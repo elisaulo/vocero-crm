@@ -36,6 +36,7 @@ import {
   uploadGraphMedia,
   validateOutgoing,
 } from "@/server/whatsapp/media";
+import { sendEvolutionText } from "@/lib/evolution";
 
 /** Error tipado del envío; `code` mapea a HTTP en la capa de API. */
 export class SendError extends Error {
@@ -253,6 +254,8 @@ async function persistOutbound(input: {
   origin: "ai" | "operator";
   mediaAssetId?: string | null;
   media?: typeof schema.mediaAsset.$inferSelect | null;
+  provider?: "meta" | "evolution";
+  externalMessageId?: string | null;
 }): Promise<string> {
   const db = getDb();
   const inserted = await db
@@ -270,6 +273,8 @@ async function persistOutbound(input: {
       aiGenerated: input.aiGenerated ?? false,
       origin: input.origin,
       mediaAssetId: input.mediaAssetId ?? null,
+      provider: input.provider ?? "meta",
+      externalMessageId: input.externalMessageId ?? null,
     })
     .returning();
   const message = inserted[0]!;
@@ -298,6 +303,68 @@ export async function sendText(input: {
   aiGenerated?: boolean;
 }): Promise<SendResult> {
   const target = await prepareSend(input.conversationId, input.organizationId);
+
+  if (target.conversation.channel === "whatsapp") {
+    const db = getDb();
+    const orgs = await db
+      .select({
+        whatsappProvider: schema.organization.whatsappProvider,
+        evolutionApiUrl: schema.organization.evolutionApiUrl,
+        evolutionApiKey: schema.organization.evolutionApiKey,
+        evolutionInstance: schema.organization.evolutionInstance,
+      })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, input.organizationId))
+      .limit(1);
+
+    const org = orgs[0];
+    if (org?.whatsappProvider === "evolution") {
+      if (
+        !org.evolutionApiUrl ||
+        !org.evolutionApiKey ||
+        !org.evolutionInstance
+      ) {
+        throw new SendError(
+          "not_connected",
+          "Configuración de Evolution API incompleta. Ingresa la URL, API Key e Instancia en Ajustes → WhatsApp."
+        );
+      }
+
+      const res = await sendEvolutionText({
+        config: {
+          apiUrl: org.evolutionApiUrl,
+          apiKey: org.evolutionApiKey,
+          instance: org.evolutionInstance,
+        },
+        recipient: target.recipient,
+        text: input.text,
+      });
+
+      if (!res.ok) {
+        throw new SendError(
+          "meta_error",
+          res.error || "Error al enviar mensaje mediante Evolution API"
+        );
+      }
+
+      const waMessageId = res.messageId ?? `evo_out_${Date.now()}`;
+      const messageId = await persistOutbound({
+        organizationId: input.organizationId,
+        conversationId: input.conversationId,
+        waMessageId,
+        type: "text",
+        text: input.text,
+        status: "sent",
+        aiGenerated: input.aiGenerated,
+        origin: input.aiGenerated ? "ai" : "operator",
+        provider: "evolution",
+        externalMessageId: res.messageId ?? null,
+      });
+
+      return { messageId };
+    }
+  }
+
   const { credentials } = target;
 
   const waMessageId = target.instagram
@@ -317,9 +384,6 @@ export async function sendText(input: {
     waMessageId,
     type: "text",
     text: input.text,
-    // Un canal sin acuses de entrega confirma al aceptar; uno con acuses
-    // avanza despues por webhook. Sin esta distincion el mensaje se queda
-    // con el reloj puesto para siempre.
     status: capabilitiesFor(target.conversation.channel).deliveryReceipts
       ? "pending"
       : "sent",

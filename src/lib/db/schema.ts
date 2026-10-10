@@ -82,6 +82,12 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
+  whatsappProvider: text("whatsapp_provider", { enum: ["meta", "evolution"] })
+    .notNull()
+    .default("meta"),
+  evolutionApiUrl: text("evolution_api_url"),
+  evolutionApiKey: text("evolution_api_key"),
+  evolutionInstance: text("evolution_instance"),
 });
 
 export const member = pgTable("member", {
@@ -428,6 +434,10 @@ export const message = pgTable(
       onDelete: "set null",
     }),
     waTimestamp: timestamp("wa_timestamp"),
+    provider: text("provider", { enum: ["meta", "evolution"] })
+      .notNull()
+      .default("meta"),
+    externalMessageId: text("external_message_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

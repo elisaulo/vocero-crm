@@ -43,9 +43,18 @@ type WebhookRegistration =
  */
 type LastRegistration = { result: WebhookRegistration; from: "save" | "button" };
 
+type EvolutionData = {
+  apiUrl: string;
+  apiKeyLast4: string;
+  instance: string;
+};
+
 export function WhatsappWizard() {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [webhook, setWebhook] = useState<WebhookInfo | null>(null);
+  const [whatsappProvider, setWhatsappProvider] = useState<"meta" | "evolution">("meta");
+  const [evolutionData, setEvolutionData] = useState<EvolutionData | null>(null);
+  const [activeTab, setActiveTab] = useState<"meta" | "evolution">("meta");
   const [loaded, setLoaded] = useState(false);
   const [registration, setRegistration] = useState<LastRegistration | null>(
     null
@@ -56,7 +65,11 @@ export function WhatsappWizard() {
       fetch("/api/settings/whatsapp").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/settings/webhook").then((r) => (r.ok ? r.json() : null)),
     ]).catch(() => [null, null]);
-    if (c) setConnection(c.connection);
+    if (c) {
+      setConnection(c.connection);
+      if (c.whatsappProvider) setWhatsappProvider(c.whatsappProvider);
+      if (c.evolution) setEvolutionData(c.evolution);
+    }
     if (w) setWebhook(w);
     setLoaded(true);
   }, []);
@@ -71,67 +84,102 @@ export function WhatsappWizard() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      {connection?.status === "reconnect_required" && (
-        <div className="flex flex-wrap items-start gap-2 rounded-lg border border-danger-soft bg-danger-tint p-4 text-sm">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <div className="min-w-[12rem] flex-1">
-            <p className="font-medium text-danger-text">
-              El token de WhatsApp expiró o fue revocado.
-            </p>
-            <p className="text-danger-text opacity-80">
-              Los envíos están pausados. Pega un token nuevo abajo y prueba la
-              conexión para reconectar.
-            </p>
-          </div>
-          <Desconectar
-            onHecho={() => {
-              setRegistration(null);
-              void refetch();
-            }}
-          />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={activeTab === "meta" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("meta")}
+          >
+            Meta Cloud API (Oficial)
+          </Button>
+          <Button
+            variant={activeTab === "evolution" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("evolution")}
+          >
+            Evolution API (QR)
+          </Button>
         </div>
-      )}
-
-      {connection && connection.status === "connected" && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-success-soft bg-success-tint p-4">
-          <CheckCircle2 className="h-5 w-5 text-success" />
-          <div className="min-w-[12rem] flex-1 text-sm">
-            <p className="font-medium text-success-text">
-              Número conectado: {connection.displayPhoneNumber ?? connection.phoneNumberId}
-            </p>
-            <p className="text-success-text opacity-80">
-              {connection.verifiedName ? `${connection.verifiedName} · ` : ""}
-              token …{connection.tokenLast4}
-            </p>
-          </div>
-          <Badge variant="success">Conectado</Badge>
-          <Desconectar
-            onHecho={() => {
-              setRegistration(null);
-              void refetch();
-            }}
-          />
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Proveedor activo:</span>
+          <Badge variant={whatsappProvider === "evolution" ? "outline" : "secondary"}>
+            {whatsappProvider === "evolution" ? "Evolution API" : "Meta Cloud API"}
+          </Badge>
         </div>
-      )}
+      </div>
 
-      <ConnectForm
-        existing={connection}
-        registration={registration?.from === "save" ? registration.result : null}
-        onRegistration={(result) =>
-          setRegistration(result ? { result, from: "save" } : null)
-        }
-        onSaved={() => void refetch()}
-      />
-
-      {webhook && (
-        <WebhookCard
-          webhook={webhook}
-          connection={connection}
-          registration={registration?.from === "button" ? registration.result : null}
-          onRegistration={(result) =>
-            setRegistration(result ? { result, from: "button" } : null)
-          }
+      {activeTab === "evolution" ? (
+        <EvolutionForm
+          existing={evolutionData}
+          isActive={whatsappProvider === "evolution"}
+          onSaved={() => void refetch()}
         />
+      ) : (
+        <>
+          {connection?.status === "reconnect_required" && (
+            <div className="flex flex-wrap items-start gap-2 rounded-lg border border-danger-soft bg-danger-tint p-4 text-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <div className="min-w-[12rem] flex-1">
+                <p className="font-medium text-danger-text">
+                  El token de WhatsApp expiró o fue revocado.
+                </p>
+                <p className="text-danger-text opacity-80">
+                  Los envíos están pausados. Pega un token nuevo abajo y prueba la
+                  conexión para reconectar.
+                </p>
+              </div>
+              <Desconectar
+                onHecho={() => {
+                  setRegistration(null);
+                  void refetch();
+                }}
+              />
+            </div>
+          )}
+
+          {connection && connection.status === "connected" && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-success-soft bg-success-tint p-4">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              <div className="min-w-[12rem] flex-1 text-sm">
+                <p className="font-medium text-success-text">
+                  Número conectado: {connection.displayPhoneNumber ?? connection.phoneNumberId}
+                </p>
+                <p className="text-success-text opacity-80">
+                  {connection.verifiedName ? `${connection.verifiedName} · ` : ""}
+                  token …{connection.tokenLast4}
+                </p>
+              </div>
+              <Badge variant="success">Conectado</Badge>
+              <Desconectar
+                onHecho={() => {
+                  setRegistration(null);
+                  void refetch();
+                }}
+              />
+            </div>
+          )}
+
+          <ConnectForm
+            existing={connection}
+            registration={registration?.from === "save" ? registration.result : null}
+            onRegistration={(result) =>
+              setRegistration(result ? { result, from: "save" } : null)
+            }
+            onSaved={() => void refetch()}
+          />
+
+          {webhook && (
+            <WebhookCard
+              webhook={webhook}
+              connection={connection}
+              registration={registration?.from === "button" ? registration.result : null}
+              onRegistration={(result) =>
+                setRegistration(result ? { result, from: "button" } : null)
+              }
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -586,5 +634,172 @@ function WebhookCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function EvolutionForm({
+  existing,
+  isActive,
+  onSaved,
+}: {
+  existing: EvolutionData | null;
+  isActive: boolean;
+  onSaved: () => void;
+}) {
+  const [apiUrl, setApiUrl] = useState(existing?.apiUrl ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [instance, setInstance] = useState(existing?.instance ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const webhookUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/webhooks/evolution?instance=${encodeURIComponent(
+          instance || "MI_INSTANCIA"
+        )}`
+      : `/api/webhooks/evolution?instance=${encodeURIComponent(
+          instance || "MI_INSTANCIA"
+        )}`;
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/settings/whatsapp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          evolutionApiUrl: apiUrl,
+          evolutionApiKey: apiKey,
+          evolutionInstance: instance,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(
+          data.message || "Error guardando la configuración de Evolution API"
+        );
+      } else {
+        onSaved();
+      }
+    } catch {
+      setError("Error de red al guardar la configuración");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleActivateProvider() {
+    setSaving(true);
+    try {
+      await fetch("/api/settings/whatsapp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "evolution" }),
+      });
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Evolution API (Conexión por QR / Baileys)</CardTitle>
+            {isActive ? (
+              <Badge variant="success">Proveedor Activo</Badge>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleActivateProvider()}
+                disabled={saving}
+              >
+                Activar Evolution API
+              </Button>
+            )}
+          </div>
+          <CardDescription>
+            Conecta una instancia de Evolution API v1/v2 para enviar y recibir
+            mensajes de WhatsApp mediante sesión de QR (Baileys).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
+            {error && (
+              <p className="rounded border border-danger-soft bg-danger-tint p-3 text-xs text-danger-text">
+                {error}
+              </p>
+            )}
+            <div className="space-y-1.5">
+              <Label>URL de Evolution API</Label>
+              <Input
+                placeholder="https://api.evolution.tu-dominio.com"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>API Key global o de instancia</Label>
+              <Input
+                type="password"
+                placeholder={
+                  existing?.apiKeyLast4
+                    ? `Clave guardada (…${existing.apiKeyLast4})`
+                    : "Global / Instance API Key"
+                }
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Nombre de Instancia</Label>
+              <Input
+                placeholder="ej. mi-negocio"
+                value={instance}
+                onChange={(e) => setInstance(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar y Activar Evolution API"}
+            </Button>
+          </form>
+
+          <div className="mt-6 border-t pt-4 space-y-2">
+            <Label className="text-xs font-semibold">
+              URL de Webhook para Evolution API
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Configura este webhook en el panel de tu instancia de Evolution API
+              (evento <code>messages.upsert</code>):
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-md border bg-background px-3 py-2 text-xs">
+                {webhookUrl}
+              </code>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  void navigator.clipboard.writeText(webhookUrl);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              {copied && <span className="text-xs text-primary">Copiado ✓</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
