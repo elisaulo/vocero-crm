@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { normalizeMx } from "@/lib/meta/client";
@@ -215,6 +215,9 @@ export async function getOrCreateConversation(
   opts?: { channel?: Channel; threadRef?: string | null; evolutionInstance?: string | null }
 ) {
   const db = getDb();
+  // 0025: extraer antes del INSERT para usarlo en el SELECT de rescate.
+  const evoInstance = opts?.evolutionInstance ?? null;
+
   const inserted = await db
     .insert(schema.conversation)
     .values({
@@ -223,7 +226,7 @@ export async function getOrCreateConversation(
       contactId,
       channel: opts?.channel ?? "whatsapp",
       channelThreadRef: opts?.threadRef ?? null,
-      evolutionInstance: opts?.evolutionInstance ?? null,
+      evolutionInstance: evoInstance,
       // 027: hereda la pausa del contacto en el mismo INSERT. Si se leyera
       // antes, cada mensaje entrante pagaría una consulta más, y entre la
       // lectura y la inserción cabría el primer turno del agente.
@@ -233,6 +236,13 @@ export async function getOrCreateConversation(
     .returning();
   if (inserted[0]) return inserted[0];
 
+  // 0025 — El SELECT de rescate discrimina por evolutionInstance para que
+  // nunca se devuelva la conversación de otra instancia:
+  //   • evoInstance == null  → cubre Meta/Instagram/Messenger/TikTok y los
+  //     contactos Evolution cuya conversación no tiene instancia asignada
+  //     (índice conversation_org_contact_no_evo_uq).
+  //   • evoInstance != null  → cubre Evolution multi-número; cada instancia
+  //     tiene su propio hilo (índice conversation_org_contact_evo_uq).
   const rows = await db
     .select()
     .from(schema.conversation)
@@ -240,24 +250,21 @@ export async function getOrCreateConversation(
       and(
         eq(schema.conversation.organizationId, organizationId),
         eq(schema.conversation.contactId, contactId),
-        eq(schema.conversation.isTest, false)
+        eq(schema.conversation.isTest, false),
+        evoInstance !== null
+          ? eq(schema.conversation.evolutionInstance, evoInstance)
+          : isNull(schema.conversation.evolutionInstance)
       )
     )
     .limit(1);
   const existing = rows[0];
   if (!existing) throw new Error("conversación no encontrada tras upsert");
 
-  // 014: el hilo de la plataforma puede aparecer después (o cambiar); se
-  // guarda en cuanto se conoce para poder responder.
+  // 014: el hilo de la plataforma puede aparecer después (o cambiar).
   const patch: Record<string, unknown> = {};
   if (opts?.threadRef && existing.channelThreadRef !== opts.threadRef) {
     patch.channelThreadRef = opts.threadRef;
     existing.channelThreadRef = opts.threadRef;
-  }
-  // 0024: si la conversación no tenía instancia registrada, guardarla ahora.
-  if (opts?.evolutionInstance && !existing.evolutionInstance) {
-    patch.evolutionInstance = opts.evolutionInstance;
-    existing.evolutionInstance = opts.evolutionInstance;
   }
   if (Object.keys(patch).length > 0) {
     patch.updatedAt = new Date();
@@ -268,6 +275,7 @@ export async function getOrCreateConversation(
   }
   return existing;
 }
+
 
 /**
  * Procesa el `value` de un cambio `messages` del webhook: mensajes entrantes

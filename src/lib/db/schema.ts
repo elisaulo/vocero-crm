@@ -408,10 +408,24 @@ export const conversation = pgTable(
 
   },
   (t) => [
-    // Una conversación real por contacto; las de prueba no compiten.
-    uniqueIndex("conversation_org_contact_real_uq")
+    /**
+     * 0025 — Dos índices parciales en lugar del único (org, contact):
+     *
+     * A) Sin instancia Evolution (Meta Cloud API, Instagram, Messenger, TikTok):
+     *    una sola conversación real por contacto.
+     * B) Con instancia Evolution (multi-número): una conversación por contacto
+     *    por instancia; el mismo contacto puede tener tantas conversaciones como
+     *    instancias le hayan escrito.
+     *
+     * Las conversaciones de prueba (is_test=true) quedan fuera de ambas
+     * restricciones, como antes.
+     */
+    uniqueIndex("conversation_org_contact_no_evo_uq")
       .on(t.organizationId, t.contactId)
-      .where(sql`${t.isTest} = false`),
+      .where(sql`${t.isTest} = false AND ${t.evolutionInstance} IS NULL`),
+    uniqueIndex("conversation_org_contact_evo_uq")
+      .on(t.organizationId, t.contactId, t.evolutionInstance)
+      .where(sql`${t.isTest} = false AND ${t.evolutionInstance} IS NOT NULL`),
     index("conversation_org_last_idx").on(t.organizationId, t.lastMessageAt),
   ]
 );
