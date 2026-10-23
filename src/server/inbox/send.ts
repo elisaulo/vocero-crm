@@ -3,6 +3,7 @@ import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { graphRequest, MetaApiError, normalizeRecipient } from "@/lib/meta/client";
 import { destinatarioMeta, type Destinatario } from "@/lib/meta/destinatario";
+import { scoped } from "@/lib/db/tenant";
 import { publish } from "@/server/events/bus";
 import {
   getCredentialsByOrg,
@@ -62,7 +63,7 @@ type SendResult = { messageId: string };
 
 type SendTarget = {
   conversation: typeof schema.conversation.$inferSelect;
-  /** null cuando el destino no es WhatsApp (014). */
+  /** null cuando el destino no es WhatsApp (014) o cuando el proveedor es Evolution. */
   credentials: Credentials | null;
   /** El destinatario en la forma que Meta espera: `to` o `recipient`. */
   destinatario: Destinatario;
@@ -72,6 +73,15 @@ type SendTarget = {
   instagram?: InstagramCredentials;
   /** 017: presente solo en conversaciones de Messenger. */
   messenger?: MessengerCredentials;
+  /**
+   * Configuración de Evolution API cuando whatsapp_provider === 'evolution'.
+   * Si está presente, sendText usa este transporte en lugar de Meta Graph API.
+   */
+  evolutionConfig?: {
+    apiUrl: string;
+    apiKey: string;
+    instance: string;
+  };
 };
 
 /**
@@ -197,6 +207,57 @@ async function prepareSend(
     );
   }
 
+  // Antes de consultar meta_credentials, determinar el proveedor activo.
+  // Si es Evolution, NO se intenta descifrar credenciales de Meta (evita
+  // Error 409 «no conectado» y Error 500 ERR_CRYPTO_INVALID_AUTH_TAG).
+  const [orgRow] = await db
+    .select({
+      whatsappProvider: schema.organization.whatsappProvider,
+      evolutionApiUrl: schema.organization.evolutionApiUrl,
+      evolutionApiKey: schema.organization.evolutionApiKey,
+      evolutionInstance: schema.organization.evolutionInstance,
+    })
+    .from(schema.organization)
+    .where(scoped(schema.organization.id, organizationId))
+    .limit(1);
+
+  if (orgRow?.whatsappProvider === "evolution") {
+    // Validar que la configuración de Evolution esté completa.
+    if (
+      !orgRow.evolutionApiUrl ||
+      !orgRow.evolutionApiKey ||
+      !orgRow.evolutionInstance
+    ) {
+      throw new SendError(
+        "not_connected",
+        "Configuración de Evolution API incompleta. Ingresa la URL, API Key e Instancia en Ajustes → WhatsApp."
+      );
+    }
+
+    // El destinatario para Evolution: teléfono o waIdentity como fallback.
+    const evoRecipient = row.contact.phone || row.contact.waIdentity;
+    if (!evoRecipient) {
+      throw new SendError(
+        "meta_error",
+        "El contacto no tiene teléfono o identidad utilizable para Evolution API"
+      );
+    }
+
+    return {
+      conversation: row.conversation,
+      credentials: null,
+      // destinatario se construye en formato Meta pero Evolution solo usará recipient.
+      destinatario: { to: evoRecipient },
+      recipient: evoRecipient,
+      evolutionConfig: {
+        apiUrl: orgRow.evolutionApiUrl,
+        apiKey: orgRow.evolutionApiKey,
+        instance: orgRow.evolutionInstance,
+      },
+    };
+  }
+
+  // Proveedor Meta Cloud API (default): requiere credenciales cifradas en meta_credentials.
   const credentials = await getCredentialsByOrg(organizationId);
   if (!credentials) {
     throw new SendError("not_connected", "No hay número de WhatsApp conectado");
@@ -304,65 +365,37 @@ export async function sendText(input: {
 }): Promise<SendResult> {
   const target = await prepareSend(input.conversationId, input.organizationId);
 
-  if (target.conversation.channel === "whatsapp") {
-    const db = getDb();
-    const orgs = await db
-      .select({
-        whatsappProvider: schema.organization.whatsappProvider,
-        evolutionApiUrl: schema.organization.evolutionApiUrl,
-        evolutionApiKey: schema.organization.evolutionApiKey,
-        evolutionInstance: schema.organization.evolutionInstance,
-      })
-      .from(schema.organization)
-      .where(eq(schema.organization.id, input.organizationId))
-      .limit(1);
+  // Evolution API: prepareSend ya validó las credenciales y las puso en
+  // target.evolutionConfig — solo despachar y persistir.
+  if (target.evolutionConfig) {
+    const res = await sendEvolutionText({
+      config: target.evolutionConfig,
+      recipient: target.recipient,
+      text: input.text,
+    });
 
-    const org = orgs[0];
-    if (org?.whatsappProvider === "evolution") {
-      if (
-        !org.evolutionApiUrl ||
-        !org.evolutionApiKey ||
-        !org.evolutionInstance
-      ) {
-        throw new SendError(
-          "not_connected",
-          "Configuración de Evolution API incompleta. Ingresa la URL, API Key e Instancia en Ajustes → WhatsApp."
-        );
-      }
-
-      const res = await sendEvolutionText({
-        config: {
-          apiUrl: org.evolutionApiUrl,
-          apiKey: org.evolutionApiKey,
-          instance: org.evolutionInstance,
-        },
-        recipient: target.recipient,
-        text: input.text,
-      });
-
-      if (!res.ok) {
-        throw new SendError(
-          "meta_error",
-          res.error || "Error al enviar mensaje mediante Evolution API"
-        );
-      }
-
-      const waMessageId = res.messageId ?? `evo_out_${Date.now()}`;
-      const messageId = await persistOutbound({
-        organizationId: input.organizationId,
-        conversationId: input.conversationId,
-        waMessageId,
-        type: "text",
-        text: input.text,
-        status: "sent",
-        aiGenerated: input.aiGenerated,
-        origin: input.aiGenerated ? "ai" : "operator",
-        provider: "evolution",
-        externalMessageId: res.messageId ?? null,
-      });
-
-      return { messageId };
+    if (!res.ok) {
+      throw new SendError(
+        "meta_error",
+        res.error || "Error al enviar mensaje mediante Evolution API"
+      );
     }
+
+    const waMessageId = res.messageId ?? `evo_out_${Date.now()}`;
+    const messageId = await persistOutbound({
+      organizationId: input.organizationId,
+      conversationId: input.conversationId,
+      waMessageId,
+      type: "text",
+      text: input.text,
+      status: "sent",
+      aiGenerated: input.aiGenerated,
+      origin: input.aiGenerated ? "ai" : "operator",
+      provider: "evolution",
+      externalMessageId: res.messageId ?? null,
+    });
+
+    return { messageId };
   }
 
   const { credentials } = target;

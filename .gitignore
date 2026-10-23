@@ -26,6 +26,8 @@ pnpm-debug.log*
 .cache/
 tmp/
 .tmp/
+# Clon del upstream descargado localmente para inspección (no es submodule)
+vocero-crm/
 
 # --- OS / editor ---
 .DS_Store

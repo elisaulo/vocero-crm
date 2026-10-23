@@ -4,15 +4,29 @@ import { sendEvolutionText } from "@/lib/evolution";
 import { dispatchSendMessage } from "@/lib/messaging-dispatcher";
 
 // Mock DB module for unit tests
-const selectChain: Record<string, unknown> = {};
-selectChain.from = () => selectChain;
-selectChain.innerJoin = () => selectChain;
-selectChain.where = () => selectChain;
-selectChain.limit = vi.fn();
+interface MockSelectChain {
+  from: () => MockSelectChain;
+  innerJoin: () => MockSelectChain;
+  where: () => MockSelectChain;
+  limit: ReturnType<typeof vi.fn>;
+}
 
-const insertChain: Record<string, unknown> = {};
-insertChain.values = () => insertChain;
-insertChain.returning = vi.fn();
+interface MockInsertChain {
+  values: () => MockInsertChain;
+  returning: ReturnType<typeof vi.fn>;
+}
+
+const selectChain: MockSelectChain = {
+  from: () => selectChain,
+  innerJoin: () => selectChain,
+  where: () => selectChain,
+  limit: vi.fn(),
+};
+
+const insertChain: MockInsertChain = {
+  values: () => insertChain,
+  returning: vi.fn(),
+};
 
 const updateChain: Record<string, unknown> = {};
 updateChain.set = () => updateChain;

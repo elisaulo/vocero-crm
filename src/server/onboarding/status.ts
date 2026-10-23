@@ -1,5 +1,6 @@
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
+import { eq } from "drizzle-orm";
 import { estadoIaDe, mensajeDeEstado } from "@/lib/ai/provider";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { verifyCalendar } from "./calendar-verifiers";
@@ -67,12 +68,43 @@ export async function onboardingStatus(
     .from(schema.kbEntry)
     .where(scoped(schema.kbEntry.organizationId, organizationId))
     .limit(1);
-  const [channel] = await db
-    .select({ status: schema.metaCredentials.status })
-    .from(schema.metaCredentials)
-    .where(scoped(schema.metaCredentials.organizationId, organizationId))
-    .limit(1);
+
+  // Consultar tanto el proveedor activo (organization) como las credenciales
+  // de Meta: si el proveedor es Evolution, no se necesita meta_credentials.
+  const [[org], [channel]] = await Promise.all([
+    db
+      .select({
+        whatsappProvider: schema.organization.whatsappProvider,
+        evolutionApiUrl: schema.organization.evolutionApiUrl,
+        evolutionApiKey: schema.organization.evolutionApiKey,
+        evolutionInstance: schema.organization.evolutionInstance,
+      })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, organizationId))
+      .limit(1),
+    db
+      .select({ status: schema.metaCredentials.status })
+      .from(schema.metaCredentials)
+      .where(scoped(schema.metaCredentials.organizationId, organizationId))
+      .limit(1),
+  ]);
+
   const ia = await estadoIaDe(organizationId);
+
+  // Determinar el estado del canal WhatsApp según el proveedor activo.
+  const evolutionReady =
+    org?.whatsappProvider === "evolution" &&
+    Boolean(org.evolutionApiUrl) &&
+    Boolean(org.evolutionApiKey) &&
+    Boolean(org.evolutionInstance);
+
+  const whatsappStatus = evolutionReady
+    ? "connected"
+    : channel?.status === "connected"
+      ? "connected"
+      : channel?.status === "reconnect_required"
+        ? "reconnect_required"
+        : undefined;
 
   const steps: ReadinessStep[] = [
     pasoPerfil(profile, Boolean(kb)),
@@ -96,16 +128,20 @@ export async function onboardingStatus(
     {
       key: "whatsapp",
       label: "WhatsApp",
-      status: channel?.status === "connected" ? "ready" : "pending",
+      status: whatsappStatus === "connected" ? "ready" : "pending",
       nextAction:
-        channel?.status === "connected"
-          ? "Número conectado"
-          : channel
+        whatsappStatus === "connected"
+          ? evolutionReady
+            ? "Evolution API configurada"
+            : "Número conectado"
+          : whatsappStatus === "reconnect_required"
             ? "Vuelve a conectar el número con un token vigente"
-            : "Vincular tu número",
+            : channel
+              ? "Vuelve a conectar el número con un token vigente"
+              : "Vincular tu número",
       href: "/settings/whatsapp",
       problem:
-        channel?.status === "reconnect_required"
+        whatsappStatus === "reconnect_required"
           ? "Meta dejó de aceptar el token de WhatsApp: vuelve a conectar el número."
           : null,
     },
