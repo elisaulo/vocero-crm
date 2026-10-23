@@ -215,9 +215,50 @@ export async function getOrCreateConversation(
   opts?: { channel?: Channel; threadRef?: string | null; evolutionInstance?: string | null }
 ) {
   const db = getDb();
-  // 0025: extraer antes del INSERT para usarlo en el SELECT de rescate.
   const evoInstance = opts?.evolutionInstance ?? null;
 
+  /**
+   * Busca la conversación aislada por instancia:
+   *   • evoInstance != null → eq(evolutionInstance, valor): hilo de esa instancia.
+   *   • evoInstance == null → isNull(evolutionInstance): hilo de Meta/otros canales.
+   * Devuelve la fila o null sin lanzar excepciones.
+   */
+  async function buscarExistente() {
+    const rows = await db
+      .select()
+      .from(schema.conversation)
+      .where(
+        and(
+          eq(schema.conversation.organizationId, organizationId),
+          eq(schema.conversation.contactId, contactId),
+          eq(schema.conversation.isTest, false),
+          evoInstance !== null
+            ? eq(schema.conversation.evolutionInstance, evoInstance)
+            : isNull(schema.conversation.evolutionInstance)
+        )
+      )
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  // ── 1. Buscar primero ─────────────────────────────────────────────────────
+  // Evita el INSERT cuando la conversación ya existe (el camino más frecuente
+  // en mensajes repetidos) y elimina el conflicto con el índice antiguo si la
+  // migración 0025 aún no se aplicó en producción.
+  const preExistente = await buscarExistente();
+  if (preExistente) {
+    // 014: el hilo de la plataforma puede aparecer después (o cambiar).
+    if (opts?.threadRef && preExistente.channelThreadRef !== opts.threadRef) {
+      await db
+        .update(schema.conversation)
+        .set({ channelThreadRef: opts.threadRef, updatedAt: new Date() })
+        .where(eq(schema.conversation.id, preExistente.id));
+      preExistente.channelThreadRef = opts.threadRef;
+    }
+    return preExistente;
+  }
+
+  // ── 2. No existe: insertar ────────────────────────────────────────────────
   const inserted = await db
     .insert(schema.conversation)
     .values({
@@ -236,44 +277,43 @@ export async function getOrCreateConversation(
     .returning();
   if (inserted[0]) return inserted[0];
 
-  // 0025 — El SELECT de rescate discrimina por evolutionInstance para que
-  // nunca se devuelva la conversación de otra instancia:
-  //   • evoInstance == null  → cubre Meta/Instagram/Messenger/TikTok y los
-  //     contactos Evolution cuya conversación no tiene instancia asignada
-  //     (índice conversation_org_contact_no_evo_uq).
-  //   • evoInstance != null  → cubre Evolution multi-número; cada instancia
-  //     tiene su propio hilo (índice conversation_org_contact_evo_uq).
-  const rows = await db
-    .select()
-    .from(schema.conversation)
-    .where(
-      and(
-        eq(schema.conversation.organizationId, organizationId),
-        eq(schema.conversation.contactId, contactId),
-        eq(schema.conversation.isTest, false),
-        evoInstance !== null
-          ? eq(schema.conversation.evolutionInstance, evoInstance)
-          : isNull(schema.conversation.evolutionInstance)
-      )
-    )
-    .limit(1);
-  const existing = rows[0];
-  if (!existing) throw new Error("conversación no encontrada tras upsert");
+  // ── 3. Conflicto concurrente: buscar de nuevo ─────────────────────────────
+  // Dos workers simultáneos intentaron el INSERT; el que perdió llega aquí.
+  const trasConcurrencia = await buscarExistente();
+  if (trasConcurrencia) return trasConcurrencia;
 
-  // 014: el hilo de la plataforma puede aparecer después (o cambiar).
-  const patch: Record<string, unknown> = {};
-  if (opts?.threadRef && existing.channelThreadRef !== opts.threadRef) {
-    patch.channelThreadRef = opts.threadRef;
-    existing.channelThreadRef = opts.threadRef;
+  // ── 4. Último recurso ─────────────────────────────────────────────────────
+  // Llega aquí si la migración 0025 aún no se aplicó en producción: el índice
+  // anterior (org, contact) provocó el conflicto del INSERT pero el contacto
+  // tiene un hilo bajo otra instancia. Devolvemos ese hilo para no perder el
+  // mensaje; el operador lo verá agrupado hasta que se aplique la migración.
+  if (evoInstance !== null) {
+    console.warn(
+      `[ingest] getOrCreateConversation: sin hilo para contact=${contactId} ` +
+        `evo=${evoInstance} tras conflicto — buscando cualquier hilo del ` +
+        `contacto (¿migración 0025 pendiente? Corre: pnpm db:migrate)`
+    );
+    const cualquiera = await db
+      .select()
+      .from(schema.conversation)
+      .where(
+        and(
+          eq(schema.conversation.organizationId, organizationId),
+          eq(schema.conversation.contactId, contactId),
+          eq(schema.conversation.isTest, false)
+        )
+      )
+      .limit(1);
+    if (cualquiera[0]) return cualquiera[0];
   }
-  if (Object.keys(patch).length > 0) {
-    patch.updatedAt = new Date();
-    await db
-      .update(schema.conversation)
-      .set(patch)
-      .where(eq(schema.conversation.id, existing.id));
-  }
-  return existing;
+
+  // ── Sin salida ────────────────────────────────────────────────────────────
+  // No debería ocurrir nunca: si el INSERT falló por conflicto debe existir
+  // alguna fila para este contacto y organización.
+  throw new Error(
+    `getOrCreateConversation: sin conversación para contactId=${contactId} ` +
+      `org=${organizationId} evo=${evoInstance ?? "null"} tras 4 intentos`
+  );
 }
 
 
