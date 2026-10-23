@@ -243,8 +243,8 @@ export async function getOrCreateConversation(
 
   // ── 1. Buscar primero ─────────────────────────────────────────────────────
   // Evita el INSERT cuando la conversación ya existe (el camino más frecuente
-  // en mensajes repetidos) y elimina el conflicto con el índice antiguo si la
-  // migración 0025 aún no se aplicó en producción.
+  // en mensajes repetidos). Filtra exactamente por evolutionInstance para no
+  // mezclar hilos de distintas instancias (multi-número, migración 0025).
   const preExistente = await buscarExistente();
   if (preExistente) {
     // 014: el hilo de la plataforma puede aparecer después (o cambiar).
@@ -279,40 +279,17 @@ export async function getOrCreateConversation(
 
   // ── 3. Conflicto concurrente: buscar de nuevo ─────────────────────────────
   // Dos workers simultáneos intentaron el INSERT; el que perdió llega aquí.
+  // La búsqueda usa los mismos filtros estrictos (incluido evolutionInstance)
+  // que garantizan el aislamiento por instancia.
   const trasConcurrencia = await buscarExistente();
   if (trasConcurrencia) return trasConcurrencia;
 
-  // ── 4. Último recurso ─────────────────────────────────────────────────────
-  // Llega aquí si la migración 0025 aún no se aplicó en producción: el índice
-  // anterior (org, contact) provocó el conflicto del INSERT pero el contacto
-  // tiene un hilo bajo otra instancia. Devolvemos ese hilo para no perder el
-  // mensaje; el operador lo verá agrupado hasta que se aplique la migración.
-  if (evoInstance !== null) {
-    console.warn(
-      `[ingest] getOrCreateConversation: sin hilo para contact=${contactId} ` +
-        `evo=${evoInstance} tras conflicto — buscando cualquier hilo del ` +
-        `contacto (¿migración 0025 pendiente? Corre: pnpm db:migrate)`
-    );
-    const cualquiera = await db
-      .select()
-      .from(schema.conversation)
-      .where(
-        and(
-          eq(schema.conversation.organizationId, organizationId),
-          eq(schema.conversation.contactId, contactId),
-          eq(schema.conversation.isTest, false)
-        )
-      )
-      .limit(1);
-    if (cualquiera[0]) return cualquiera[0];
-  }
-
   // ── Sin salida ────────────────────────────────────────────────────────────
-  // No debería ocurrir nunca: si el INSERT falló por conflicto debe existir
-  // alguna fila para este contacto y organización.
+  // No debería ocurrir nunca: si el INSERT falló por conflicto (onConflictDoNothing)
+  // debe existir alguna fila que coincida exactamente con (org, contact, evoInstance).
   throw new Error(
     `getOrCreateConversation: sin conversación para contactId=${contactId} ` +
-      `org=${organizationId} evo=${evoInstance ?? "null"} tras 4 intentos`
+      `org=${organizationId} evo=${evoInstance ?? "null"} tras 3 intentos`
   );
 }
 
