@@ -212,7 +212,7 @@ export async function getOrCreateContact(
 export async function getOrCreateConversation(
   organizationId: string,
   contactId: string,
-  opts?: { channel?: Channel; threadRef?: string | null }
+  opts?: { channel?: Channel; threadRef?: string | null; evolutionInstance?: string | null }
 ) {
   const db = getDb();
   const inserted = await db
@@ -223,6 +223,7 @@ export async function getOrCreateConversation(
       contactId,
       channel: opts?.channel ?? "whatsapp",
       channelThreadRef: opts?.threadRef ?? null,
+      evolutionInstance: opts?.evolutionInstance ?? null,
       // 027: hereda la pausa del contacto en el mismo INSERT. Si se leyera
       // antes, cada mensaje entrante pagaría una consulta más, y entre la
       // lectura y la inserción cabría el primer turno del agente.
@@ -245,14 +246,25 @@ export async function getOrCreateConversation(
     .limit(1);
   const existing = rows[0];
   if (!existing) throw new Error("conversación no encontrada tras upsert");
-  // 014: el hilo de la plataforma puede aparecer despues (o cambiar); se
+
+  // 014: el hilo de la plataforma puede aparecer después (o cambiar); se
   // guarda en cuanto se conoce para poder responder.
+  const patch: Record<string, unknown> = {};
   if (opts?.threadRef && existing.channelThreadRef !== opts.threadRef) {
+    patch.channelThreadRef = opts.threadRef;
+    existing.channelThreadRef = opts.threadRef;
+  }
+  // 0024: si la conversación no tenía instancia registrada, guardarla ahora.
+  if (opts?.evolutionInstance && !existing.evolutionInstance) {
+    patch.evolutionInstance = opts.evolutionInstance;
+    existing.evolutionInstance = opts.evolutionInstance;
+  }
+  if (Object.keys(patch).length > 0) {
+    patch.updatedAt = new Date();
     await db
       .update(schema.conversation)
-      .set({ channelThreadRef: opts.threadRef, updatedAt: new Date() })
+      .set(patch)
       .where(eq(schema.conversation.id, existing.id));
-    existing.channelThreadRef = opts.threadRef;
   }
   return existing;
 }
@@ -457,6 +469,8 @@ export async function ingestInboundMessage(input: {
   threadRef?: string | null;
   /** 016/018: el anuncio que abrió la conversación, ya normalizado por el canal. */
   anuncio?: AnuncioDeOrigen | null;
+  /** 0024: instancia de Evolution API por la que entró el mensaje (multi-número). */
+  evolutionInstance?: string | null;
 }): Promise<void> {
   const db = getDb();
   const { organizationId } = input;
@@ -468,7 +482,11 @@ export async function ingestInboundMessage(input: {
   const conversation = await getOrCreateConversation(
     organizationId,
     contact.id,
-    { channel: contact.channel, threadRef: input.threadRef ?? null }
+    {
+      channel: contact.channel,
+      threadRef: input.threadRef ?? null,
+      evolutionInstance: input.evolutionInstance ?? null,
+    }
   );
 
   // 016/018 — Si el mensaje viene de un anuncio, capturar su origen ANTES del

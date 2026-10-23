@@ -169,6 +169,13 @@
       "when": 1761593409038,
       "tag": "0023_evolution_api_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1761680000000,
+      "tag": "0024_conversation_evolution_instance",
+      "breakpoints": true
     }
   ]
 }

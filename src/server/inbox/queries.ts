@@ -188,6 +188,8 @@ export function serializeConversation(
     },
     preview,
     anuncio,
+    // 0024: instancia de Evolution API (null en otros canales/proveedores).
+    evolutionInstance: c.evolutionInstance ?? null,
   };
 }
 

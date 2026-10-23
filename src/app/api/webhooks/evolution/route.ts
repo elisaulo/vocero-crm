@@ -195,6 +195,9 @@ async function processEvolutionPayload(
       type: "text",
       text,
       timestamp: timestampStr,
+      // 0024: persiste la instancia por la que entró para el despacho de vuelta.
+      evolutionInstance: instanceName,
     });
+
   }
 }

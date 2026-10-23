@@ -334,12 +334,14 @@ async function prepareSend(
     .limit(1);
 
   if (orgRow?.whatsappProvider === "evolution") {
+    // 0024 — multi-instancia: la conversación recuerda por qué instancia entró
+    // el cliente. Se prefiere esa; si es una conversación vieja sin instancia
+    // registrada, se cae al valor de la organización como respaldo.
+    const instance =
+      row.conversation.evolutionInstance || orgRow.evolutionInstance;
+
     // Validar que la configuración de Evolution esté completa.
-    if (
-      !orgRow.evolutionApiUrl ||
-      !orgRow.evolutionApiKey ||
-      !orgRow.evolutionInstance
-    ) {
+    if (!orgRow.evolutionApiUrl || !orgRow.evolutionApiKey || !instance) {
       throw new SendError(
         "not_connected",
         "Configuración de Evolution API incompleta. Ingresa la URL, API Key e Instancia en Ajustes → WhatsApp."
@@ -364,10 +366,11 @@ async function prepareSend(
       evolutionConfig: {
         apiUrl: orgRow.evolutionApiUrl,
         apiKey: orgRow.evolutionApiKey,
-        instance: orgRow.evolutionInstance,
+        instance,
       },
     };
   }
+
 
   // Proveedor Meta Cloud API (default): requiere credenciales cifradas en meta_credentials.
   const credentials = await getCredentialsByOrg(organizationId);

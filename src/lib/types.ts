@@ -36,7 +36,14 @@ export type ConversationDto = {
     /** `post` si fue una publicación y no un anuncio. */
     sourceType: string | null;
   } | null;
+  /**
+   * 0024 — Instancia de Evolution API por la que entró la conversación.
+   * `null` para Meta Cloud API y otros canales. Usado para mostrar el badge
+   * de número/instancia en la bandeja y enrutar la respuesta de vuelta.
+   */
+  evolutionInstance: string | null;
 };
+
 
 /** 018 — De qué anuncio llegó un contacto, como lo ve la bandeja. */
 export type AnuncioDto = {

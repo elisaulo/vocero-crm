@@ -396,8 +396,16 @@ export const conversation = pgTable(
     lastInboundAt: timestamp("last_inbound_at"),
     lastMessageAt: timestamp("last_message_at"),
     unreadCount: integer("unread_count").notNull().default(0),
+    /**
+     * 0024 — Instancia de Evolution API por la que entró la conversación.
+     * Null para conversaciones de Meta Cloud API y otros canales.
+     * Se persiste al primer mensaje entrante y sirve para despachar la
+     * respuesta siempre por la misma instancia (multi-número).
+     */
+    evolutionInstance: text("evolution_instance"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+
   },
   (t) => [
     // Una conversación real por contacto; las de prueba no compiten.

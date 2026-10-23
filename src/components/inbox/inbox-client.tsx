@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, PanelRight } from "lucide-react";
+import { ChevronLeft, PanelRight, Smartphone } from "lucide-react";
 import { cn, formatPhone } from "@/lib/utils";
 import { ContactAvatar } from "@/components/avatar";
 import type {
@@ -380,6 +380,15 @@ export function InboxClient({
                   <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-tight tracking-tight">
                     {multiChannel && <ChannelBadge channel={selected.channel} />}
                     <span className="truncate">{selected.contact.name}</span>
+                    {selected.evolutionInstance && (
+                      <span
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-success-soft bg-success-tint px-1.5 py-0.5 text-[10px] font-medium text-success-text"
+                        title={`Instancia Evolution: ${selected.evolutionInstance}`}
+                      >
+                        <Smartphone className="h-2.5 w-2.5" strokeWidth={1.8} />
+                        <span className="max-w-[72px] truncate">{selected.evolutionInstance}</span>
+                      </span>
+                    )}
                   </p>
                   <p
                     className={cn(
