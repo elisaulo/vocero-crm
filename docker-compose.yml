@@ -57,7 +57,7 @@ services:
       ALLOW_SIGNUP: ${ALLOW_SIGNUP:-}
       AGENT_COALESCE_MS: ${AGENT_COALESCE_MS:-6000}
       # Opcionales: vacías = apagadas (guía de cada una en .env.example).
-      CHANNELS: ${CHANNELS:-}
+      CHANNELS: ${CHANNELS:-whatsapp,instagram,messenger,tiktok}
       AGENDA: ${AGENDA:-}
       ATRIBUCION: ${ATRIBUCION:-}
       BOT_API_KEY: ${BOT_API_KEY:-}
@@ -78,6 +78,8 @@ services:
       # Adjuntos, logo e icono (la imagen ya trae MEDIA_DIR=/data/media): sin
       # este volumen se pierden al recrear el contenedor.
       - vocero_app_data:/data
+    ports:
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy

@@ -7,13 +7,13 @@ import type { ResolvedIdentity } from "@/server/inbox/identity";
 
 export const dynamic = "force-dynamic";
 
-export type EvolutionItemKey = {
+type EvolutionItemKey = {
   id?: string;
   fromMe?: boolean;
   remoteJid?: string;
 };
 
-export type EvolutionMessageContent = {
+type EvolutionMessageContent = {
   conversation?: string;
   extendedTextMessage?: { text?: string };
   imageMessage?: { caption?: string };
@@ -21,7 +21,7 @@ export type EvolutionMessageContent = {
   documentMessage?: { caption?: string };
 };
 
-export type EvolutionItem = {
+type EvolutionItem = {
   key?: EvolutionItemKey;
   remoteJid?: string;
   pushName?: string;
@@ -33,7 +33,7 @@ export type EvolutionItem = {
   messageTimestamp?: number | string;
 };
 
-export type EvolutionPayload = {
+type EvolutionPayload = {
   event?: string;
   type?: string;
   instance?: string;
@@ -42,6 +42,7 @@ export type EvolutionPayload = {
 
 /**
  * Webhook dedicado para Evolution API (evento messages.upsert).
+ * Solo se exporta POST (handler HTTP); processEvolutionPayload es privada.
  */
 export async function POST(req: Request) {
   let payload: EvolutionPayload;
@@ -61,14 +62,19 @@ export async function POST(req: Request) {
       }
     });
   } catch {
-    // Fuera de Next.js request context (entornos de pruebas unitarias)
+    // Fuera del contexto de request de Next.js (entornos de prueba unitaria)
     void processEvolutionPayload(payload, req);
   }
 
   return Response.json({ received: true });
 }
 
-export async function processEvolutionPayload(
+/**
+ * Lógica de procesamiento del evento Evolution API.
+ * Función privada del módulo: no se exporta para no violar las restricciones
+ * de Next.js App Router (route.ts solo exporta handlers HTTP y config).
+ */
+async function processEvolutionPayload(
   payload: EvolutionPayload,
   req: Request
 ): Promise<void> {
