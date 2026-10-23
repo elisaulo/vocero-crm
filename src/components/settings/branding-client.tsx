@@ -41,7 +41,10 @@ function accentVars(s: AccentSet): React.CSSProperties {
 
 export function BrandingClient({
   favicon = null,
+  kicker = "CRM · WhatsApp",
 }: {
+  /** 028 — La etiqueta bajo el logo, la misma que enseña el menú. */
+  kicker?: string;
   /**
    * Logo subido, solo para la vista previa: se sube y se quita en su propia
    * tarjeta. Llega del servidor y no del fetch de abajo a propósito: esa
@@ -213,7 +216,7 @@ export function BrandingClient({
                 <BrandLogo
                   branding={{ name: name.trim() || DEFAULT_BRANDING.name, accent, favicon }}
                 />
-                <span className="kicker mt-2 block">CRM · WhatsApp</span>
+                <span className="kicker mt-2 block">{kicker}</span>
               </div>
               <span className={cn(navItemClass(true), "mt-3")}>
                 <Inbox className="h-[17px] w-[17px] text-brand" strokeWidth={1.8} />

@@ -16,7 +16,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * ediciones. La única diferencia está en `mediaId`, y se explica abajo.
  */
 
-export type CanalDelEvento = "whatsapp" | "instagram" | "messenger";
+export type CanalDelEvento = "whatsapp" | "instagram" | "messenger" | "tiktok";
 
 export type MensajeDelEvento = {
   id: string;
@@ -33,6 +33,23 @@ export type MensajeDelEvento = {
   mimeType?: string | null;
   /** Solo con adjunto. */
   caption?: string | null;
+  /** 031 — Solo con adjunto que trae nombre de archivo (un PDF, casi siempre). */
+  fileName?: string;
+  /** 031 — Solo si `type` es `location`. */
+  location?: UbicacionDelEvento;
+  /** 031 — Solo si `type` es `contacts`: los nombres de las tarjetas. */
+  contacts?: { name: string }[];
+};
+
+/**
+ * 031 — Una ubicación compartida. `name` y `address` solo si Meta los mandó
+ * (un pin suelto no los trae).
+ */
+export type UbicacionDelEvento = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  address?: string;
 };
 
 export type EventoDespacho = {
@@ -44,6 +61,12 @@ export type EventoDespacho = {
     aiEnabled: boolean;
     windowOpen: boolean;
     windowExpiresAt: string | null;
+    /**
+     * 033 — Solo en una conversación de prueba del Laboratorio, y siempre
+     * `true`. La respuesta se guarda y no se envía; el cerebro no debería
+     * tratarla como un cliente (lista de permitidos, seguimiento).
+     */
+    test?: true;
   };
   contact: {
     id: string;
@@ -65,6 +88,10 @@ export type MensajeParaEvento = {
     waMediaId: string | null;
     mimeType: string | null;
     caption: string | null;
+    /** 031 */
+    fileName?: string | null;
+    /** 031 — `media_asset.payload`: la ubicación o las tarjetas tal como llegaron. */
+    payload?: unknown;
   } | null;
 };
 
@@ -83,6 +110,8 @@ export function armarEvento(datos: {
     aiEnabled: boolean;
     windowOpen: boolean;
     windowExpiresAt: Date | null;
+    /** 033 */
+    test?: boolean;
   };
   contact: { id: string; displayName: string; identity: string };
   messages: MensajeParaEvento[];
@@ -101,6 +130,8 @@ export function armarEvento(datos: {
       aiEnabled: datos.conversation.aiEnabled,
       windowOpen: datos.conversation.windowOpen,
       windowExpiresAt: datos.conversation.windowExpiresAt?.toISOString() ?? null,
+      // 033 — Solo cuando aplica, al final: el cuerpo gemelo no cambia.
+      ...(datos.conversation.test ? { test: true as const } : {}),
     },
     contact: {
       id: datos.contact.id,
@@ -114,7 +145,7 @@ export function armarEvento(datos: {
 }
 
 function mensajeDelEvento(m: MensajeParaEvento): MensajeDelEvento {
-  const base = {
+  const evento: MensajeDelEvento = {
     id: m.id,
     at: m.createdAt.toISOString(),
     type: m.type,
@@ -123,14 +154,125 @@ function mensajeDelEvento(m: MensajeParaEvento): MensajeDelEvento {
   };
   // Sin algo que descargar, `mimeType` y `caption` no dicen nada: una
   // ubicación o una tarjeta de contacto no tienen media id.
-  if (!m.media?.waMediaId) return base;
-  return { ...base, mimeType: m.media.mimeType, caption: m.media.caption };
+  if (m.media?.waMediaId) {
+    evento.mimeType = m.media.mimeType;
+    evento.caption = m.media.caption;
+    // 031 — Las llaves nuevas van SOLO cuando aplican, y siempre después de
+    // las de antes: así el cuerpo fijado en la prueba gemela no cambia.
+    if (m.media.fileName) evento.fileName = m.media.fileName;
+  }
+  if (m.type === "location") {
+    const ubicacion = ubicacionDe(m.media?.payload);
+    if (ubicacion) evento.location = ubicacion;
+  }
+  if (m.type === "contacts") {
+    const nombres = nombresDeTarjetas(m.media?.payload);
+    if (nombres.length) evento.contacts = nombres.map((name) => ({ name }));
+  }
+  return evento;
+}
+
+/**
+ * 031 — La ubicación que el webhook de Meta guardó en `media_asset.payload`.
+ * Tolerante: lo que no tenga coordenadas numéricas no es una ubicación.
+ */
+export function ubicacionDe(payload: unknown): UbicacionDelEvento | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.latitude !== "number" || typeof p.longitude !== "number") {
+    return null;
+  }
+  const ubicacion: UbicacionDelEvento = {
+    latitude: p.latitude,
+    longitude: p.longitude,
+  };
+  if (typeof p.name === "string" && p.name.trim()) ubicacion.name = p.name.trim();
+  if (typeof p.address === "string" && p.address.trim()) {
+    ubicacion.address = p.address.trim();
+  }
+  return ubicacion;
+}
+
+/**
+ * 031 — Los nombres de las tarjetas de contacto (`contacts[].name` de Meta):
+ * el nombre con formato o, si falta, el de pila. Las que no traen ninguno se
+ * omiten.
+ */
+export function nombresDeTarjetas(payload: unknown): string[] {
+  if (!Array.isArray(payload)) return [];
+  const nombres: string[] = [];
+  for (const tarjeta of payload) {
+    if (!tarjeta || typeof tarjeta !== "object") continue;
+    const name = (tarjeta as { name?: unknown }).name;
+    if (!name || typeof name !== "object") continue;
+    const n = name as { formatted_name?: unknown; first_name?: unknown };
+    const elegido =
+      typeof n.formatted_name === "string" && n.formatted_name.trim()
+        ? n.formatted_name.trim()
+        : typeof n.first_name === "string" && n.first_name.trim()
+          ? n.first_name.trim()
+          : null;
+    if (elegido) nombres.push(elegido);
+  }
+  return nombres;
+}
+
+/**
+ * 026 — Quien administra el negocio eliminó una conversación: el cerebro tiene
+ * que olvidarla.
+ *
+ * Viaja a la MISMA URL y con la MISMA firma que un despacho. Se distingue por
+ * `type`, que un despacho no lleva: quien no conozca este evento ve un cuerpo
+ * sin `messages` y lo rechaza, que es inofensivo — no se reintenta.
+ *
+ * No lleva el contenido de lo borrado, solo con qué encontrarlo. `identity` va
+ * porque un cerebro suele indexar su memoria por persona, no por el id de
+ * conversación del CRM.
+ */
+export type EventoOlvido = {
+  type: "conversation.deleted";
+  eventId: string;
+  organization: { id: string; slug: string | null };
+  conversation: { id: string; channel: CanalDelEvento };
+  contact: { id: string; identity: string };
+  deletedAt: string;
+};
+
+export const TIPO_OLVIDO = "conversation.deleted" as const;
+
+/**
+ * El orden de las claves es contrato: se firma el JSON tal como sale de aquí.
+ * Es el mismo cuerpo que manda Vocero Cloud, y la prueba gemela de `nea-agent`
+ * (`tests/test_olvido.py`) lo tiene copiado byte a byte, igual que
+ * `tests/unit/olvido-contrato.test.ts` aquí.
+ */
+export function construirEventoOlvido(datos: {
+  eventId: string;
+  organization: { id: string; slug: string | null };
+  conversation: { id: string; channel: CanalDelEvento };
+  contact: { id: string; identity: string };
+  deletedAt: Date;
+}): EventoOlvido {
+  return {
+    type: TIPO_OLVIDO,
+    eventId: datos.eventId,
+    organization: {
+      id: datos.organization.id,
+      slug: datos.organization.slug,
+    },
+    conversation: {
+      id: datos.conversation.id,
+      channel: datos.conversation.channel,
+    },
+    contact: { id: datos.contact.id, identity: datos.contact.identity },
+    deletedAt: datos.deletedAt.toISOString(),
+  };
 }
 
 export const CABECERA_FIRMA = "x-vocero-signature";
 export const CABECERA_DISPATCH = "x-vocero-dispatch-id";
 export const CABECERA_ORG = "x-vocero-organization";
-/** Reservada para eventos que no son un turno. La raíz aún no manda ninguno. */
+/** Para los eventos que no son un turno: hoy, `conversation.deleted` (026). */
 export const CABECERA_EVENTO = "x-vocero-event";
 
 /**

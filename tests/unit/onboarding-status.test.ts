@@ -16,6 +16,9 @@ vi.mock("@/lib/ai/provider", async (importOriginal) => ({
   estadoIaDe,
 }));
 
+const getBrainHealth = vi.hoisted(() => vi.fn());
+vi.mock("@/server/bot/status", () => ({ getBrainHealth }));
+
 import { onboardingStatus } from "@/server/onboarding/status";
 import { verifyCalendar, hasWeeklyHours } from "@/server/onboarding/calendar-verifiers";
 
@@ -42,6 +45,10 @@ const paso = async (key: string) =>
 beforeEach(() => {
   rows.clear();
   vi.stubEnv("AGENDA", "");
+  vi.stubEnv("BRAIN_DISPATCH_URL", "");
+  vi.stubEnv("BRAIN_HEALTH_URL", "");
+  getBrainHealth.mockReset();
+  getBrainHealth.mockResolvedValue(null);
   estadoIaDe.mockResolvedValue({ activa: false, motivo: "sin_configurar" });
   rows.set(schema.agentProfile, [{ name: "Asistente", instructions: null, enabled: false }]);
 });
@@ -55,6 +62,7 @@ describe("una instancia recién instalada", () => {
       ["profile", "pending"],
       ["ai", "pending"],
       ["whatsapp", "pending"],
+      ["brain", "pending"],
       ["calendar", "not_applicable"],
     ]);
     expect(status.steps.find((s) => s.key === "calendar")?.href).toBeNull();
@@ -69,7 +77,44 @@ describe("una instancia recién instalada", () => {
       "/settings/ai",
       "/settings/whatsapp",
       null,
+      null,
     ]);
+  });
+});
+
+describe("036 — «Conecta tu agente»", () => {
+  const LLAVE = "k".repeat(32);
+
+  it("sin BRAIN_DISPATCH_URL está pendiente y dice qué poner, sin «problema»", async () => {
+    const s = await paso("brain");
+    expect(s).toMatchObject({ status: "pending", problem: null });
+    expect(s?.nextAction).toMatch(/BRAIN_DISPATCH_URL/);
+    expect(getBrainHealth).not.toHaveBeenCalled();
+  });
+
+  it("sin BOT_API_KEY lo dice como problema", async () => {
+    vi.stubEnv("BRAIN_DISPATCH_URL", "http://nea:8000/vocero/dispatch");
+    vi.stubEnv("BOT_API_KEY", "");
+    expect((await paso("brain"))?.problem).toMatch(/BOT_API_KEY/);
+  });
+
+  it("configurado y con el /health en línea → listo; le pregunta al /health del mismo origen", async () => {
+    vi.stubEnv("BRAIN_DISPATCH_URL", "http://nea:8000/vocero/dispatch");
+    vi.stubEnv("BOT_API_KEY", LLAVE);
+    getBrainHealth.mockResolvedValue({ reachable: true, host: "nea:8000", checkedAt: "", version: "2.0.0" });
+    const s = await paso("brain");
+    expect(s).toMatchObject({ status: "ready", problem: null });
+    expect(s?.nextAction).toContain("2.0.0");
+    expect(getBrainHealth).toHaveBeenCalledWith("http://nea:8000/health");
+  });
+
+  it("configurado pero el /health no contesta → pendiente con el motivo", async () => {
+    vi.stubEnv("BRAIN_DISPATCH_URL", "http://nea:8000/vocero/dispatch");
+    vi.stubEnv("BOT_API_KEY", LLAVE);
+    getBrainHealth.mockResolvedValue({ reachable: false, host: "nea:8000", checkedAt: "", problem: "network" });
+    const s = await paso("brain");
+    expect(s?.status).toBe("pending");
+    expect(s?.problem).toMatch(/no responde/);
   });
 });
 

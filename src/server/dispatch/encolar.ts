@@ -5,8 +5,12 @@ import { iniciarWorker, programarTanda } from "@/server/dispatch/worker";
 
 /**
  * 021 — El enganche de la ingesta: un mensaje entrante real ya está en la
- * bandeja y hay un cerebro configurado, así que su turno se ENCOLA en vez de
- * pensarse aquí.
+ * bandeja y hay un cerebro configurado, así que su turno se ENCOLA.
+ *
+ * 036 — Desde que el CRM no trae agente, este es el único camino por el que
+ * alguien contesta, y el interruptor de la pantalla Agente
+ * (`agent_profile.enabled`) decide si se toma: apagado, la conversación
+ * queda en la bandeja para una persona.
  *
  * Nunca lanza. Corre al final de la ingesta, dentro del `after()` del webhook:
  * una excepción aquí no puede costarle a ese payload los mensajes que vengan
@@ -14,7 +18,8 @@ import { iniciarWorker, programarTanda } from "@/server/dispatch/worker";
  */
 export async function despacharAlCerebro(
   conversationId: string,
-  organizationId: string
+  organizationId: string,
+  messageId: string
 ): Promise<void> {
   try {
     const [conv] = await getDb()
@@ -40,7 +45,20 @@ export async function despacharAlCerebro(
     // camino.
     if (!conv.aiEnabled || conv.handoffAt || conv.isTest) return;
 
-    const { notBefore } = await encolarDespacho({ organizationId, conversationId });
+    const [perfil] = await getDb()
+      .select({ enabled: schema.agentProfile.enabled })
+      .from(schema.agentProfile)
+      .where(eq(schema.agentProfile.organizationId, organizationId))
+      .limit(1);
+    if (!perfil?.enabled) return;
+
+    // 025 — El despacho anota qué entrante lo provoca: es lo que le debe al
+    // cerebro, aunque después la conversación tenga una respuesta.
+    const { notBefore } = await encolarDespacho({
+      organizationId,
+      conversationId,
+      messageIds: [messageId],
+    });
     iniciarWorker();
     // Que despierte justo cuando la ventana venza, no en su siguiente barrido.
     programarTanda(notBefore);

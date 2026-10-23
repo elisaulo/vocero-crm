@@ -7,7 +7,8 @@ import {
 } from "./status";
 
 /**
- * La guía de inicio: tres pasos (cuatro con la agenda) y nada más (issue #86).
+ * La guía de inicio: cuatro pasos (cinco con la agenda) y nada más (issue #86).
+ * 036 — «Conecta tu agente» es opcional: sin él, Vocero es una bandeja manual.
  *
  * Es lo primero que ve quien instala Vocero: configurar el agente, vincular
  * el proveedor de IA, conectar el número y, si la agenda existe en esta
@@ -20,14 +21,19 @@ import {
  * plataforma (modelo fijado por soporte, agencias, planes).
  */
 export type GuideStep = {
-  key: "agent" | "ai" | "whatsapp" | "calendar";
+  key: "agent" | "ai" | "whatsapp" | "brain" | "calendar";
   title: string;
   description: string;
   done: boolean;
+  /** 036 — En «Conecta tu agente» es externo (la receta del par): se hace en
+   *  el entorno, no en una pantalla. */
   href: string;
   cta: string;
   /** Lo que falta, cuando no es lo obvio del paso. */
   hint: string | null;
+  /** 036 — No cuenta para `complete`: sin cerebro, Vocero es una bandeja
+   *  manual, y eso es un producto válido. */
+  optional?: boolean;
 };
 
 export type Guide = {
@@ -35,7 +41,13 @@ export type Guide = {
   complete: boolean;
   /** El agente ya está encendido. */
   enabled: boolean;
+  /** 036 — Hay un cerebro conectado y sano: tiene sentido encender. */
+  brainConnected: boolean;
 };
+
+/** 036 — A dónde lleva «Conecta tu agente»: la receta del par. */
+export const GUIA_DEL_PAR =
+  "https://github.com/kevinrivm/vocero-crm/blob/main/docs/migrar-a-2.0.md#el-par-crm--nea";
 
 const ready = (s: ReadinessStep | undefined) => s?.status === "ready";
 
@@ -47,6 +59,7 @@ export function guideFrom(status: OnboardingStatus): Guide {
   const ai = step("ai");
   const whatsapp = step("whatsapp");
   const calendar = step("calendar");
+  const brain = step("brain");
 
   const steps: GuideStep[] = [
     {
@@ -79,6 +92,17 @@ export function guideFrom(status: OnboardingStatus): Guide {
       cta: "Conectar WhatsApp",
       hint: whatsapp?.problem ?? null,
     },
+    {
+      key: "brain",
+      title: "Conecta tu agente",
+      description:
+        "Vocero no trae agente: contesta el que conectas al lado (Nea, o el tuyo). Sin agente, Vocero funciona como bandeja manual y contestas tú.",
+      done: ready(brain),
+      href: GUIA_DEL_PAR,
+      cta: "Cómo conectarlo",
+      hint: ready(brain) ? null : (brain?.problem ?? brain?.nextAction ?? null),
+      optional: true,
+    },
   ];
   // Sin agenda en esta instancia el paso no existe: pintarlo «no aplica»
   // sería justo el tipo de ruido que la guía evita.
@@ -94,7 +118,12 @@ export function guideFrom(status: OnboardingStatus): Guide {
       hint: calendar.problem,
     });
   }
-  return { steps, complete: steps.every((s) => s.done), enabled: status.enabled };
+  return {
+    steps,
+    complete: steps.every((s) => s.done || s.optional),
+    enabled: status.enabled,
+    brainConnected: ready(brain),
+  };
 }
 
 export async function guideStatus(organizationId: string): Promise<Guide> {
@@ -118,5 +147,6 @@ export async function guideFirst(
 ): Promise<boolean> {
   if (!canConfigure(session.role)) return false;
   const guide = await guideStatus(session.organizationId);
-  return !guide.complete || !guide.enabled;
+  // 036 — Una bandeja manual (sin cerebro) no se queda atrapada en la guía.
+  return !guide.complete || (guide.brainConnected && !guide.enabled);
 }

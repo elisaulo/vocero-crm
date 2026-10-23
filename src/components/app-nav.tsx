@@ -44,6 +44,7 @@ export function AppNav({
   theme,
   commit,
   agenda = false,
+  kicker = "CRM · WhatsApp",
   open = false,
   onClose,
 }: {
@@ -57,6 +58,8 @@ export function AppNav({
    * caso llega con `verified: false`, y la insignia lo dice.
    */
   commit?: ResolvedCommit;
+  /** 028 — La etiqueta bajo el logo; la decide el servidor por los canales. */
+  kicker?: string;
   /**
    * 015 — ¿hay agenda en esta instancia? Viene del servidor por prop y no se
    * deduce de los datos: una instancia con la agenda encendida pero sin citas
@@ -148,7 +151,7 @@ export function AppNav({
         </button>
         <div className="min-w-0">
           <BrandLogo branding={branding} />
-          <span className="kicker mt-2 block">CRM · WhatsApp</span>
+          <span className="kicker mt-2 block">{kicker}</span>
         </div>
       </div>
 

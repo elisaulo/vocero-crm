@@ -7,6 +7,8 @@ node_modules
 coverage
 .playwright-mcp
 docs
+# 035: el OpenAPI se importa en /api/bot/openapi.json y entra al build.
+!docs/openapi.json
 specs
 memory
 tests

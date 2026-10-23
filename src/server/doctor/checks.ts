@@ -6,7 +6,7 @@ import { scoped } from "@/lib/db/tenant";
 import { envSchema, safeParseEnv, type Env } from "@/lib/env";
 import { leerConfigDespacho } from "@/server/brains/config";
 import { GENERATED_SECRETS, PLACEHOLDER_PREFIX } from "@/server/doctor/init-env";
-import { probeMediaDir } from "@/server/media-dir";
+import { probeBucket, probeMediaDir } from "@/server/media-dir";
 import { testConnection, type ConnectionCheck } from "@/server/whatsapp/connect";
 import {
   getCredentialsByOrg,
@@ -582,4 +582,45 @@ export function summarize(results: CheckResult[]) {
   const count = (status: CheckStatus) => results.filter((r) => r.status === status).length;
   const fail = count("fail");
   return { ok: count("ok"), fail, warn: count("warn"), skip: count("skip"), exitCode: fail > 0 ? 1 : 0 };
+}
+
+/**
+ * 037 — Con `MEDIA_STORE=bucket`, el mismo sondeo que el arranque: escribir y
+ * borrar un objeto en el bucket. Sin la bandera no se menciona (constitución
+ * II.3.1: apagado, el conector no existe). Solo enseña el host, nunca llaves.
+ */
+export async function checkMediaBucket(env: Record<string, string | undefined>): Promise<CheckResult | null> {
+  if ((env.MEDIA_STORE ?? "").trim().toLowerCase() !== "bucket") return null;
+  const label = "Bucket de adjuntos";
+  const { MEDIA_BUCKET_ENDPOINT: endpoint, MEDIA_BUCKET_NAME: bucket, MEDIA_BUCKET_KEY_ID: keyId, MEDIA_BUCKET_SECRET: secret } = env;
+  if (!endpoint || !bucket || !keyId || !secret) {
+    return {
+      status: "fail",
+      label,
+      detail: "MEDIA_STORE=bucket pero faltan variables del bucket: los adjuntos se guardan en disco",
+      fix: "define MEDIA_BUCKET_ENDPOINT, MEDIA_BUCKET_NAME, MEDIA_BUCKET_KEY_ID y MEDIA_BUCKET_SECRET (y MEDIA_BUCKET_REGION si no es `auto`), o quita MEDIA_STORE",
+    };
+  }
+  let host: string;
+  try {
+    const url = new URL(endpoint);
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("protocolo");
+    host = url.host;
+  } catch {
+    return { status: "fail", label, detail: "MEDIA_BUCKET_ENDPOINT no es una URL http(s)", fix: "p. ej. http://minio:9000 o https://<cuenta>.r2.cloudflarestorage.com" };
+  }
+  const r = await probeBucket({
+    endpoint: endpoint.replace(/\/+$/, ""),
+    bucket,
+    accessKeyId: keyId,
+    secretAccessKey: secret,
+    region: env.MEDIA_BUCKET_REGION || "auto",
+  });
+  if (r.writable) return { status: "ok", label, detail: `${host}/${bucket} acepta escrituras` };
+  return {
+    status: "fail",
+    label,
+    detail: `${host}/${bucket} no acepta escrituras (${r.code}): los adjuntos se guardan en disco mientras tanto`,
+    fix: "revisa que el bucket exista, la llave y su permiso de escritura, y la región (MinIO y R2: `auto` o `us-east-1`)",
+  };
 }

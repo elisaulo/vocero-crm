@@ -252,9 +252,10 @@ export function AiClient() {
         <CardHeader>
           <CardTitle>Proveedor de IA</CardTitle>
           <CardDescription>
-            Con qué piensa tu agente: el proveedor, el modelo y la llave que paga
-            el consumo. La llave se guarda cifrada y no vuelve a mostrarse
-            completa.
+            Con esta llave piensa tu agente (a través del CRM: no hace falta
+            copiarla a tu agente) y el juez del Laboratorio. Aquí eliges el
+            proveedor, el modelo y la llave que paga el consumo. La llave se
+            guarda cifrada y no vuelve a mostrarse completa.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -276,8 +277,8 @@ export function AiClient() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Todavía no hay proveedor de IA: tu agente no puede contestar y los
-              mensajes llegan a la bandeja para que los atienda una persona.
+              Todavía no hay proveedor de IA: tu agente no tiene con qué pensar y
+              los mensajes llegan a la bandeja para que los atienda una persona.
             </p>
           )}
 
@@ -355,8 +356,8 @@ export function AiClient() {
                 </datalist>
               )}
               <p className="text-xs text-muted-foreground">
-                El mismo modelo conversa con tus clientes y juzga en el
-                Laboratorio.
+                Tu agente lo usa a través del CRM para conversar con tus
+                clientes, y el juez del Laboratorio para calificar.
               </p>
             </div>
 

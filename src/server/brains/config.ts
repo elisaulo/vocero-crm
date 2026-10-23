@@ -3,11 +3,10 @@
  * `BRAIN_DISPATCH_URL` (a dónde) y `BOT_API_KEY` (con qué se firma, y con qué
  * contesta el cerebro por `/api/bot/*`).
  *
- * Activo, el despacho silencia al agente incluido: los dos caminos son
- * excluyentes (`server/ai/trigger.ts`). Mal configurado NO está activo: todo
- * se comporta como si la variable no existiera y la tarjeta «Quién responde»
- * dice qué corregir. Preferible a dejar la instancia muda por una URL mal
- * escrita.
+ * 036 — Es el único camino por el que alguien contesta (el CRM no trae
+ * agente), y además hace falta el interruptor del Agente encendido. Mal
+ * configurado NO está activo: la instancia queda como bandeja manual y la
+ * tarjeta «Quién responde» dice qué corregir.
  *
  * A diferencia de la edición cloud, aquí no se exige una URL pública: la pone
  * quien instala, no un tercero, y lo normal es la dirección interna del
@@ -58,4 +57,17 @@ export function leerConfigDespacho(env: Entorno = process.env): ConfigDespacho {
 /** El CRM está empujando turnos a un cerebro. */
 export function despachoActivo(): boolean {
   return leerConfigDespacho().active;
+}
+
+/**
+ * 036 — A dónde preguntarle al cerebro si está sano: `BRAIN_HEALTH_URL` o, sin
+ * ella, el `/health` del mismo origen del despacho (lo que sirve Nea). `null`
+ * si no hay ninguna de las dos.
+ */
+export function urlSaludCerebro(env: Entorno = process.env): string | null {
+  const directa = env.BRAIN_HEALTH_URL?.trim();
+  if (directa) return directa;
+  const despacho = leerConfigDespacho(env);
+  if (!despacho.active) return null;
+  return new URL("/health", despacho.url).toString();
 }

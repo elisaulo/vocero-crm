@@ -4,6 +4,8 @@ import {
   clasificarRespuesta,
   firmaValida,
   firmarCuerpo,
+  nombresDeTarjetas,
+  ubicacionDe,
   CABECERA_DISPATCH,
   CABECERA_EVENTO,
   CABECERA_FIRMA,
@@ -126,6 +128,114 @@ describe("el evento de despacho — la forma es contrato", () => {
       "lastMessageAt",
     ]);
     expect(Object.keys(evento().contact)).toEqual(["id", "displayName", "identity"]);
+  });
+});
+
+describe("033 — conversation.test, solo en las del Laboratorio", () => {
+  it("una conversación de prueba lleva test: true, al final de conversation", () => {
+    const e = armarEvento({
+      ...datosMinimos(),
+      conversation: { ...datosMinimos().conversation, test: true },
+    });
+    expect(Object.keys(e.conversation).at(-1)).toBe("test");
+    expect(e.conversation.test).toBe(true);
+  });
+
+  it("una real no lleva la llave (el cuerpo gemelo no cambia)", () => {
+    const e = armarEvento({
+      ...datosMinimos(),
+      conversation: { ...datosMinimos().conversation, test: false },
+    });
+    expect("test" in e.conversation).toBe(false);
+    expect(JSON.stringify(evento())).toBe(CUERPO);
+  });
+});
+
+describe("031 — lo que el webhook le daba al cerebro, ahora en el despacho", () => {
+  function unMensaje(m: Partial<Parameters<typeof armarEvento>[0]["messages"][number]>) {
+    return armarEvento({
+      ...datosMinimos(),
+      messages: [
+        {
+          id: "msg_9",
+          createdAt: new Date("2026-10-19T05:10:03.000Z"),
+          type: "text",
+          text: null,
+          media: null,
+          ...m,
+        },
+      ],
+    }).messages[0]!;
+  }
+
+  it("un PDF con nombre lleva fileName, después de caption", () => {
+    const m = unMensaje({
+      type: "document",
+      media: {
+        waMediaId: "555",
+        mimeType: "application/pdf",
+        caption: null,
+        fileName: "cotizacion.pdf",
+      },
+    });
+    expect(Object.keys(m)).toEqual([
+      "id", "at", "type", "text", "mediaId", "mimeType", "caption", "fileName",
+    ]);
+    expect(m.fileName).toBe("cotizacion.pdf");
+  });
+
+  it("un adjunto sin nombre no lleva fileName (el cuerpo gemelo no cambia)", () => {
+    const m = unMensaje({
+      type: "image",
+      media: { waMediaId: "1", mimeType: "image/jpeg", caption: null, fileName: null },
+    });
+    expect("fileName" in m).toBe(false);
+  });
+
+  it("una ubicación lleva sus coordenadas, y nombre y dirección si vinieron", () => {
+    const m = unMensaje({
+      type: "location",
+      media: {
+        waMediaId: null,
+        mimeType: null,
+        caption: null,
+        payload: { latitude: 19.43, longitude: -99.13, name: "Oficina", address: " Reforma 1 " },
+      },
+    });
+    expect(Object.keys(m)).toEqual(["id", "at", "type", "text", "mediaId", "location"]);
+    expect(m.location).toEqual({
+      latitude: 19.43,
+      longitude: -99.13,
+      name: "Oficina",
+      address: "Reforma 1",
+    });
+    expect(ubicacionDe({ latitude: 1, longitude: 2 })).toEqual({ latitude: 1, longitude: 2 });
+    expect(ubicacionDe({ latitude: "19", longitude: 2 })).toBeNull();
+    expect(ubicacionDe(null)).toBeNull();
+  });
+
+  it("una tarjeta de contacto lleva los nombres; sin nombres, no lleva la llave", () => {
+    const m = unMensaje({
+      type: "contacts",
+      media: {
+        waMediaId: null,
+        mimeType: null,
+        caption: null,
+        payload: [
+          { name: { formatted_name: "Luis Gómez", first_name: "Luis" } },
+          { name: { first_name: "Marta" } },
+          { name: {} },
+          "basura",
+        ],
+      },
+    });
+    expect(m.contacts).toEqual([{ name: "Luis Gómez" }, { name: "Marta" }]);
+    expect(nombresDeTarjetas([{ name: {} }])).toEqual([]);
+    const vacia = unMensaje({
+      type: "contacts",
+      media: { waMediaId: null, mimeType: null, caption: null, payload: [] },
+    });
+    expect("contacts" in vacia).toBe(false);
   });
 });
 

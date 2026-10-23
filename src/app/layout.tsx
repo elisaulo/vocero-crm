@@ -5,6 +5,8 @@ import { accentCssVariables, DEFAULT_BRANDING } from "@/lib/branding";
 import { faviconHref } from "@/lib/favicon";
 import { normalizeThemePreference, THEME_COOKIE } from "@/lib/theme";
 import { getBranding } from "@/server/branding";
+import { enabledChannels } from "@/server/channels/enabled";
+import { productName } from "@/lib/channels";
 import "./globals.css";
 
 // Las tres voces de la marca, las mismas de vocerocrm.com. next/font las
@@ -32,9 +34,10 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding().catch(() => DEFAULT_BRANDING);
+  const producto = productName([...enabledChannels()]);
   return {
-    title: `${branding.name} — CRM de WhatsApp`,
-    description: "CRM de WhatsApp con agente de IA y Laboratorio de auto-evaluación",
+    title: `${branding.name} — ${producto}`,
+    description: `${producto} con agente de IA y Laboratorio de auto-evaluación`,
     // El `?v=` cambia con la marca: los navegadores guardan el favicon con una
     // insistencia notable y, sin eso, el logo nuevo tarda días en aparecer.
     icons: { icon: faviconHref(branding) },

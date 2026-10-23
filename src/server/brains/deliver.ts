@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import {
@@ -6,14 +6,18 @@ import {
   clasificarRespuesta,
   firmarCuerpo,
   CABECERA_DISPATCH,
+  CABECERA_EVENTO,
   CABECERA_FIRMA,
   CABECERA_ORG,
+  type EventoOlvido,
   type EventoDespacho,
   type MensajeParaEvento,
   type ResultadoEntrega,
 } from "@/server/brains/contract";
+import { leerConfigDespacho } from "@/server/brains/config";
 import type { FilaDespacho } from "@/server/dispatch/outbox";
-import { WINDOW_MS, isWindowOpen } from "@/server/inbox/window";
+import { isWindowOpen, windowExpiresAt } from "@/server/inbox/window";
+import { windowMsFor } from "@/server/channels/capabilities";
 
 /**
  * 021 — Entrega de un despacho al cerebro: leer la ráfaga, armar el evento y
@@ -28,6 +32,55 @@ export const TIMEOUT_ENTREGA_MS = 20_000;
 const VENTANA_DE_MENSAJES = 20;
 
 /**
+ * Las columnas de un mensaje que el evento necesita, con su adjunto. Función y
+ * no constante: el esquema no se toca al importar el módulo.
+ */
+function columnasDelMensaje() {
+  return {
+    id: schema.message.id,
+    direction: schema.message.direction,
+    type: schema.message.type,
+    text: schema.message.text,
+    createdAt: schema.message.createdAt,
+    waMediaId: schema.mediaAsset.waMediaId,
+    mimeType: schema.mediaAsset.mimeType,
+    caption: schema.mediaAsset.caption,
+    fileName: schema.mediaAsset.fileName,
+    payload: schema.mediaAsset.payload,
+    assetId: schema.mediaAsset.id,
+  };
+}
+
+function paraEvento(m: {
+  id: string;
+  createdAt: Date;
+  type: string;
+  text: string | null;
+  waMediaId: string | null;
+  mimeType: string | null;
+  caption: string | null;
+  fileName: string | null;
+  payload: unknown;
+  assetId: string | null;
+}): MensajeParaEvento {
+  return {
+    id: m.id,
+    createdAt: m.createdAt,
+    type: m.type,
+    text: m.text,
+    media: m.assetId
+      ? {
+          waMediaId: m.waMediaId,
+          mimeType: m.mimeType,
+          caption: m.caption,
+          fileName: m.fileName,
+          payload: m.payload,
+        }
+      : null,
+  };
+}
+
+/**
  * La ráfaga = lo que el cliente dijo y todavía no se le ha respondido.
  *
  * Se delimita por el último mensaje SALIENTE de la conversación, no por las
@@ -35,24 +88,25 @@ const VENTANA_DE_MENSAJES = 20;
  * mensaje, así que el primero de la ráfaga podía quedar unos milisegundos
  * ANTES y caerse del evento. Delimitar por la conversación es además robusto
  * frente a relojes desalineados.
+ *
+ * 025 — `debidos` son los ids que el despacho tiene anotados
+ * (`dispatch.message_ids`). El corte por el último saliente confunde «sin
+ * responder» con «sin entregar»: lo que el cliente escribe mientras el cerebro
+ * piensa queda DETRÁS de la respuesta a lo anterior, y ese mensaje se quedaba
+ * sin despacho. Un debido viaja aunque tenga una respuesta del agente después.
+ *
+ * Lo que sí lo salda es que conteste una PERSONA (cualquier saliente que no
+ * sea del agente): ese mensaje ya tuvo quien lo atendiera, y mandárselo al
+ * cerebro sería contestarle dos veces al cliente.
  */
 export async function rafagaDe(
   organizationId: string,
-  conversationId: string
+  conversationId: string,
+  debidos: readonly string[] = []
 ): Promise<MensajeParaEvento[]> {
   const db = getDb();
   const filas = await db
-    .select({
-      id: schema.message.id,
-      direction: schema.message.direction,
-      type: schema.message.type,
-      text: schema.message.text,
-      createdAt: schema.message.createdAt,
-      waMediaId: schema.mediaAsset.waMediaId,
-      mimeType: schema.mediaAsset.mimeType,
-      caption: schema.mediaAsset.caption,
-      assetId: schema.mediaAsset.id,
-    })
+    .select(columnasDelMensaje())
     .from(schema.message)
     .leftJoin(
       schema.mediaAsset,
@@ -73,25 +127,52 @@ export async function rafagaDe(
     (idx, m, i) => (m.direction === "out" ? i : idx),
     -1
   );
-  return ordenados
+  const rafaga = ordenados
     .slice(ultimaSalida + 1)
-    .filter((m) => m.direction === "in")
-    .map((m) => ({
-      id: m.id,
-      createdAt: m.createdAt,
-      type: m.type,
-      text: m.text,
-      media: m.assetId
-        ? { waMediaId: m.waMediaId, mimeType: m.mimeType, caption: m.caption }
-        : null,
-    }));
+    .filter((m) => m.direction === "in");
+
+  const enRafaga = new Set(rafaga.map((m) => m.id));
+  const faltan = [...new Set(debidos)].filter((id) => !enRafaga.has(id));
+  if (!faltan.length) return rafaga.map(paraEvento);
+
+  // La comparación de horas se hace en Postgres, que guarda microsegundos: en
+  // JS dos mensajes del mismo milisegundo no tienen orden.
+  const atrasados = await db
+    .select(columnasDelMensaje())
+    .from(schema.message)
+    .leftJoin(
+      schema.mediaAsset,
+      eq(schema.mediaAsset.id, schema.message.mediaAssetId)
+    )
+    .where(
+      scoped(
+        schema.message.organizationId,
+        organizationId,
+        and(
+          eq(schema.message.conversationId, conversationId),
+          eq(schema.message.direction, "in"),
+          inArray(schema.message.id, faltan),
+          sql`${schema.message.createdAt} > coalesce((
+            select max(s.created_at) from message s
+            where s.organization_id = ${organizationId}
+              and s.conversation_id = ${conversationId}
+              and s.direction = 'out'
+              and s.ai_generated = false
+          ), '-infinity'::timestamp)`
+        )
+      )
+    )
+    .orderBy(schema.message.createdAt);
+  // Los atrasados son, por definición, anteriores al último saliente; la
+  // ráfaga, posterior. Concatenar ya los deja en orden.
+  return [...atrasados, ...rafaga].map(paraEvento);
 }
 
 /**
  * Pura: ¿la ráfaga de ahora trae algo que el evento entregado no llevaba?
  *
- * Un mensaje que entra mientras su despacho está en vuelo no extiende la fila
- * (el cerebro ya tiene el evento), así que al entregar se vuelve a mirar: si
+ * Un mensaje que entra mientras su despacho está en vuelo no viaja en ese
+ * evento (el cerebro ya lo tiene), así que al entregar se vuelve a mirar: si
  * hay algo nuevo, se encola otro despacho. Se compara por id y no por hora por
  * lo mismo que el lease: microsegundos contra milisegundos.
  */
@@ -99,14 +180,25 @@ export function hayMensajesSinDespachar(
   entregados: readonly string[],
   rafagaActual: readonly { id: string }[]
 ): boolean {
+  return sinDespachar(entregados, rafagaActual).length > 0;
+}
+
+/** Pura: cuáles. Son los ids que el despacho siguiente lleva anotados. */
+export function sinDespachar(
+  entregados: readonly string[],
+  rafagaActual: readonly { id: string }[]
+): string[] {
   const vistos = new Set(entregados);
-  return rafagaActual.some((m) => !vistos.has(m.id));
+  return rafagaActual.filter((m) => !vistos.has(m.id)).map((m) => m.id);
 }
 
 /**
- * Arma el evento normalizado desde la base. `null` si ya no hay turno que
- * entregar: la conversación o el contacto no existen, o la ráfaga está vacía
- * (alguien contestó a mano durante la ventana).
+ * Arma el evento normalizado desde la base. `null` si la conversación o el
+ * contacto ya no existen.
+ *
+ * 025 — Puede salir con `messages` vacío: una persona contestó a mano dentro
+ * de la ventana y ya no se debe nada. Ese evento no se entrega; quien llama lo
+ * descarta.
  */
 export async function construirEvento(
   fila: FilaDespacho
@@ -145,8 +237,11 @@ export async function construirEvento(
     .limit(1);
   if (!contact) return null;
 
-  const messages = await rafagaDe(fila.organizationId, conv.id);
-  if (messages.length === 0) return null;
+  const messages = await rafagaDe(
+    fila.organizationId,
+    conv.id,
+    fila.messageIds ?? []
+  );
 
   return armarEvento({
     dispatchId: fila.id,
@@ -155,10 +250,17 @@ export async function construirEvento(
       id: conv.id,
       channel: conv.channel,
       aiEnabled: conv.aiEnabled,
-      windowOpen: isWindowOpen(conv.lastInboundAt),
-      windowExpiresAt: conv.lastInboundAt
-        ? new Date(conv.lastInboundAt.getTime() + WINDOW_MS)
-        : null,
+      // 022: la ventana es la del canal (48 h en TikTok).
+      windowOpen: isWindowOpen(
+        conv.lastInboundAt,
+        new Date(),
+        windowMsFor(conv.channel)
+      ),
+      windowExpiresAt: windowExpiresAt(
+        conv.lastInboundAt,
+        windowMsFor(conv.channel)
+      ),
+      test: conv.isTest,
     },
     contact: {
       id: contact.id,
@@ -216,6 +318,70 @@ export async function entregar(
         ? `el cerebro no contestó en ${Math.round((opts.timeoutMs ?? TIMEOUT_ENTREGA_MS) / 1000)} s`
         : "no se pudo conectar con el cerebro",
     };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 026 — Lo que ve quien eliminó: si el cerebro confirmó que olvidó. */
+export type ResultadoOlvido = "no_aplica" | "avisado" | "sin_confirmar";
+
+/**
+ * No se le hace esperar a quien elimina lo que espera un despacho: quien acusa
+ * recibo de un borrado solo tiene que guardarlo, no pensar una respuesta.
+ */
+export const TIMEOUT_OLVIDO_MS = 8000;
+
+/**
+ * 026 — Le avisa al cerebro que una conversación se eliminó.
+ *
+ * Un solo intento, sin cola. El borrado en el CRM ya ocurrió y no depende de
+ * esto, y el contrato le pide al cerebro tratar un `conversation.id` nuevo
+ * para la misma persona como una conversación nueva — así un aviso perdido no
+ * deja memoria en uso, solo guardada hasta que esa persona vuelva a escribir.
+ *
+ * Sin despacho configurado no hay a quién avisar: el agente incluido no guarda
+ * nada aparte, su memoria ERAN los mensajes. Nunca lanza.
+ */
+export async function avisarOlvido(
+  evento: EventoOlvido,
+  opts: {
+    destino?: { url: string; secret: string } | null;
+    timeoutMs?: number;
+    fetchImpl?: typeof fetch;
+  } = {}
+): Promise<ResultadoOlvido> {
+  const config = leerConfigDespacho();
+  const destino =
+    opts.destino !== undefined
+      ? opts.destino
+      : config.active
+        ? { url: config.url, secret: config.secret }
+        : null;
+  if (!destino) return "no_aplica";
+
+  // Se serializa UNA vez y se firma ese string, igual que un despacho.
+  const cuerpo = JSON.stringify(evento);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? TIMEOUT_OLVIDO_MS);
+  try {
+    const res = await (opts.fetchImpl ?? fetch)(destino.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [CABECERA_FIRMA]: firmarCuerpo(cuerpo, destino.secret),
+        [CABECERA_EVENTO]: evento.type,
+        [CABECERA_ORG]: evento.organization.slug ?? evento.organization.id,
+      },
+      redirect: "manual",
+      cache: "no-store",
+      body: cuerpo,
+      signal: controller.signal,
+    });
+    await res.body?.cancel().catch(() => {});
+    return res.status >= 200 && res.status < 300 ? "avisado" : "sin_confirmar";
+  } catch {
+    return "sin_confirmar";
   } finally {
     clearTimeout(timer);
   }

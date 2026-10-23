@@ -3,15 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Power } from "lucide-react";
-import type { Guide } from "@/server/onboarding/guide";
+import { ArrowRight, ArrowUpRight, Check, Inbox, Power } from "lucide-react";
+import type { Guide, GuideStep } from "@/server/onboarding/guide";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 /**
  * La primera pantalla (issue #86): los pasos con su avance y, al final, el
  * botón que enciende el agente. Todo lo que afirma viene del servidor
  * (`guide`); aquí solo se pinta y se enciende.
+ *
+ * 036 — «Conecta tu agente» es opcional y lleva a una guía externa (el
+ * cerebro se conecta en el entorno, no en una pantalla). Sin agente conectado
+ * la tarjeta final no ofrece encender nada: Vocero es una bandeja manual.
  */
 export function OnboardingClient({
   guide,
@@ -25,7 +30,13 @@ export function OnboardingClient({
   const [error, setError] = useState("");
   const total = guide.steps.length;
   const done = guide.steps.filter((s) => s.done).length;
-  const current = guide.steps.find((s) => !s.done)?.key ?? null;
+  // Los obligatorios primero: el opcional solo es «el que toca» cuando ya no
+  // falta nada más.
+  const current =
+    guide.steps.find((s) => !s.done && !s.optional)?.key ??
+    guide.steps.find((s) => !s.done)?.key ??
+    null;
+  const guiaDelPar = guide.steps.find((s) => s.key === "brain")?.href ?? null;
   // Antes del paso 1 el nombre es el de fábrica («Asistente») y se lee como
   // una palabra suelta, no como el nombre de alguien: se dice «tu agente».
   const agentReady = guide.steps.find((s) => s.key === "agent")?.done ?? false;
@@ -111,34 +122,25 @@ export function OnboardingClient({
                   {step.done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="font-semibold">
+                  <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold">
                     {step.title}
+                    {step.optional && <Badge variant="secondary">Opcional</Badge>}
                     <span className="sr-only">{step.done ? " (listo)" : " (pendiente)"}</span>
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
                   {!step.done && step.hint && (
-                    <p className="mt-1 text-sm text-warning-text">{step.hint}</p>
+                    // Un paso opcional no es una falta: su pista va en gris.
+                    <p
+                      className={cn(
+                        "mt-1 text-sm",
+                        step.optional ? "text-text-2" : "text-warning-text"
+                      )}
+                    >
+                      {step.hint}
+                    </p>
                   )}
                   <div className="mt-3">
-                    {step.done ? (
-                      <Link
-                        href={step.href}
-                        className="text-sm text-muted-foreground underline underline-offset-2"
-                      >
-                        Listo · revisar
-                      </Link>
-                    ) : (
-                      <Link
-                        href={step.href}
-                        className={buttonVariants({
-                          size: "sm",
-                          variant: isCurrent ? "default" : "outline",
-                        })}
-                      >
-                        {step.cta}
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    )}
+                    <StepLink step={step} isCurrent={isCurrent} />
                   </div>
                 </div>
               </li>
@@ -149,10 +151,12 @@ export function OnboardingClient({
         <section
           className={cn(
             "rounded-xl border p-5",
-            guide.complete && !guide.enabled ? "border-primary bg-brand-tint" : "bg-card"
+            guide.complete && guide.brainConnected && !guide.enabled
+              ? "border-primary bg-brand-tint"
+              : "bg-card"
           )}
         >
-          {guide.enabled ? (
+          {guide.enabled && guide.brainConnected ? (
             <>
               <h2 className="font-semibold">
                 {agentReady && agentName
@@ -160,19 +164,19 @@ export function OnboardingClient({
                   : "Tu agente ya está contestando"}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                El agente está encendido y atiende a tus clientes por WhatsApp.
-                Puedes apagarlo cuando quieras desde Agente.
+                El agente está encendido y atiende a tus clientes. Puedes
+                apagarlo cuando quieras desde Agente.
               </p>
               <Link href="/inbox" className={cn(buttonVariants({ size: "sm" }), "mt-3")}>
                 Ir a la Bandeja <ArrowRight className="h-4 w-4" />
               </Link>
             </>
-          ) : guide.complete ? (
+          ) : guide.complete && guide.brainConnected ? (
             <>
               <h2 className="font-semibold">¡Todo listo! Enciende a {agente}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Desde ese momento contestará a tus clientes por WhatsApp. Puedes
-                apagarlo cuando quieras desde Agente.
+                Desde ese momento contestará a tus clientes. Puedes apagarlo
+                cuando quieras desde Agente.
               </p>
               <Button className="mt-3" disabled={busy} onClick={() => void encender()}>
                 <Power className="h-4 w-4" />
@@ -184,6 +188,32 @@ export function OnboardingClient({
                 </p>
               )}
             </>
+          ) : guide.complete ? (
+            <>
+              <h2 className="flex items-center gap-2 font-semibold">
+                <Inbox className="h-4 w-4 text-muted-foreground" />
+                Listo: Vocero funciona como bandeja manual
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Los mensajes llegan a la Bandeja y contestas tú. Para que un
+                agente conteste, conéctalo: después lo enciendes aquí.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href="/inbox" className={buttonVariants({ size: "sm" })}>
+                  Ir a la Bandeja <ArrowRight className="h-4 w-4" />
+                </Link>
+                {guiaDelPar && (
+                  <a
+                    href={guiaDelPar}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={buttonVariants({ size: "sm", variant: "outline" })}
+                  >
+                    Cómo conectar tu agente <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            </>
           ) : (
             <>
               <h2 className="flex items-center gap-2 font-semibold">
@@ -193,13 +223,39 @@ export function OnboardingClient({
               <p className="mt-1 text-sm text-muted-foreground">
                 Tu agente empieza apagado: mientras no lo enciendas no le
                 contesta a nadie y los mensajes que lleguen los atiendes tú desde
-                la Bandeja. Cuando completes los {total} pasos, aquí aparece el
-                botón para encenderlo.
+                la Bandeja. Con los pasos listos y tu agente conectado, aquí
+                aparece el botón para encenderlo.
               </p>
             </>
           )}
         </section>
       </div>
     </div>
+  );
+}
+
+/** El botón de cada paso. «Conecta tu agente» lleva a una guía externa: se
+ *  abre en otra pestaña para no sacar a nadie de su CRM. */
+function StepLink({ step, isCurrent }: { step: GuideStep; isCurrent: boolean }) {
+  const external = /^https?:\/\//.test(step.href);
+  const className = step.done
+    ? "text-sm text-muted-foreground underline underline-offset-2"
+    : buttonVariants({ size: "sm", variant: isCurrent ? "default" : "outline" });
+  const children = step.done ? (
+    "Listo · revisar"
+  ) : (
+    <>
+      {step.cta}
+      {external ? <ArrowUpRight className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+    </>
+  );
+  return external ? (
+    <a href={step.href} target="_blank" rel="noreferrer" className={className}>
+      {children}
+    </a>
+  ) : (
+    <Link href={step.href} className={className}>
+      {children}
+    </Link>
   );
 }

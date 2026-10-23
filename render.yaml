@@ -26,6 +26,10 @@
 # - El disco se monta como root; el entrypoint de la imagen se lo da al
 #   usuario de la app en cada arranque. MEDIA_DIR no se define: la imagen ya
 #   trae /data/media, dentro del disco.
+# - 037: sin disco (o con varias instancias), los adjuntos pueden ir a un
+#   bucket S3-compatible: MEDIA_STORE=bucket y las MEDIA_BUCKET_* (ver
+#   .env.example). Entonces el disco deja de ser obligatorio para los
+#   adjuntos.
 # ============================================================
 services:
   - type: web
@@ -33,7 +37,7 @@ services:
     runtime: image
     image:
       # Pública: sin `creds`. Es linux/amd64, lo único que corre Render.
-      url: ghcr.io/kevinrivm/vocero-crm:1.5.0
+      url: ghcr.io/kevinrivm/vocero-crm:2.0.0
     plan: starter
     # Misma región para el servicio y la base; no se cambia después.
     # region: oregon   # ohio · virginia · frankfurt · singapore
@@ -69,6 +73,15 @@ services:
         sync: false
       - key: META_GRAPH_API_VERSION
         value: v25.0
+      # 2.0 — El agente (Nea, el servicio `vocero-nea` de abajo). La llave
+      # firma el despacho y con ella Nea le contesta al CRM: se genera aquí y
+      # Nea la toma de este servicio.
+      - key: BOT_API_KEY
+        generateValue: true
+      - key: BRAIN_DISPATCH_URL
+        value: http://vocero-nea:8000/vocero/dispatch
+      - key: BRAIN_HEALTH_URL
+        value: http://vocero-nea:8000/health
       # Opcionales, cuando los tengas (guía en .env.example):
       # - key: OPENROUTER_API_TOKEN
       #   sync: false
@@ -78,6 +91,32 @@ services:
       #   sync: false
       # - key: AGENDA
       #   value: "on"
+
+  # 2.0 — El agente, servicio privado sobre la misma base (esquema `nea`).
+  # Sin llave de IA: piensa por el CRM con la de Ajustes → IA. Sin disco ni
+  # dominio. Guía: docs/migrar-a-2.0.md.
+  - type: pserv
+    name: vocero-nea
+    runtime: image
+    image:
+      url: ghcr.io/kevinrivm/nea-agent:2.0.0
+    plan: starter
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: CRM_BASE_URL
+        value: http://vocero:3000
+      - key: CRM_BOT_API_KEY
+        fromService:
+          type: web
+          name: vocero
+          envVarKey: BOT_API_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vocero-db
+          property: connectionString
+      - key: DATABASE_SCHEMA
+        value: nea
 
 databases:
   - name: vocero-db

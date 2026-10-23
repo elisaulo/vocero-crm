@@ -62,13 +62,25 @@ export const envSchema = z.object({
   // configuración y lo demás sigue funcionando (server/bot/status.ts).
   BRAIN_HEALTH_URL: z.string().optional(),
   // 021: a dónde le despacha el CRM cada turno al cerebro externo. Ej.:
-  // http://nea:8000/vocero/dispatch. Con ella y `BOT_API_KEY`, el agente
-  // incluido deja de contestar: contesta el cerebro. Tampoco se valida aquí,
+  // http://nea:8000/vocero/dispatch. Con ella, `BOT_API_KEY` y el interruptor
+  // del Agente encendido, contesta el cerebro (036). Tampoco se valida aquí,
   // por lo mismo que la de arriba: mal escrita, el despacho queda inactivo y
   // la tarjeta lo dice (server/brains/config.ts).
   BRAIN_DISPATCH_URL: z.string().optional(),
-  // 008: volumen local de adjuntos (constitución II: sin S3/R2).
+  // 008: volumen local de adjuntos. Es el camino por defecto y el de respaldo
+  // del bucket (037).
   MEDIA_DIR: z.string().default("./.dev-media"),
+  // 037: conector opcional (constitución II.3). `bucket` escribe los adjuntos,
+  // el logo y el icono en un S3-compatible propio; se leen siempre de los dos
+  // sitios (src/lib/storage/medios.ts). Las MEDIA_BUCKET_* no se validan aquí,
+  // por lo mismo que BRAIN_HEALTH_URL: mal escritas, se escribe en disco y
+  // `pnpm doctor` y /api/health lo dicen, en vez de tumbar el CRM entero.
+  MEDIA_STORE: z.string().default("disco"),
+  MEDIA_BUCKET_ENDPOINT: z.string().optional(),
+  MEDIA_BUCKET_NAME: z.string().optional(),
+  MEDIA_BUCKET_REGION: z.string().default("auto"),
+  MEDIA_BUCKET_KEY_ID: z.string().optional(),
+  MEDIA_BUCKET_SECRET: z.string().optional(),
   NODE_ENV: z.string().default("development"),
 });
 

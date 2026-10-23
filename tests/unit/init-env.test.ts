@@ -32,6 +32,7 @@ describe("generateSecrets", () => {
     const s = generateSecrets();
     expect(Object.keys(s).sort()).toEqual([
       "BETTER_AUTH_SECRET",
+      "BOT_API_KEY",
       "ENCRYPTION_KEY",
       "META_WEBHOOK_VERIFY_TOKEN",
       "POSTGRES_PASSWORD",
@@ -43,6 +44,8 @@ describe("generateSecrets", () => {
     // hex: va dentro de una URL (DATABASE_URL) y del path del webhook sin escapar.
     expect(s.META_WEBHOOK_VERIFY_TOKEN).toMatch(/^[0-9a-f]{64}$/);
     expect(s.POSTGRES_PASSWORD).toMatch(/^[0-9a-f]{48}$/);
+    // 2.0 — Firma el despacho al agente del compose: hex, en una cabecera.
+    expect(s.BOT_API_KEY).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("cada llamada produce valores distintos", () => {
@@ -109,6 +112,7 @@ describe("renderInitEnv sobre el .env.example real", () => {
       "BETTER_AUTH_SECRET",
       "ENCRYPTION_KEY",
       "META_WEBHOOK_VERIFY_TOKEN",
+      "BOT_API_KEY",
     ]);
     expect(r.set).toEqual({ DOMAIN: "localhost", APP_BASE_URL: "https://localhost" });
     const resumen = JSON.stringify({ generated: r.generated, set: r.set });

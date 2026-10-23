@@ -43,6 +43,9 @@ export type HealthFeatures = {
   channels: Channel[];
   /** Atribución de anuncios y CAPI (016): bandera `ATRIBUCION`. */
   atribucion: boolean;
+  /** 037 — Dónde pidió quien instala guardar los adjuntos: bandera
+   *  `MEDIA_STORE`. Si de verdad se puede escribir ahí lo dice `mediaWritable`. */
+  media: "disco" | "bucket";
 };
 
 export type HealthOk = {
@@ -71,6 +74,7 @@ export type FlagEnv = {
   AGENDA?: string;
   CHANNELS?: string;
   ATRIBUCION?: string;
+  MEDIA_STORE?: string;
   [otra: string]: string | undefined;
 };
 
@@ -86,6 +90,7 @@ export function healthFeatures(env: FlagEnv = process.env): HealthFeatures {
     agenda: parseAgendaFlag(env.AGENDA),
     channels: CHANNEL_ORDER.filter((c) => channels.has(c)),
     atribucion: parseAtribucionFlag(env.ATRIBUCION),
+    media: env.MEDIA_STORE?.trim().toLowerCase() === "bucket" ? "bucket" : "disco",
   };
 }
 

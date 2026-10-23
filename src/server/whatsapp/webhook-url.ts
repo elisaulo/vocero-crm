@@ -12,7 +12,7 @@ import { getEnv } from "@/lib/env";
  * automático en Meta y el mock la toman de aquí, para que no haya dos formas
  * de armarla que un día dejen de coincidir.
  */
-export type WebhookChannel = "wa" | "ig" | "messenger";
+export type WebhookChannel = "wa" | "ig" | "messenger" | "tiktok";
 
 /** Ruta (sin origen) del webhook de un canal. */
 export function webhookPath(channel: WebhookChannel = "wa"): string {

@@ -50,6 +50,7 @@ describe("features: las banderas de despliegue", () => {
       agenda: false,
       channels: ["whatsapp"],
       atribucion: false,
+      media: "disco",
     });
   });
 
@@ -65,6 +66,7 @@ describe("features: las banderas de despliegue", () => {
       agenda: true,
       channels: ["whatsapp", "instagram", "messenger"],
       atribucion: true,
+      media: "disco",
     });
   });
 
@@ -73,7 +75,7 @@ describe("features: las banderas de despliegue", () => {
     // `true` y la agenda respondiera 404, el health mentiría.
     expect(
       healthFeatures({ AGENDA: "onn", CHANNELS: "telegram", ATRIBUCION: "off" })
-    ).toEqual({ agenda: false, channels: ["whatsapp"], atribucion: false });
+    ).toEqual({ agenda: false, channels: ["whatsapp"], atribucion: false, media: "disco" });
   });
 });
 
@@ -139,7 +141,7 @@ describe("GET /api/health", () => {
     const cuerpo = await res.json();
     expect(cuerpo).toMatchObject({
       ok: true,
-      features: { agenda: true, channels: ["whatsapp", "instagram"], atribucion: false },
+      features: { agenda: true, channels: ["whatsapp", "instagram"], atribucion: false, media: "disco" },
       mediaWritable: true,
     });
     expect(typeof cuerpo.version).toBe("string");

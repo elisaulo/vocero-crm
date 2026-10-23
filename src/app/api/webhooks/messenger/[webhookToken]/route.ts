@@ -6,8 +6,8 @@ import {
   channelDisabledResponse,
   isChannelEnabled,
 } from "@/server/channels/enabled";
-import { isValidZernioSignature, looksLikeMetaPayload, zernioSignatureFrom } from "@/server/zernio";
-import { processZernioPayload, resolveZernioSecret } from "@/server/zernio/dispatch";
+import { looksLikeMetaPayload, zernioSignatureFrom } from "@/server/zernio";
+import { isAuthenticZernioDelivery, processZernioPayload } from "@/server/zernio/dispatch";
 
 /**
  * 017 — Webhook público del canal de Messenger.
@@ -77,10 +77,9 @@ export async function POST(req: Request, { params }: Params) {
       return new Response(null, { status: 401 });
     }
   } else {
-    // Zernio: la firma se valida contra el secreto de ESTA cuenta, que hay que
-    // resolver leyendo el cuerpo primero.
-    const { secret } = await resolveZernioSecret(rawBody);
-    if (!isValidZernioSignature(rawBody, zernioSignatureFrom(req.headers), secret)) {
+    // Zernio: la firma se valida contra los secretos de la organización dueña
+    // de ESTA cuenta, que hay que resolver leyendo el cuerpo primero (023).
+    if (!(await isAuthenticZernioDelivery(rawBody, zernioSignatureFrom(req.headers)))) {
       return new Response(null, { status: 401 });
     }
   }

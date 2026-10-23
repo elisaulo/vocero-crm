@@ -10,19 +10,14 @@ import {
 } from "@/lib/brain-status";
 
 /**
- * «Quién responde a tus clientes»: qué cerebro contesta los WhatsApp de la
- * instancia y si hay dos contestando a la vez.
+ * «Quién responde a tus clientes»: si hay un cerebro conectado, si el
+ * interruptor del Agente deja que el CRM le despache, y qué dice su `/health`.
  *
- * El agente incluido solo contesta con token de IA Y el interruptor del
- * Agente encendido. Un cerebro externo (Nea) no mira ese interruptor —ni le
- * llega: `/api/bot/profile` no lo manda—, así que con los dos activos el
- * cliente recibe dos respuestas distintas. El CRM no sabe de Nea más que dos
- * cosas: cuándo llamó por última vez a `/api/bot/*` y, si se configuró
- * `BRAIN_HEALTH_URL`, qué dice su `/health`.
- *
- * 021 — Con el despacho activo (`BRAIN_DISPATCH_URL`) ya no hay que adivinar:
- * el CRM le empuja cada turno al cerebro y calla al agente incluido, así que
- * la doble respuesta no puede salir de aquí.
+ * 036 — El CRM ya no trae agente: quien contesta es el cerebro al que se le
+ * despacha (`BRAIN_DISPATCH_URL`), y solo con el interruptor encendido. Sin
+ * cerebro, Vocero es una bandeja manual, que es un producto válido: el aviso
+ * `sin_cerebro` informa, no alarma. Ya no hay dos que puedan contestar a la
+ * vez desde el CRM, así que `doble_respuesta` se fue.
  */
 
 /** Una llamada a `/api/bot/*` en esta ventana cuenta como «está contestando». */
@@ -70,7 +65,9 @@ export function resetBrainStatusState(): void {
 // ---------------------------------------------------------------------------
 
 export type BrainStatusInput = {
+  /** La organización tiene con qué pensar (Ajustes → IA o el entorno). */
   aiConfigured: boolean;
+  /** El interruptor del Agente: el CRM despacha. */
   agentEnabled: boolean;
   botKeyConfigured: boolean;
   lastSeenAt: Date | null;
@@ -82,10 +79,6 @@ export type BrainStatusInput = {
 
 export function computeBrainStatus(input: BrainStatusInput): BrainStatusDto {
   const dispatch = input.dispatch ?? SIN_DESPACHO;
-  // El despacho activo calla al agente incluido (`server/ai/trigger.ts`):
-  // aunque tenga IA e interruptor, no es él quien contesta.
-  const wouldAnswer = input.aiConfigured && input.agentEnabled;
-  const answering = wouldAnswer && !dispatch.active;
   const seenRecently =
     input.botKeyConfigured &&
     input.lastSeenAt !== null &&
@@ -94,18 +87,12 @@ export function computeBrainStatus(input: BrainStatusInput): BrainStatusDto {
     seenRecently || input.health?.reachable === true || dispatch.active;
 
   let warning: BrainWarning | null = null;
-  if (answering && active) warning = "doble_respuesta";
-  // Nadie puede contestar: sin agente incluido y con /api/bot/* cerrada (sin
-  // llave, un Nea en línea tampoco puede hablar por el CRM).
-  else if (!answering && !input.botKeyConfigured) warning = "sin_cerebro";
+  if (!dispatch.active) warning = "sin_cerebro";
+  else if (!input.agentEnabled) warning = "apagado";
 
   return {
-    embedded: {
-      configured: input.aiConfigured,
-      enabled: input.agentEnabled,
-      answering,
-      silenced: wouldAnswer && dispatch.active,
-    },
+    enabled: input.agentEnabled,
+    aiConfigured: input.aiConfigured,
     external: {
       keyConfigured: input.botKeyConfigured,
       lastSeenAt: input.lastSeenAt?.toISOString() ?? null,

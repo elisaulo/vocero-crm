@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { getEnv } from "@/lib/env";
@@ -55,63 +55,124 @@ export type FilaDespacho = typeof schema.dispatch.$inferSelect;
  * vez de crear otro. Devuelve CUÁNDO vence esa ventana, para que quien encola
  * despierte al worker en ese instante en vez de esperar a su siguiente
  * barrido.
+ *
+ * 025 — `messageIds` son los entrantes que provocan esta llamada. Se anotan en
+ * la fila viva —también si va EN VUELO— porque son lo que ese despacho le debe
+ * al cerebro: la ráfaga sola no alcanza a decirlo (ver `rafagaDe`).
  */
 export async function encolarDespacho(params: {
   organizationId: string;
   conversationId: string;
+  messageIds?: readonly string[];
   ahora?: Date;
+  /**
+   * 033 — Sin ventana de agrupado: lo usa el Laboratorio, que manda una línea
+   * del guion a la vez y no tiene a nadie más escribiendo detrás.
+   */
+  inmediato?: boolean;
 }): Promise<{ id: string; notBefore: Date }> {
   const db = getDb();
   const ahora = params.ahora ?? new Date();
-  const notBefore = new Date(ahora.getTime() + ventanaCoalesceMs());
+  const notBefore = new Date(
+    ahora.getTime() + (params.inmediato ? 0 : ventanaCoalesceMs())
+  );
+  const messageIds = [...new Set(params.messageIds ?? [])];
+  // Se concatena en SQL y no leyendo-y-escribiendo: dos mensajes que llegan a
+  // la vez no pueden pisarse la lista el uno al otro.
+  const anotados: { messageIds?: SQL } = messageIds.length
+    ? {
+        messageIds: sql`coalesce(${schema.dispatch.messageIds}, '[]'::jsonb) || ${JSON.stringify(messageIds)}::jsonb`,
+      }
+    : {};
 
-  const [vivo] = await db
-    .select()
-    .from(schema.dispatch)
-    .where(
-      and(
-        eq(schema.dispatch.conversationId, params.conversationId),
-        inArray(schema.dispatch.status, ["pendiente", "en_vuelo"])
+  // Casi siempre una vuelta. Se repite solo si la fila viva cambió bajo los
+  // pies: otro mensaje ganó el índice único, o el worker la tomó justo ahora.
+  for (let vuelta = 0; ; vuelta++) {
+    const [vivo] = await db
+      .select()
+      .from(schema.dispatch)
+      .where(
+        and(
+          eq(schema.dispatch.conversationId, params.conversationId),
+          inArray(schema.dispatch.status, ["pendiente", "en_vuelo"])
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (vivo) {
-    if (vivo.status === "pendiente") {
-      await db
+    if (vivo) {
+      // En vuelo no se toca `not_before`: el cerebro ya tiene el evento, sin
+      // este mensaje, y adelantar la ventana no lo haría llegar antes. Queda
+      // anotado en la fila, y el worker, al entregarla, ve que lo sigue
+      // debiendo y encola otro despacho.
+      const enVuelo = vivo.status === "en_vuelo";
+      if (enVuelo && !messageIds.length) {
+        return { id: vivo.id, notBefore: vivo.notBefore };
+      }
+      /**
+       * Solo si SIGUE vivo.
+       *
+       * Entre el SELECT de arriba y este UPDATE el worker pudo terminarlo. Lo
+       * anotado en una fila ya entregada no lo vuelve a leer nadie: ese
+       * mensaje se quedaría sin despacho. Si ya no está vivo, abre su fila.
+       */
+      const [tocado] = await db
         .update(schema.dispatch)
-        .set({ notBefore, lastMessageAt: ahora, updatedAt: ahora })
+        .set(
+          enVuelo
+            ? anotados
+            : { notBefore, lastMessageAt: ahora, updatedAt: ahora, ...anotados }
+        )
         .where(
           and(
             eq(schema.dispatch.id, vivo.id),
-            eq(schema.dispatch.status, "pendiente")
+            eq(schema.dispatch.status, vivo.status)
           )
-        );
-      return { id: vivo.id, notBefore };
+        )
+        .returning({ notBefore: schema.dispatch.notBefore });
+      if (tocado) return { id: vivo.id, notBefore: tocado.notBefore };
     }
-    // En vuelo: el cerebro ya tiene el evento, sin este mensaje. No se toca
-    // la fila; el worker, al entregarla, ve que la ráfaga creció y encola otro
-    // despacho (`hayMensajesSinDespachar`).
-    return { id: vivo.id, notBefore: vivo.notBefore };
-  }
 
-  const id = newId("dispatch");
-  try {
-    await db.insert(schema.dispatch).values({
-      id,
-      organizationId: params.organizationId,
-      conversationId: params.conversationId,
-      status: "pendiente",
-      notBefore,
-      firstMessageAt: ahora,
-      lastMessageAt: ahora,
-    });
-  } catch (err) {
-    // Dos mensajes de la misma conversación entraron a la vez y el otro ganó
-    // el índice único: su fila ya cubre a este mensaje.
-    if (!esViolacionDeUnicidad(err)) throw err;
+    const id = newId("dispatch");
+    try {
+      await db.insert(schema.dispatch).values({
+        id,
+        organizationId: params.organizationId,
+        conversationId: params.conversationId,
+        status: "pendiente",
+        notBefore,
+        firstMessageAt: ahora,
+        lastMessageAt: ahora,
+        messageIds: messageIds.length ? messageIds : null,
+      });
+      return { id, notBefore };
+    } catch (err) {
+      // Dos mensajes de la misma conversación entraron a la vez y el otro ganó
+      // el índice único. Su fila cubre a este mensaje, pero no lo tiene
+      // anotado: se vuelve a empezar para anotarlo en ella.
+      if (!esViolacionDeUnicidad(err)) throw err;
+      if (vuelta >= 2 || !messageIds.length) return { id, notBefore };
+    }
   }
-  return { id, notBefore };
+}
+
+/**
+ * 025 — Los ids anotados en la fila AHORA, no los que traía cuando se reclamó.
+ *
+ * Mientras el despacho iba en vuelo pudieron anotarse más: son justo los que
+ * el evento no llevó.
+ */
+export async function mensajesAnotados(fila: FilaDespacho): Promise<string[]> {
+  const [row] = await getDb()
+    .select({ messageIds: schema.dispatch.messageIds })
+    .from(schema.dispatch)
+    .where(
+      and(
+        eq(schema.dispatch.id, fila.id),
+        eq(schema.dispatch.organizationId, fila.organizationId)
+      )
+    )
+    .limit(1);
+  return [...new Set(row?.messageIds ?? [])];
 }
 
 function esViolacionDeUnicidad(err: unknown): boolean {

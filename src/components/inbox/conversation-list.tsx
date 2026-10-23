@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { ContactAvatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatTime, previewText } from "./helpers";
+import { emptyInboxDescription, formatTime, previewText } from "./helpers";
 
 /* Puntos de etapa: los tokens del tema, no hex copiados del tema claro —
    así siguen al acento white-label y se recalculan en oscuro. */
@@ -34,7 +34,13 @@ const STAGE_DOT_FALLBACK = "var(--text-3)";
 const FOCO_SEPARADO =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-function InboxEmptyState({ onSeeded }: { onSeeded: () => void }) {
+function InboxEmptyState({
+  onSeeded,
+  channels,
+}: {
+  onSeeded: () => void;
+  channels: readonly Channel[];
+}) {
   const [seeding, setSeeding] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -53,7 +59,7 @@ function InboxEmptyState({ onSeeded }: { onSeeded: () => void }) {
       icon={Inbox}
       className="h-full"
       title="Sin conversaciones todavía"
-      description="Cuando alguien escriba a tu número de WhatsApp, su conversación aparecerá aquí en tiempo real."
+      description={emptyInboxDescription(channels.map((ch) => CHANNEL_LABEL[ch]))}
       action={
         !failed && (
           <Button
@@ -274,10 +280,17 @@ export function ConversationList({
         {loading ? (
           <p className="p-6 text-center text-xs text-text-3">Cargando…</p>
         ) : conversations.length === 0 ? (
-          <InboxEmptyState onSeeded={onSeeded} />
+          <InboxEmptyState onSeeded={onSeeded} channels={channels} />
         ) : visible.length === 0 ? (
           <p className="p-6 text-center text-xs text-text-3">
-            Sin resultados para este filtro.
+            {/* 028: un canal en el que nadie ha escrito no es una búsqueda fallida. */}
+            {inbox !== "all" &&
+            !query &&
+            filter === "all" &&
+            stage === "all" &&
+            !conversations.some((c) => c.channel === inbox)
+              ? `Nadie ha escrito por ${CHANNEL_LABEL[inbox]} todavía.`
+              : "Sin resultados para este filtro."}
           </p>
         ) : (
           <ul>

@@ -248,3 +248,35 @@ describe("registerWebhookForNumber — la consulta falla", () => {
     expect(consoleText()).not.toContain(TOKEN);
   });
 });
+
+describe("035 — «Recuperar el webhook» (forzar)", () => {
+  it("con override ajeno en la WABA, lo quita (re-suscribe sin cuerpo) y registra el del número", async () => {
+    const meta = metaFalsa({
+      data: [{ whatsapp_business_api_data: APP, override_callback_uri: OVERRIDE }],
+    });
+
+    await expect(registerWebhookForNumber({ ...opts, forzar: true })).resolves.toMatchObject({ ok: true });
+
+    expect(meta.override).toBe(URL_PROPIA);
+    // Sin cuerpo: así borra Meta el override de la WABA. Si se quedara, el
+    // siguiente «Guardar» quitaría el del número.
+    expect(subscriptions()).toHaveLength(1);
+    expect(subscriptions()[0]![1].body).toBeUndefined();
+  });
+
+  it("el log dice que se quitó, sin la ruta secreta del override", async () => {
+    metaFalsa({ data: [{ whatsapp_business_api_data: APP, override_callback_uri: OVERRIDE }] });
+    await registerWebhookForNumber({ ...opts, forzar: true });
+    expect(consoleText()).toContain("nea.ejemplo.com");
+    expect(consoleText()).not.toContain("segmento-secreto-abc");
+  });
+
+  it("también pisa un override ajeno en el número (el de Nea 1.x)", async () => {
+    const meta = metaFalsa(
+      { data: [{ whatsapp_business_api_data: APP, override_callback_uri: OVERRIDE }] },
+      "https://nea.ejemplo.com/webhook"
+    );
+    await registerWebhookForNumber({ ...opts, forzar: true });
+    expect(meta.override).toBe(URL_PROPIA);
+  });
+});

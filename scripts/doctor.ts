@@ -17,6 +17,7 @@ import {
   checkAi,
   checkDispatch,
   checkDatabase,
+  checkMediaBucket,
   checkMediaDir,
   checkWhatsApp,
   evaluateComposeEnv,
@@ -69,7 +70,9 @@ if (!env) {
 } else {
   const db = await checkDatabase(env.DATABASE_URL);
   section("Base de datos", [db]);
-  section("Adjuntos", [await checkMediaDir(env.MEDIA_DIR)]);
+  // 037 — El bucket solo aparece si MEDIA_STORE=bucket (conector apagado = no existe).
+  const bucket = await checkMediaBucket(process.env);
+  section("Adjuntos", [await checkMediaDir(env.MEDIA_DIR), ...(bucket ? [bucket] : [])]);
   if (db.status === "ok") {
     section("WhatsApp", await checkWhatsApp());
     await getSql()

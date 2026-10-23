@@ -1,21 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
   CheckCheck,
   Clock3,
   FileText,
+  Forward,
   MapPin,
   Paperclip,
+  Reply,
   Smartphone,
   Sparkles,
   UserRound,
 } from "lucide-react";
-import type { MessageDto, MessageMediaDto } from "@/lib/types";
+import type { ConversationDto, MessageDto, MessageMediaDto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatBytes, mediaLabel } from "./helpers";
+import { ForwardImageDialog } from "./forward-image-dialog";
+import { LinkedText } from "./linked-text";
+import { QuoteBlock } from "./quote-block";
 
 function StatusTicks({ status }: { status: MessageDto["status"] }) {
   const cls = "h-[13px] w-[13px]";
@@ -182,19 +187,69 @@ function bubbleTime(iso: string): string {
   });
 }
 
-export function MessageThread({ messages }: { messages: MessageDto[] }) {
+export function MessageThread({
+  messages,
+  contactName,
+  onReply,
+  conversations = [],
+  onForwarded,
+}: {
+  messages: MessageDto[];
+  /** 039: quién firma las citas del cliente. */
+  contactName: string;
+  /** 039: presente solo si el canal permite responder citando. */
+  onReply?: (m: MessageDto) => void;
+  /** 042 — Destinos posibles del reenvío; sin `onForwarded` no se ofrece. */
+  conversations?: ConversationDto[];
+  onForwarded?: () => void;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [forwarding, setForwarding] = useState<MessageDto | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [resaltado, setResaltado] = useState<string | null>(null);
+  const resaltadoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 039: el clic en una cita lleva al original y lo resalta un momento.
+  const irAlCitado = useCallback((id: string) => {
+    const el = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(id)}"]`
+    );
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    setResaltado(id);
+    if (resaltadoTimer.current) clearTimeout(resaltadoTimer.current);
+    resaltadoTimer.current = setTimeout(() => setResaltado(null), 1600);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (resaltadoTimer.current) clearTimeout(resaltadoTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, notice]);
 
   return (
     <div
       ref={scrollRef}
       className="thread-bg flex flex-1 flex-col gap-[3px] overflow-y-auto px-3 py-5 sm:px-[6%]"
     >
+      {forwarding && (
+        <ForwardImageDialog
+          message={forwarding}
+          conversations={conversations}
+          onClose={() => setForwarding(null)}
+          onSent={(name) => {
+            setForwarding(null);
+            setNotice(`Imagen reenviada a ${name}`);
+            onForwarded?.();
+          }}
+        />
+      )}
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const newDay =
@@ -216,12 +271,13 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
             )}
             <div
               className={cn(
-                "flex",
-                out ? "justify-end" : "justify-start",
+                "group flex items-center gap-1",
+                out ? "flex-row-reverse" : "flex-row",
                 grouped ? "mt-[3px]" : "mt-2.5"
               )}
             >
               <div
+                data-message-id={m.id}
                 className={cn(
                   // En el teléfono la burbuja necesita casi todo el renglón:
                   // con 64% cada mensaje se parte en tres líneas.
@@ -231,21 +287,43 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
                   out
                     ? "border-bubble-out-border bg-bubble-out text-bubble-out-text"
                     : "border-bubble-in-border bg-bubble-in",
-                  !grouped && (out ? "rounded-tr-[5px]" : "rounded-tl-[5px]")
+                  !grouped && (out ? "rounded-tr-[5px]" : "rounded-tl-[5px]"),
+                  resaltado === m.id && "ring-2 ring-brand"
                 )}
               >
+                {m.replyTo && (
+                  <QuoteBlock
+                    cita={m.replyTo}
+                    contactName={contactName}
+                    onJump={irAlCitado}
+                    className="mb-1.5"
+                  />
+                )}
                 {m.media ? (
                   <span className="block">
                     <MediaBlock media={m.media} />
                     {m.media.caption && (
                       <span className="mt-1 block whitespace-pre-wrap break-words">
-                        {m.media.caption}
+                        <LinkedText text={m.media.caption} />
                       </span>
                     )}
+                    {/* Aunque la descarga haya fallado: el servidor la reintenta (042 · D4). */}
+                    {onForwarded && m.media.kind === "image" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotice(null);
+                            setForwarding(m);
+                          }}
+                          className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium text-brand-ink transition-colors hover:bg-secondary"
+                        >
+                          <Forward className="h-3.5 w-3.5" strokeWidth={1.7} /> Reenviar imagen
+                        </button>
+                      )}
                   </span>
                 ) : m.type === "text" || m.type === "template" ? (
                   <span className="whitespace-pre-wrap break-words">
-                    {m.text}
+                    <LinkedText text={m.text} />
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 text-text-3">
@@ -291,10 +369,30 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
                   </p>
                 )}
               </div>
+              {onReply && m.quotable && (
+                // En el teléfono no hay "pasar el ratón": ahí se ve siempre.
+                <button
+                  type="button"
+                  onClick={() => onReply(m)}
+                  aria-label="Responder"
+                  title="Responder"
+                  className="shrink-0 rounded-full p-1.5 text-text-3 transition-opacity hover:bg-secondary hover:text-foreground focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <Reply className="h-4 w-4" strokeWidth={1.7} />
+                </button>
+              )}
             </div>
           </div>
         );
       })}
+      {notice && (
+        <p
+          role="status"
+          className="mt-2 self-center rounded-full border border-border-strong bg-background px-3 py-1 text-xs text-text-2 shadow-sm"
+        >
+          {notice}
+        </p>
+      )}
     </div>
   );
 }

@@ -4,9 +4,8 @@
  * contacto). Solo tipos y textos: lo importan componentes de cliente, así que
  * aquí no entra nada de servidor. El cálculo vive en `server/bot/status.ts`.
  *
- * Por qué existe: el agente incluido y un cerebro externo (Nea) no se ven
- * entre sí. Si los dos están activos, el cliente recibe DOS respuestas
- * distintas al mismo mensaje, y hasta ahora nada en el CRM lo decía.
+ * Desde la 036 el CRM no trae agente: contesta el cerebro conectado (Nea u
+ * otro), y solo si el interruptor del Agente lo deja.
  */
 
 /** Los modos de Nea tal como los reporta su `/health`. */
@@ -50,7 +49,12 @@ export type BrainHealthDto = {
   relay?: BrainRelayDto;
 };
 
-export type BrainWarning = "doble_respuesta" | "sin_cerebro";
+/**
+ * 036 — `sin_cerebro`: no hay despacho configurado; la bandeja es manual
+ * (informativo, no un error). `apagado`: hay cerebro y el interruptor del
+ * Agente no deja que el CRM le despache.
+ */
+export type BrainWarning = "sin_cerebro" | "apagado";
 
 /**
  * 021 — El despacho: el CRM le empuja cada turno al cerebro externo
@@ -83,16 +87,11 @@ export const SIN_DESPACHO: BrainDispatchDto = {
 };
 
 export type BrainStatusDto = {
-  embedded: {
-    /** La organización tiene proveedor de IA: lo guardado en Ajustes → IA
-     *  o, de respaldo, `OPENROUTER_API_TOKEN` en el entorno. */
-    configured: boolean;
-    /** El interruptor del Agente. */
-    enabled: boolean;
-    answering: boolean;
-    /** 021: tendría con qué contestar, pero el despacho lo calla. */
-    silenced: boolean;
-  };
+  /** 036 — El interruptor del Agente: el CRM le despacha al cerebro. */
+  enabled: boolean;
+  /** Hay con qué pensar: la llave de Ajustes → IA (o `OPENROUTER_API_TOKEN`
+   *  de respaldo), que el cerebro usa por `/api/bot/llm`. */
+  aiConfigured: boolean;
   external: {
     /** `BOT_API_KEY` válida: la API `/api/bot/*` está abierta. */
     keyConfigured: boolean;
@@ -120,14 +119,13 @@ export function externalBrainName(status: BrainStatusDto): string | null {
 }
 
 /**
- * Hasta donde el CRM puede saber, el cerebro externo está contestando: está
- * activo y, si se le pregunta a su `/health`, no está caído. `active` a secas
- * sirve para el aviso de doble respuesta (mejor avisar de más); para decirle
- * al dueño «responde tu cerebro externo» hace falta esto.
+ * Hasta donde el CRM puede saber, el cerebro está contestando: el CRM le
+ * despacha (despacho activo e interruptor encendido) y, si se le pregunta a su
+ * `/health`, no está caído.
  */
 export function externalAnswering(status: BrainStatusDto): boolean {
   const h = status.external.health;
-  return status.external.active && (!healthKnown(h) || h.reachable);
+  return status.dispatch.active && status.enabled && (!healthKnown(h) || h.reachable);
 }
 
 /** Se le pregunta a su `/health` y no está en línea. */

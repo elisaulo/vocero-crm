@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { estadoIaDe, mensajeDeEstado } from "@/lib/ai/provider";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { verifyCalendar } from "./calendar-verifiers";
+import { leerConfigDespacho, urlSaludCerebro } from "@/server/brains/config";
+import { getBrainHealth } from "@/server/bot/status";
 
 /**
  * Qué le falta a esta instancia para que el agente conteste (issue #86).
@@ -25,7 +27,7 @@ export type ReadinessStatus =
   | "unsupported"
   | "not_applicable";
 
-export type ReadinessKey = "profile" | "ai" | "whatsapp" | "calendar";
+export type ReadinessKey = "profile" | "ai" | "whatsapp" | "brain" | "calendar";
 
 export type ReadinessStep = {
   key: ReadinessKey;
@@ -44,7 +46,7 @@ export type ReadinessStep = {
 
 export type OnboardingStatus = {
   steps: ReadinessStep[];
-  /** El agente ya está encendido. */
+  /** El agente ya está encendido: el CRM le despacha al cerebro (036). */
   enabled: boolean;
 };
 
@@ -145,6 +147,7 @@ export async function onboardingStatus(
           ? "Meta dejó de aceptar el token de WhatsApp: vuelve a conectar el número."
           : null,
     },
+    await pasoCerebro(),
   ];
 
   if (agendaEnabled()) {
@@ -168,6 +171,49 @@ export async function onboardingStatus(
 }
 
 type Perfil = { name: string; instructions: string | null; enabled: boolean };
+
+/**
+ * 036 — «Conecta tu agente». El CRM ya no trae agente: contesta el cerebro al
+ * que se le despacha (Nea u otro). La dirección vive en el entorno
+ * (`BRAIN_DISPATCH_URL`, spec 036 D3), así que el paso no tiene pantalla a la
+ * que llevar: dice qué falta y lleva a la guía. Listo cuando el despacho está
+ * configurado y el `/health` del cerebro contesta.
+ */
+async function pasoCerebro(): Promise<ReadinessStep> {
+  const base = { key: "brain" as const, label: "Tu agente", href: null };
+  const despacho = leerConfigDespacho();
+  if (!despacho.active) {
+    return {
+      ...base,
+      status: "pending",
+      nextAction:
+        "Levanta tu agente (Nea) al lado del CRM y pon BRAIN_DISPATCH_URL y BOT_API_KEY en el entorno",
+      problem:
+        despacho.problem === "url"
+          ? "BRAIN_DISPATCH_URL no es una dirección válida."
+          : despacho.problem === "sin_llave"
+            ? "Falta BOT_API_KEY (16 caracteres o más): sin ella no se firma el despacho."
+            : null,
+    };
+  }
+  const salud = await getBrainHealth(urlSaludCerebro() ?? undefined);
+  if (salud && !salud.reachable) {
+    return {
+      ...base,
+      status: "pending",
+      nextAction: `Tu agente (${despacho.host}) está configurado pero no contesta`,
+      problem: `El /health de ${salud.host || despacho.host} no responde: revisa que el servicio esté corriendo.`,
+    };
+  }
+  return {
+    ...base,
+    status: "ready",
+    nextAction: salud?.version
+      ? `Conectado: ${despacho.host} (versión ${salud.version})`
+      : `Conectado: ${despacho.host}`,
+    problem: null,
+  };
+}
 
 /**
  * El agente está «configurado» cuando tiene con qué contestar: instrucciones

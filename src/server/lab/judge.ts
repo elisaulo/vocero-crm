@@ -31,7 +31,7 @@ export async function judgeCase(input: {
   /** De quién es la configuración de IA con la que juzga. */
   organizationId: string;
   personaKey: string;
-  transcript: { role: "cliente" | "agente"; text: string }[];
+  transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
   kbText: string;
   behaviorText: string;
 }): Promise<JudgeOutcome> {

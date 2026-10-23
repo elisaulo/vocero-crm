@@ -1,8 +1,7 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import { borrarMedia, guardarMedia, leerMedia, rutaEnDisco } from "@/lib/storage/medios";
 import { graphRequest, MetaApiError } from "@/lib/meta/client";
 import {
   getCredentialsByOrg,
@@ -12,9 +11,14 @@ import { isForbiddenUploadMime } from "@/server/whatsapp/media-headers";
 
 /**
  * 008 — Única frontera de media con la Graph API (constitución II: todo el
- * tráfico a Meta pasa por adaptadores dedicados) + persistencia en el volumen
- * local `MEDIA_DIR`. Meta expira sus archivos (~30 días, URLs de minutos):
- * el disco propio es la copia durable que la UI previsualiza.
+ * tráfico a Meta pasa por adaptadores dedicados) + persistencia propia. Meta
+ * expira sus archivos (~30 días, URLs de minutos): la copia propia es la
+ * durable que la UI previsualiza.
+ *
+ * 037 — Esa copia vive en el disco (`MEDIA_DIR`) o en un bucket S3-compatible
+ * (`MEDIA_STORE=bucket`): lo decide `src/lib/storage/medios.ts`, que escribe
+ * donde diga la bandera y lee en los dos sitios. Estas funciones conservan su
+ * nombre para no tocar a quien las llama.
  */
 
 export type MediaKind = (typeof schema.mediaAsset.$inferSelect)["kind"];
@@ -98,45 +102,33 @@ export function validateOutgoing(mime: string, sizeBytes: number) {
 
 /* ---------- Disco local ---------- */
 
-function assertSafeSegment(s: string): void {
-  if (!/^[\w.-]+$/.test(s)) throw new Error(`segmento de ruta inválido: ${s}`);
-}
-
-/** Ruta absoluta del archivo de un asset dentro de MEDIA_DIR. */
+/** Ruta absoluta del archivo de un asset en el volumen local (solo el disco). */
 export function mediaFilePath(organizationId: string, assetId: string): string {
-  assertSafeSegment(organizationId);
-  assertSafeSegment(assetId);
-  return path.join(getEnv().MEDIA_DIR, organizationId, assetId);
+  return rutaEnDisco(organizationId, assetId);
 }
 
+/** Guarda el binario donde toque y devuelve la ruta relativa que va a la BD. */
 export async function saveMediaFile(
   organizationId: string,
   assetId: string,
-  data: Buffer | Uint8Array
+  data: Buffer | Uint8Array,
+  contentType?: string
 ): Promise<string> {
-  const file = mediaFilePath(organizationId, assetId);
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, data);
-  return path.join(organizationId, assetId); // ruta relativa persistida en BD
+  return guardarMedia(organizationId, assetId, data, contentType);
 }
 
-export async function readMediaFile(
-  organizationId: string,
-  assetId: string
-): Promise<Buffer> {
-  return readFile(mediaFilePath(organizationId, assetId));
+/** Lee el binario, del bucket o del disco (037: en los dos sitios). */
+export async function readMediaFile(organizationId: string, assetId: string): Promise<Buffer> {
+  return leerMedia(organizationId, assetId);
 }
 
 /**
  * 018 — Borra el archivo de un asset. Sin error si ya no estaba: quien lo
  * llama está deshaciendo una copia que sobró, y un archivo que no existe es
- * justo el estado al que quiere llegar.
+ * justo el estado al que quiere llegar. 037 — En los dos sitios.
  */
-export async function deleteMediaFile(
-  organizationId: string,
-  assetId: string
-): Promise<void> {
-  await rm(mediaFilePath(organizationId, assetId), { force: true });
+export async function deleteMediaFile(organizationId: string, assetId: string): Promise<void> {
+  await borrarMedia(organizationId, assetId);
 }
 
 /* ---------- Descarga desde Graph (entrantes y echoes) ---------- */
@@ -228,7 +220,7 @@ export async function ensureAssetAvailable(
       creds.token,
       asset.waMediaId
     );
-    const storagePath = await saveMediaFile(organizationId, assetId, data);
+    const storagePath = await saveMediaFile(organizationId, assetId, data, mimeType ?? undefined);
     const updated = await db
       .update(schema.mediaAsset)
       .set({

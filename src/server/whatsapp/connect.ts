@@ -135,12 +135,21 @@ export async function registerWebhookForNumber(opts: {
   token: string;
   webhookUrl: string;
   verifyToken: string;
+  /**
+   * 035 — «Recuperar el webhook»: quien administra decidió que los mensajes
+   * vuelvan al CRM aunque la WABA enrute a un override ajeno (el de Nea 1.x,
+   * o el backend de una agencia). Se re-suscribe la app SIN cuerpo —así borra
+   * Meta el override de la WABA— y se registra el del número. Quitar también
+   * el de la WABA es lo que hace que dure: si se quedara, el siguiente
+   * «Guardar» lo vería y quitaría el del número, por la regla de arriba.
+   */
+  forzar?: boolean;
 }): Promise<WebhookRegistration> {
   const { wabaId, phoneNumberId, token, webhookUrl, verifyToken } = opts;
   const ownPath = pathOf(webhookUrl);
 
   const override = await wabaOverride(wabaId, token);
-  if (override && !sameWebhookPath(override, ownPath)) {
+  if (override && !sameWebhookPath(override, ownPath) && !opts.forzar) {
     const host = hostOf(override);
     console.log(
       `[connect] la WABA ${wabaId} enruta sus webhooks a un override (${host}): se respeta y no se registra el del número`
@@ -148,7 +157,12 @@ export async function registerWebhookForNumber(opts: {
     await unregisterWebhookForNumber({ phoneNumberId, token, webhookPath: ownPath });
     return { ok: true, skipped: "waba_override", host };
   }
-  if (!override) {
+  if (!override || (opts.forzar && !sameWebhookPath(override, ownPath))) {
+    if (override) {
+      console.log(
+        `[connect] recuperar el webhook: se quita el override de la WABA ${wabaId} (${hostOf(override)})`
+      );
+    }
     try {
       await graphRequest(`${wabaId}/subscribed_apps`, { method: "POST", token });
     } catch (err) {

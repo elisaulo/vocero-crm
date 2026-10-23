@@ -517,12 +517,22 @@ function WebhookCard({
   const [registering, setRegistering] = useState(false);
   const canRegister = connection?.status === "connected";
 
-  async function register() {
+  async function register(recuperar = false) {
+    if (recuperar) {
+      const host = registration?.ok && "skipped" in registration ? registration.host : "otro servicio";
+      const ok = window.confirm(
+        `Recuperar el webhook: los mensajes de tu número dejarán de llegar a ${host} y llegarán a este CRM, que se los despacha a tu agente. ¿Continuar?`
+      );
+      if (!ok) return;
+    }
     setRegistering(true);
     onRegistration(null);
-    const res = await fetch("/api/settings/webhook", { method: "POST" }).catch(
-      () => null
-    );
+    const res = await fetch("/api/settings/webhook", {
+      method: "POST",
+      ...(recuperar
+        ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ recuperar: true }) }
+        : {}),
+    }).catch(() => null);
     const data = (await res?.json().catch(() => null)) as
       | (WebhookRegistration & { error?: { message?: string } })
       | null;
@@ -562,11 +572,23 @@ function WebhookCard({
               variant="outline"
               size="sm"
               disabled={registering}
-              onClick={() => void register()}
+              onClick={() => void register(false)}
             >
               {registering ? "Registrando…" : "Registrar en Meta"}
             </Button>
             {registration && <RegistrationNotice registration={registration} />}
+            {/* 035 — Quien venía con Nea 1.x delante del CRM: el webhook vive en
+                un override ajeno de la WABA y el registro normal lo respeta. */}
+            {registration?.ok && "skipped" in registration && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={registering}
+                onClick={() => void register(true)}
+              >
+                Recuperar el webhook
+              </Button>
+            )}
           </div>
         )}
         {!webhook.isHttps && (

@@ -1,6 +1,13 @@
 # ============================================================
 # Vocero CRM — fly.toml (docs.fly.io/reference/configuration)
 #
+# 2.0 — El agente (Nea) es otra app de Fly al lado: `fly launch --image
+# ghcr.io/kevinrivm/nea-agent:2.0.0 --no-public-ips` con CRM_BASE_URL hacia
+# esta app por la red privada (http://<app>.internal:3000), la misma
+# DATABASE_URL con DATABASE_SCHEMA=nea, CRM_BOT_API_KEY = BOT_API_KEY de aquí y
+# su LLM_API_KEY. Aquí, BRAIN_DISPATCH_URL=http://<nea>.internal:8000/vocero/dispatch.
+# Guía: docs/migrar-a-2.0.md.
+#
 # Una Machine desde la imagen publicada (sin build en Fly), un volumen en
 # /data y el healthcheck de la app. Este archivo declara la imagen, el
 # puerto, el volumen, el healthcheck, el tamaño de la máquina y las variables
@@ -36,6 +43,9 @@
 # - El volumen se monta como root; el entrypoint de la imagen se lo da al
 #   usuario de la app en cada arranque. MEDIA_DIR no se define: la imagen ya
 #   trae /data/media.
+# - 037: si prefieres no atar los adjuntos al volumen de una Machine,
+#   MEDIA_STORE=bucket y las MEDIA_BUCKET_* (`fly secrets set`) los mandan a
+#   un bucket S3-compatible (Tigris, R2, S3). Ver .env.example.
 # - La imagen va fijada a la versión (una prueba lo exige): actualizar es
 #   cambiar la etiqueta y `fly deploy`. Las migraciones corren al arrancar.
 # ============================================================
@@ -46,7 +56,7 @@ app = "vocero-crm"
 primary_region = "qro"
 
 [build]
-  image = "ghcr.io/kevinrivm/vocero-crm:1.5.0"
+  image = "ghcr.io/kevinrivm/vocero-crm:2.0.0"
 
 [env]
   # No es secreta y depende del nombre de la app: cámbiala junto con `app`, o

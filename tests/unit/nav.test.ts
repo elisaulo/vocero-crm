@@ -81,11 +81,20 @@ describe("ajustes en tres secciones", () => {
   });
 
   it("cada bandera añade su enlace en su sección y en ninguna otra", () => {
+    // 023: con un canal social, "Estado" abre la sección.
     expect(links(settingsSections({ messenger: true }))).toEqual({
-      Canales: ["WhatsApp", "Messenger"],
+      Canales: ["Estado", "WhatsApp", "Messenger"],
       Agente: ["IA"],
       Negocio: ["Marca", "Plantillas", "Equipo"],
     });
+    expect(links(settingsSections({ instagram: true })).Canales).toEqual([
+      "Estado",
+      "WhatsApp",
+      "Instagram",
+    ]);
+    expect(
+      links(settingsSections({ instagram: true, messenger: true, tiktok: true })).Canales
+    ).toEqual(["Estado", "WhatsApp", "Instagram", "Messenger", "TikTok"]);
     expect(links(settingsSections({ agenda: true }))).toEqual({
       Canales: ["WhatsApp"],
       Agente: ["IA", "Agenda"],
@@ -99,14 +108,23 @@ describe("ajustes en tres secciones", () => {
   });
 
   it("con todo encendido, cada pantalla de Ajustes tiene exactamente un enlace", () => {
-    const all = settingsSections({ agenda: true, atribucion: true, messenger: true })
+    const all = settingsSections({
+      agenda: true,
+      atribucion: true,
+      instagram: true,
+      messenger: true,
+      tiktok: true,
+    })
       .flatMap((s) => s.links)
       .map((l) => l.href);
     expect(new Set(all).size).toBe(all.length);
     expect(all.sort()).toEqual(
       [
+        "/settings/channels",
         "/settings/whatsapp",
+        "/settings/instagram",
         "/settings/messenger",
+        "/settings/tiktok",
         "/settings/ai",
         "/settings/calendar",
         "/settings/branding",

@@ -5,13 +5,18 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, PanelRight } from "lucide-react";
 import { cn, formatPhone } from "@/lib/utils";
 import { ContactAvatar } from "@/components/avatar";
-import type { ConversationDto, MessageDto } from "@/lib/types";
+import type {
+  ConversationDto,
+  MessageDto,
+  QuotedMessageDto,
+} from "@/lib/types";
 import { CHANNEL_LABEL, type Channel } from "@/lib/channels";
 import { ChannelBadge } from "@/components/channel-badge";
 import { useEvents } from "@/components/use-events";
 import { ConversationList } from "./conversation-list";
 import { MessageThread } from "./message-thread";
 import { Composer } from "./composer";
+import { citaDe } from "./helpers";
 import { ContactPanel } from "./contact-panel";
 
 /**
@@ -23,6 +28,8 @@ type PendingOut = {
   id: string;
   conversationId: string;
   text: string;
+  /** 039: la cita viaja también en la burbuja provisional. */
+  replyTo: QuotedMessageDto | null;
   createdAt: string;
 };
 
@@ -35,7 +42,14 @@ const PANEL_MEDIA_QUERY = "(min-width: 1280px)";
 const isWideEnoughForPanel = () =>
   typeof window !== "undefined" && window.matchMedia(PANEL_MEDIA_QUERY).matches;
 
-export function InboxClient({ channels }: { channels: readonly Channel[] }) {
+export function InboxClient({
+  channels,
+  canDelete = false,
+}: {
+  channels: readonly Channel[];
+  /** 026 — Eliminar es irreversible: solo quien administra ve la opción. */
+  canDelete?: boolean;
+}) {
   const multiChannel = channels.length > 1;
   const [conversations, setConversations] = useState<ConversationDto[] | null>(
     null
@@ -43,6 +57,8 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageDto[]>([]);
   const [pending, setPending] = useState<PendingOut[]>([]);
+  // 039: el mensaje al que se está respondiendo citando.
+  const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
   // Arranca cerrado: en pantallas angostas el panel de detalles es un cajón
   // ENCIMA del hilo, así que abrirlo por defecto taparía la conversación. El
   // efecto de abajo lo abre solo si de veras hay tres columnas de ancho.
@@ -97,6 +113,7 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
     (id: string) => {
       setSelectedId(id);
       setMessages([]);
+      setReplyTo(null);
       void refetchMessages(id);
       void fetch(`/api/conversations/${id}`, {
         method: "PATCH",
@@ -106,6 +123,17 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
     },
     [refetchMessages]
   );
+
+  /** 026 — Saca una conversación eliminada de todo lo que esta pestaña recuerda. */
+  const quitarConversacion = useCallback((id: string) => {
+    setConversations((prev) => prev?.filter((c) => c.id !== id) ?? prev);
+    setPending((prev) => prev.filter((p) => p.conversationId !== id));
+    if (selectedIdRef.current === id) {
+      setSelectedId(null);
+      setMessages([]);
+      setReplyTo(null);
+    }
+  }, []);
 
   // Enlace directo desde Contactos/Pipeline: /inbox?contact=<id>
   const searchParams = useSearchParams();
@@ -152,6 +180,13 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
       // El agente movió de etapa o cambió el handoff: refresca el panel en vivo.
       setDetailRev((v) => v + 1);
     },
+    onConversationDeleted: ({ conversationId }) => {
+      // 026: la eliminó alguien del equipo (o esta misma pestaña). Se quita
+      // ya, sin esperar al refetch, para que nadie le escriba a un hilo que
+      // no existe.
+      quitarConversacion(conversationId);
+      void refetchConversations();
+    },
     onReconnect: () => {
       // Catch-up tras reconexión (contrato sse.md): refetch completo.
       void refetchConversations();
@@ -197,6 +232,8 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
         aiGenerated: false,
         origin: "operator",
         media: null,
+        quotable: false,
+        replyTo: p.replyTo,
         createdAt: p.createdAt,
       })),
     ];
@@ -209,7 +246,7 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
    * jamás se pierde en silencio.
    */
   const sendText = useCallback(
-    async (text: string): Promise<string | null> => {
+    async (text: string, cita: MessageDto | null = null): Promise<string | null> => {
       const conversationId = selectedIdRef.current;
       if (!conversationId) return "Sin conversación seleccionada";
 
@@ -220,6 +257,7 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
           id: tmpId,
           conversationId,
           text,
+          replyTo: cita ? citaDe(cita) : null,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -229,7 +267,9 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
         const res = await fetch(`/api/conversations/${conversationId}/messages`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify(
+            cita ? { text, replyToMessageId: cita.id } : { text }
+          ),
         }).catch(() => null);
         if (!res) {
           drop();
@@ -268,6 +308,30 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
       void refetchConversations();
     },
     [refetchConversations]
+  );
+
+  /** 026 — Devuelve el mensaje de error, o null si la conversación ya no existe. */
+  const deleteConversation = useCallback(
+    async (alsoContact: boolean): Promise<string | null> => {
+      const id = selectedIdRef.current;
+      if (!id) return "Sin conversación seleccionada";
+      const res = await fetch(
+        `/api/conversations/${id}${alsoContact ? "?contacto=1" : ""}`,
+        { method: "DELETE" }
+      ).catch(() => null);
+      if (!res) return "Sin conexión con el servidor";
+      // 404 = otra persona la eliminó primero: para quien lo pidió, ya está.
+      if (!res.ok && res.status !== 404) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        return data?.error?.message ?? "No se pudo eliminar la conversación";
+      }
+      quitarConversacion(id);
+      void refetchConversations();
+      return null;
+    },
+    [quitarConversacion, refetchConversations]
   );
 
   return (
@@ -322,12 +386,19 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
                       "mt-0.5 font-mono text-[10.5px] tracking-[0.04em]",
                       selected.windowOpen
                         ? "font-medium text-success-text"
-                        : "text-text-3"
+                        : selected.humanWindow?.open
+                          ? "font-medium text-info-text"
+                          : "text-text-3"
                     )}
                   >
                     {selected.windowOpen
                       ? "ventana abierta"
-                      : selected.contact.phone
+                      : selected.humanWindow?.open
+                        ? // 024: pasadas 24 h en Instagram o Messenger solo
+                          // contesta una persona. No se llama «atención
+                          // humana»: eso ya es el traspaso, con la IA en pausa.
+                          "ventana humana"
+                        : selected.contact.phone
                         ? formatPhone(selected.contact.phone)
                         : // Instagram no tiene teléfono: decir "Sin teléfono"
                           // sería contestar una pregunta que nadie hizo.
@@ -345,16 +416,40 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
                 </button>
               )}
             </header>
-            <MessageThread messages={thread} />
             <Composer
+              // 028: uno por conversación. Sin la llave, el borrador, el adjunto
+              // elegido y el panel abierto pasaban a la siguiente conversación.
+              // 043: el hilo va dentro (la zona donde se suelta una imagen es
+              // la conversación entera), así que la llave también lo reinicia
+              // a él: el aviso «Imagen reenviada a…» no pasa a otra.
+              key={selected.id}
               conversation={selected}
               onSend={sendText}
+              replyTo={replyTo?.conversationId === selected.id ? replyTo : null}
+              onReplyChange={setReplyTo}
               onSent={() => {
                 if (selectedIdRef.current)
                   void refetchMessages(selectedIdRef.current);
                 void refetchConversations();
               }}
-            />
+            >
+              <MessageThread
+                messages={thread}
+                contactName={selected.contact.name}
+                // 039: citar solo donde el canal lo permite y se puede escribir
+                // texto libre (con la ventana cerrada solo salen plantillas).
+                onReply={
+                  selected.composer.quoteReply && selected.windowOpen
+                    ? setReplyTo
+                    : undefined
+                }
+                conversations={conversations ?? []}
+                onForwarded={() => {
+                  if (selectedIdRef.current) void refetchMessages(selectedIdRef.current);
+                  void refetchConversations();
+                }}
+              />
+            </Composer>
           </>
         ) : (
           <div className="thread-bg flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
@@ -393,6 +488,7 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
               conversation={selected}
               refreshKey={detailRev}
               onPatchConversation={patchConversation}
+              onDeleteConversation={canDelete ? deleteConversation : undefined}
               onClose={() => togglePanel(false)}
             />
           </div>

@@ -33,10 +33,11 @@ const creds = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/env", () => ({ getEnv: () => env }));
+const sesion = vi.hoisted(() => ({ role: "owner" }));
 vi.mock("@/lib/auth/session", () => ({
   UnauthorizedError: class UnauthorizedError extends Error {},
-  requireSession: async () => ({ userId: "usr_1", organizationId: "org_a", role: "owner" }),
-  getSessionOrNull: async () => ({ userId: "usr_1", organizationId: "org_a", role: "owner" }),
+  requireSession: async () => ({ userId: "usr_1", organizationId: "org_a", role: sesion.role }),
+  getSessionOrNull: async () => ({ userId: "usr_1", organizationId: "org_a", role: sesion.role }),
 }));
 vi.mock("@/server/channels/enabled", () => ({ isChannelEnabled: () => false }));
 vi.mock("@/server/whatsapp/credentials", () => ({
@@ -57,6 +58,13 @@ vi.mock("@/server/whatsapp/connect", () => ({
 
 import { DELETE, PUT } from "@/app/api/settings/whatsapp/route";
 import { GET as webhookGet, POST as webhookPost } from "@/app/api/settings/webhook/route";
+
+/** 035 — La ruta lee el cuerpo (`recuperar`); sin cuerpo, el registro de siempre. */
+const peticion = (cuerpo?: unknown) =>
+  new Request("http://crm.test/api/settings/webhook", {
+    method: "POST",
+    ...(cuerpo === undefined ? {} : { body: JSON.stringify(cuerpo), headers: { "content-type": "application/json" } }),
+  });
 
 const URL_FIJA = "https://crm.ejemplo.test/api/webhooks/wa/verify-abc";
 
@@ -157,7 +165,7 @@ describe("desconectar quita el webhook que puso el guardado", () => {
 
 describe("«Registrar en Meta» con la conexión guardada", () => {
   it("sin conexión → 409", async () => {
-    const res = await webhookPost();
+    const res = await webhookPost(peticion());
     expect(res.status).toBe(409);
     expect((await res.json()).error.code).toBe("sin_conexion");
     expect(register).not.toHaveBeenCalled();
@@ -173,7 +181,7 @@ describe("«Registrar en Meta» con la conexión guardada", () => {
       verifiedName: null,
     };
     register.mockResolvedValueOnce({ ok: true, appWithoutWebhook: true });
-    const res = await webhookPost();
+    const res = await webhookPost(peticion());
     expect(res.status).toBe(200);
     expect(register).toHaveBeenCalledWith({
       wabaId: "111",
@@ -181,6 +189,7 @@ describe("«Registrar en Meta» con la conexión guardada", () => {
       token: "EAAG-guardado",
       webhookUrl: URL_FIJA,
       verifyToken: "verify-abc",
+      forzar: false,
     });
     expect(await res.json()).toEqual({ ok: true, appWithoutWebhook: true });
   });
@@ -195,12 +204,12 @@ describe("«Registrar en Meta» con la conexión guardada", () => {
       verifiedName: null,
     };
     register.mockResolvedValueOnce({ ok: false, code: "missing_permission", message: "sin permiso" });
-    const rechazo = await webhookPost();
+    const rechazo = await webhookPost(peticion());
     expect(rechazo.status).toBe(422);
     expect((await rechazo.json()).error).toEqual({ code: "missing_permission", message: "sin permiso" });
 
     register.mockResolvedValueOnce({ ok: false, code: "meta_unavailable", message: "caída" });
-    expect((await webhookPost()).status).toBe(503);
+    expect((await webhookPost(peticion())).status).toBe(503);
   });
 
   it("GET sigue enseñando la URL fija y el verify token para el respaldo manual", async () => {
@@ -213,5 +222,35 @@ describe("«Registrar en Meta» con la conexión guardada", () => {
       instagramUrl: null,
       messengerUrl: null,
     });
+  });
+});
+
+describe("035 — «Recuperar el webhook»", () => {
+  const conectada = {
+    wabaId: "111",
+    phoneNumberId: "222",
+    token: "EAAG-guardado",
+    status: "connected" as const,
+    displayPhoneNumber: null,
+    verifiedName: null,
+  };
+
+  it("con recuperar: true registra forzando, aunque la WABA tenga override ajeno", async () => {
+    creds.current = conectada;
+    register.mockResolvedValueOnce({ ok: true, appWithoutWebhook: false });
+    const res = await webhookPost(peticion({ recuperar: true }));
+    expect(res.status).toBe(200);
+    expect(register).toHaveBeenLastCalledWith(expect.objectContaining({ forzar: true }));
+  });
+
+  it("solo quien administra", async () => {
+    creds.current = conectada;
+    sesion.role = "member";
+    try {
+      const res = await webhookPost(peticion({ recuperar: true }));
+      expect(res.status).toBe(403);
+    } finally {
+      sesion.role = "owner";
+    }
   });
 });

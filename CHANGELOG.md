@@ -5,11 +5,254 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
-## Sin publicar — camino a 2.0.0
+## 2.0.0 — 2026-10-20
 
-Lo que ya está en `main` de la sección 2.0.0 del
-[plan](docs/plan-1.5-y-2.0.md). Nada de esto cambia una instalación que no
-toque sus variables.
+El agente sale del CRM y se conecta por contrato. Vocero se queda con lo suyo
+—bandeja, pipeline, agenda, perfil del agente, conocimiento, la llave de IA y
+el Laboratorio— y contesta [Nea](https://github.com/kevinrivm/nea-agent) (MIT)
+u otro cerebro conectado al lado. Sin agente, Vocero es una bandeja manual.
+
+### Actualizar desde 1.6.0
+
+Es mayor: hay algo que hacer a mano. La guía completa, por caso (solo el
+agente incluido, Nea 1.x delante, cerebro propio), es
+[`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md). Lo corto:
+
+1. Respalda la base, como siempre.
+2. **docker compose**: `git pull`; si tu `.env` no tiene `BOT_API_KEY`,
+   agrégala (`openssl rand -hex 32`); y `docker compose up -d`: levanta el CRM
+   2.0.0 y Nea 2.0.0 sobre la misma base, con el despacho ya cableado. **Coolify**: la etiqueta `2.0.0` y un servicio más para Nea (guía,
+   «El par»). Las migraciones corren solas.
+3. Enciende el agente en la pantalla Agente: desde la 2.0 ese interruptor
+   decide si el CRM le despacha a tu agente, y solo se enciende con el agente
+   conectado y sano.
+4. Si tu número recibía los webhooks en Nea 1.x, **recupera el webhook** en
+   Configuración → WhatsApp.
+
+### ⚠️ Rompe: hay que hacer algo a mano
+
+- **El CRM ya no trae agente** (036). Quien contesta es el cerebro que
+  conectas al lado: [Nea](https://github.com/kevinrivm/nea-agent) (MIT) u
+  otro, por el despacho (`BRAIN_DISPATCH_URL` + `BOT_API_KEY`) y
+  `/api/bot/*`. Sin cerebro, Vocero es un CRM de bandeja manual: recibe, se
+  contesta a mano, pipeline y agenda. **Si usabas el agente incluido, nadie
+  contesta después de actualizar** hasta que levantes Nea (`docker compose
+  up -d`, o el servicio en Coolify) y vuelvas a encender el agente. El perfil, el conocimiento, la llave de Ajustes → IA y el
+  Laboratorio se quedan donde estaban.
+- **El interruptor de la pantalla Agente ahora decide el despacho** (036).
+  Encendido = el CRM le despacha a tu agente; apagado = las conversaciones se
+  quedan en la bandeja. Encenderlo exige un cerebro configurado y con su
+  `/health` sano (si no, 409 `sin_cerebro`). **Si ya despachabas con la 1.6 y
+  el interruptor estaba apagado** (entonces no importaba), enciéndelo después
+  de actualizar; la tarjeta «Quién responde» lo avisa.
+
+### Nuevo
+
+- **El despacho lleva lo que el cerebro leía del webhook** (031): `adOrigen`
+  en el contexto; `fileName`, `location` y `contacts` en los mensajes.
+- **El Laboratorio prueba al cerebro que contesta** (033), por el despacho;
+  `POST /api/bot/messages` guarda las respuestas de prueba sin enviarlas.
+- **Roles como datos** (034): rol Calificador y herramientas encendidas en la
+  pantalla Agente; `role` y `tools` en `/api/bot/profile`. Migración `0021`.
+- **Contrato público** (035): [`docs/openapi.json`](docs/openapi.json),
+  servido en `GET /api/bot/openapi.json` y validado en `pnpm test`.
+- **Recuperar el webhook** (035) en Configuración → WhatsApp, para quien
+  venía con Nea 1.x delante del CRM.
+- **El par en el compose** (035): `docker compose up -d` levanta Nea al lado
+  del CRM sobre la misma base, con el despacho ya cableado. Render trae el
+  servicio `vocero-nea`; `pnpm init-env` genera `BOT_API_KEY`.
+- **Tu agente piensa por el CRM** (036): `POST /api/bot/llm/{ruta}`, compatible
+  con OpenAI, reenvía al proveedor de Ajustes → IA con la llave guardada. La
+  llave se pone una vez, en la interfaz, y no sale del CRM; un 401 o 402 del
+  proveedor la pausa en Ajustes → IA. Sin IA, 402 `sin_credencial`. `/api/bot/*`
+  acepta también `Authorization: Bearer`.
+- **`llm` en `/api/bot/profile`** (036): `{path, model}` con el modelo de
+  Ajustes → IA, o `null` sin IA configurada. Nea 2.0 sin `LLM_API_KEY` lo usa
+  solo.
+- **«Conecta tu agente» en la guía de inicio** (036), opcional: se marca
+  cuando el despacho está configurado y el agente contesta su `/health`. Sin
+  agente, la guía dice que Vocero funciona como bandeja manual y no te deja
+  atrapado en ella.
+- **Tu agente mueve al lead de etapa** (038): `POST /api/bot/stage`, solo hacia
+  adelante y a etapas abiertas (ganar o perder lo decide una persona), con la
+  herramienta «Mover de etapa» del rol; el contexto trae `lead.nextStages`.
+  Nea 2.0 la usa.
+- **Adjuntos en un bucket S3-compatible** (037), opcional y apagado por
+  defecto: `MEDIA_STORE=bucket` y las `MEDIA_BUCKET_*`. Lo nuevo va al bucket
+  y lo viejo se sigue leyendo del volumen (sin migrar); si el bucket falla al
+  escribir, el archivo queda en el volumen. `docker compose --profile bucket`
+  levanta un MinIO propio. `/api/health` gana `features.media`; el sondeo de
+  `mediaWritable` y `pnpm doctor` prueban el bucket. Sin SDK de AWS.
+
+### Cambió
+
+- **El Laboratorio necesita un agente conectado** (036): las personas le
+  escriben por el despacho; sin él, crear una corrida responde 409
+  `sin_cerebro` y la pantalla lo explica. El juez sigue usando la llave de
+  Ajustes → IA.
+- **«Quién responde»** (036) deja el agente incluido y el aviso
+  `doble_respuesta`. Quedan `sin_cerebro` (informativo: bandeja manual) y
+  `apagado` (agente conectado con el interruptor apagado).
+- **Nea en el compose sin llave de IA** (036): el servicio `nea` ya no lleva
+  `LLM_API_KEY` y `.env.example` pierde `NEA_LLM_API_KEY`. Si la tenías en tu
+  `.env`, ya no se lee: puedes quitarla. Nea piensa por el CRM.
+- Ajustes → IA dice para qué es la llave: con ella piensa tu agente (a través
+  del CRM) y el juez del Laboratorio.
+
+### Se fue
+
+- El turno dentro del proceso (036): `src/server/ai/{pipeline,actions,trigger,handoff,orden-turno}.ts`,
+  el prompt del agente de `prompts.ts` (quedan `renderKb` y el prompt del
+  juez), `src/server/agenda/agent.ts` y `scripts/eval-silencios.ts`. Un fork
+  que los tocaba tiene que llevar ese comportamiento a su cerebro.
+
+## 1.6.0 — 2026-10-14
+
+La versión multicanal. Instagram, Messenger y ahora TikTok llegan a la misma
+bandeja que WhatsApp, se conectan pegando la llave de Zernio y se vigilan desde
+una sola pantalla. El agente escribe como se debe en cada red y ya no se queda
+callado ante un saludo. Y llegan dos cosas que pedían los negocios con
+clientes de siempre: importar contactos y marcarlos «sin agente». Con solo
+WhatsApp encendido, todo funciona como antes.
+
+### Actualizar desde 1.5.1
+
+1. Respalda la base, como siempre.
+2. Redespliega con la imagen `1.6.0` (compose: `git pull` y
+   `docker compose up -d`; Coolify: cambia la etiqueta y redespliega). Las
+   migraciones `0018` a `0020` son aditivas y corren solas al arrancar.
+3. Si ya tenías Instagram o Messenger por Zernio, no hay que reconectar nada.
+   Al arrancar, el log dice `[boot] N secreto(s) de firma de Zernio
+   cifrado(s) en reposo`: es la 030 haciendo su trabajo, una sola vez.
+4. Para encender canales, pon `CHANNELS` (por ejemplo
+   `whatsapp,instagram,messenger,tiktok`) y **redespliega**: un reinicio no
+   carga variables nuevas. Después abre Configuración → Estado.
+5. Si tienes un cerebro externo por despacho: en Instagram y Messenger, entre
+   las 24 horas y los 7 días, `POST /api/bot/messages` ahora responde 409
+   `window_closed` a la IA; y tras eliminar una conversación llega un evento
+   `conversation.deleted` a la misma URL. Mira `type` antes de buscar
+   `messages`.
+
+TikTok está probado con el simulador y aún no con un mensaje real: la cuenta
+Business de prueba sigue en revisión.
+
+### Cambios
+
+- **Canal de TikTok** (022), opcional y apagado por defecto: con `tiktok` en
+  `CHANNELS`, los mensajes directos de tu cuenta TikTok Business entran a la
+  misma bandeja, con su distintivo, y los contesta el operador o el agente.
+  Llega por Zernio, con tu propia cuenta; se conecta en Ajustes → TikTok.
+  Vocero aplica lo que TikTok impone y lo dice claro: ventana de 48 horas sin
+  forma de reabrir, hasta 10 mensajes tras el último del cliente (el undécimo
+  responde 409 `message_limit`) y texto de hasta 6,000 caracteres.
+  **Aún sin probar con un mensaje real de TikTok** (solo con simulador): la
+  cuenta Business de prueba está en revisión.
+- **Migración `0018_canal_tiktok`**: crea la tabla `tiktok_credentials`.
+  Aditiva; corre sola al arrancar y queda vacía si no usas el canal.
+- **Pulido de la bandeja multicanal** (028). En Instagram, Messenger y TikTok
+  el compositor ya no ofrece adjuntos, ubicación ni contacto, que esos canales
+  no mandan. La bandeja vacía y el filtro de un canal sin conversaciones dicen
+  qué pasa («Nadie ha escrito por Instagram todavía»). Con más de un canal, el
+  menú, la pestaña y la pantalla de entrada dicen «multicanal». Y al cambiar de
+  conversación ya no se arrastran el borrador ni el archivo elegido: antes un
+  adjunto escogido para una persona podía salir en la conversación de otra.
+  Los avatares de nombres con emoji («Kevin Belier 🐏») ya no salen rotos.
+- **El agente contesta los saludos** (029). Un «Hola, prueba» —lo primero que
+  escribe quien estrena su agente— se quedaba sin respuesta: el agente lo tomaba
+  por un mensaje de prueba y callaba. Ahora solo calla ante un cierre («ok»,
+  «gracias», un emoji). Y deja de gastar un segundo llamado al modelo en cada
+  turno después del primero, así que contesta antes. Sin nada que configurar.
+- **Importar contactos** (027). En Contactos, «Importar»: un CSV con una
+  columna de nombre y una de teléfono (con código de país). Se lee en tu
+  navegador y te enseña qué va a entrar y qué se queda fuera, con su motivo,
+  antes de crear nada. No duplica ni le cambia el nombre a quien ya existía, y
+  no crea conversaciones ni leads. Hasta 2,000 renglones por archivo.
+- **Contactos «sin agente»** (027). Una casilla al importar, y otra en «Editar»
+  de cada contacto: el agente no le responde a esa persona. Sus mensajes
+  llegan a la bandeja y los atiendes tú; vale para el agente incluido y para un
+  cerebro por despacho. Pensado para clientes o miembros que ya son tuyos.
+- **Migración `0019_contact_ai_paused`**: una columna en `contact`, con
+  valor por defecto. Aditiva; corre sola al arrancar y deja a todos tus
+  contactos con agente, como estaban.
+- **El secreto de firma de Zernio, cifrado** (030). Instagram, Messenger y
+  TikTok guardaban en claro el secreto con el que se comprueba que un webhook
+  viene de Zernio; ahora va cifrado con tu `ENCRYPTION_KEY`, como el token.
+  Quien leyera un respaldo de la base podía fabricar mensajes que el CRM
+  aceptaba como reales. No hay que reconectar nada.
+- **Migración `0020_secreto_zernio_cifrado`**: tres columnas nulas en cada
+  tabla de credenciales de canal. Aditiva; corre sola al arrancar. Después,
+  al arrancar la app, los secretos que ya tenías se cifran y la columna vieja
+  queda vacía; el log dice cuántos (`[boot] N secreto(s) de firma de Zernio
+  cifrado(s) en reposo`). La columna vieja se quita en una versión mayor: no
+  saltes de una 1.5 directo a esa, pasa antes por la 1.6.
+- **Eliminar una conversación** (026). En la bandeja, al fondo de Detalles:
+  se borran los mensajes, sus adjuntos (también el archivo) y la ficha; el
+  contacto conserva sus notas y su etapa, salvo que marques «Borrar también el
+  contacto y su lead». Es irreversible y solo lo ve quien administra el
+  negocio. Una cita agendada por venir lo detiene: primero se cancela.
+- **El cerebro olvida lo borrado** (026). Con el despacho activo, tras eliminar
+  una conversación el CRM manda un evento `conversation.deleted` a la misma
+  URL y con la misma firma que un turno (un intento, sin reintentos). Si tu
+  cerebro recibe despachos, mira `type` antes de buscar `messages`: un
+  cuerpo con `type` no es un turno. Y trata un `conversation.id` nuevo para
+  una persona que ya conocías como una conversación nueva. Detalle en
+  `specs/021-despacho-estandar/contracts/despacho.md`.
+- **En Instagram, Messenger y TikTok el agente ya no escribe con asteriscos**
+  (024). El agente incluido y los cerebros externos marcan negritas como en
+  WhatsApp; esas redes no las dibujan y el cliente veía `*así*`. Ahora el
+  texto de la IA sale plano en esos canales: sin marcas, con `•` en las listas
+  y los enlaces como `texto: URL`. WhatsApp no cambia, y lo que escribe una
+  persona en la bandeja tampoco.
+- **Ventana humana en Instagram y Messenger** (024). Pasadas 24 horas del
+  último mensaje del cliente la bandeja ya no esconde el cuadro de texto ni
+  pide una plantilla que esos canales no tienen: una persona puede contestar
+  hasta 7 días (sale con la etiqueta de agente humano de Meta) y la bandeja
+  dice cuánto queda. Pasados los 7 días lo explica en vez de dejar que Meta
+  rechace el envío.
+- **La IA deja de usar esa etiqueta.** Entre 24 horas y 7 días, en Instagram
+  y Messenger, `POST /api/bot/messages` responde 409 `window_closed` (antes
+  enviaba con la etiqueta, que Meta reserva a personas). Es lo que ya decían
+  `windowOpen` y el contrato del despacho; el agente incluido pasa la
+  conversación a una persona, como en WhatsApp.
+- **Instagram ya tiene pantalla** (023): Configuración → Instagram. Antes el
+  canal solo se podía conectar llamando a la API a mano.
+- **Conectar por Zernio es pegar la llave** (023), en Instagram, Messenger y
+  TikTok. Vocero encuentra la cuenta con esa llave (y si hay varias, las
+  ofrece para elegir), da de alta el webhook en tu Zernio limitado a tus
+  cuentas y genera el secreto de firma. Ya no se copia un `accountId` ni se
+  captura un secreto. Arregla dos fallos silenciosos: guardar el id del perfil
+  en vez del de la cuenta (el webhook respondía 200 y cada mensaje se
+  descartaba) y tener un secreto distinto por canal (uno rechazaba todo con
+  401).
+- **Configuración → Estado** (023): todos los canales encendidos, si están
+  conectados, cuándo entró el último mensaje y, por Zernio, cómo están la
+  cuenta y el webhook, con un botón para repararlo. Aparece si tienes algún
+  canal social encendido.
+- La firma de Zernio vale con cualquiera de los secretos de tus canales y con
+  el que Zernio tenga para el webhook de esta instancia: un secreto mal
+  capturado deja de tumbar un canal.
+- Conectar Instagram pasa a ser cosa del propietario, como ya lo eran
+  Messenger y TikTok.
+- `/api/bot/messages` gana el 409 `message_limit`. En `/api/bot/context` y en
+  el despacho, la ventana (`windowOpen`, `windowRemainingMs`,
+  `windowExpiresAt`) es la del canal de la conversación; para WhatsApp,
+  Instagram y Messenger sigue siendo de 24 horas.
+
+## 1.5.1 — 2026-10-13
+
+Sale antes que la 1.6.0 por un arreglo que no espera: el agente dejaba sin
+contestar el segundo mensaje cuando el cliente escribía dos veces seguidas.
+Trae también lo que ya estaba en `main` camino a la 2.0.0 (el despacho al
+cerebro), que no cambia nada si no tocas tus variables.
+
+### Actualizar desde 1.5.0
+
+Redespliega con la imagen `1.5.1` (compose: `git pull` y
+`docker compose up -d`; Coolify: cambia la etiqueta y redespliega). Respalda
+la base antes, como siempre. Las migraciones `0016` y `0017` son aditivas y
+corren solas al arrancar.
+
+### Cambios
 
 - **Despacho al cerebro** (#89): con `BRAIN_DISPATCH_URL` y `BOT_API_KEY`, el
   CRM le pasa cada turno a tu cerebro externo con un `POST` firmado, en vez de
@@ -20,6 +263,20 @@ toque sus variables.
   Contrato en `specs/021-despacho-estandar/contracts/despacho.md`.
 - **Migración `0016_despacho_al_cerebro`**: crea la tabla `dispatch`. Aditiva;
   corre sola al arrancar y queda vacía si no usas el despacho.
+- **El agente ya no deja sin contestar el segundo mensaje** (025). Si el
+  cliente escribía otra vez mientras se pensaba la respuesta a lo anterior,
+  ese mensaje quedaba detrás de la respuesta y se daba por atendido. Ahora
+  quien lleva el turno recuerda qué mensajes debe: con el despacho, el cerebro
+  recibe ese mensaje en su propio despacho; con el agente incluido, el modelo
+  lo lee después de su propia respuesta y gasta un turno más, solo uno.
+- **Si una persona contesta desde la bandeja dentro de la ventana de
+  agrupado, el agente incluido ya no contesta encima.** Con el despacho ya era
+  así. La IA de la conversación sigue encendida para el siguiente mensaje.
+- **Migración `0017_dispatch_message_ids`**: una columna nula en `dispatch`.
+  Aditiva; corre sola al arrancar.
+- El contrato del despacho gana dos garantías: `messages` nunca llega vacío, y
+  un mensaje puede ser anterior a tu última respuesta (deduplica por
+  `messages[].id`, como ya pedía).
 - Si ya tienes Nea delante del CRM, **no pongas `BRAIN_DISPATCH_URL` todavía**:
   Nea 1.x recibe el webhook por su cuenta y le llegaría cada mensaje dos
   veces. El despacho es para la Nea que lo reciba

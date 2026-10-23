@@ -1,4 +1,5 @@
 import { apiError, withAuth } from "@/lib/api";
+import { canConfigure } from "@/lib/auth/roles";
 import { getEnv } from "@/lib/env";
 import { isChannelEnabled } from "@/server/channels/enabled";
 import { registerWebhookForNumber } from "@/server/whatsapp/connect";
@@ -25,6 +26,8 @@ export const GET = withAuth(async () => {
     url,
     instagramUrl: isChannelEnabled("instagram") ? webhookUrl("ig") : null,
     messengerUrl: isChannelEnabled("messenger") ? webhookUrl("messenger") : null,
+    // 022: la URL que se da de alta en Zernio para los mensajes de TikTok.
+    tiktokUrl: isChannelEnabled("tiktok") ? webhookUrl("tiktok") : null,
     verifyToken: env.META_WEBHOOK_VERIFY_TOKEN,
     isHttps: url.startsWith("https://"),
     signatureLayer: Boolean(env.META_APP_SECRET),
@@ -36,8 +39,23 @@ export const GET = withAuth(async () => {
  *
  * Guardar ya lo hace; esto es para las conexiones anteriores a ese cambio y
  * para reintentar si Meta falló, sin volver a pegar el token.
+ *
+ * 035 — Con `{"recuperar": true}`, «Recuperar el webhook»: aunque la WABA
+ * enrute a un override ajeno (quien venía con Nea 1.x delante del CRM), el
+ * del número queda apuntando aquí. Quien recibía por el override deja de
+ * recibir: solo quien administra.
  */
-export const POST = withAuth(async (session) => {
+export const POST = withAuth(async (session, req: Request) => {
+  let recuperar = false;
+  try {
+    const cuerpo = (await req.json()) as { recuperar?: unknown } | null;
+    recuperar = cuerpo?.recuperar === true;
+  } catch {
+    // Sin cuerpo: el registro de siempre.
+  }
+  if (recuperar && !canConfigure(session.role)) {
+    return apiError(403, "forbidden", "Solo quien administra puede recuperar el webhook");
+  }
   const creds = await getCredentialsByOrg(session.organizationId);
   if (!creds) {
     return apiError(
@@ -53,6 +71,7 @@ export const POST = withAuth(async (session) => {
     token: creds.token,
     webhookUrl: webhookUrl("wa"),
     verifyToken: webhookVerifyToken(),
+    forzar: recuperar,
   });
   if (!resultado.ok) {
     const status = resultado.code === "meta_unavailable" ? 503 : 422;

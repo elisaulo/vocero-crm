@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Cable, Check, ChevronRight, Sparkles, UserRound } from "lucide-react";
+import {
+  Cable,
+  Check,
+  ChevronRight,
+  Inbox,
+  Power,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import {
   externalAnswerLabel,
   externalAnswering,
@@ -23,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaPanel } from "@/components/ficha-panel";
+import { DeleteConversationDialog } from "./delete-conversation-dialog";
 
 const HANDOFF_LABELS: Record<string, string> = {
   cliente: "El cliente pidió un humano",
@@ -36,6 +45,7 @@ export function ContactPanel({
   conversation,
   refreshKey = 0,
   onPatchConversation,
+  onDeleteConversation,
   onClose,
 }: {
   conversation: ConversationDto;
@@ -45,8 +55,11 @@ export function ContactPanel({
     aiEnabled?: boolean;
     reactivate?: boolean;
   }) => Promise<void>;
+  /** 026 — Ausente = quien mira no puede eliminar: no se le ofrece. */
+  onDeleteConversation?: (alsoContact: boolean) => Promise<string | null>;
   onClose: () => void;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [notes, setNotes] = useState("");
   const [ficha, setFicha] = useState<FichaDto>({});
   const [notesLoaded, setNotesLoaded] = useState(false);
@@ -56,20 +69,19 @@ export function ContactPanel({
   const [leadId, setLeadId] = useState<string | null>(null);
   // 018: de qué anuncio llegó; null si escribió por su cuenta.
   const [anuncio, setAnuncio] = useState<AnuncioDto | null>(null);
-  // Quién responde (agente incluido, cerebro externo o los dos): sin esto, el
-  // toggle "Respondiendo" mentiría cuando el agente aún no se ha
-  // configurado/encendido, y pediría la clave de IA aunque conteste Nea.
+  // Quién responde: el agente conectado (036: el CRM no trae uno), conectado
+  // pero apagado, o nadie (bandeja manual). Sin esto, el toggle diría
+  // «Respondiendo» cuando no contesta nadie.
   const [brain, setBrain] = useState<BrainStatusDto | null>(null);
 
   const contactId = conversation.contact.id;
 
-  const aiConfigured = brain?.embedded.configured ?? false;
-  const agentReady = brain?.embedded.answering ?? false;
-  // Hasta donde se sabe, contesta: activo y, si hay /health, en línea.
+  // Hasta donde se sabe, contesta: el CRM le despacha (agente conectado e
+  // interruptor encendido) y, si hay /health, está en línea.
   const externalActive = brain ? externalAnswering(brain) : false;
-  // El control es la FUENTE DE VERDAD de la conversación: el agente in-process
-  // y cualquier cerebro externo conectado por /api/bot/* respetan este flag,
-  // así que el toggle opera siempre — `agentReady` solo matiza el texto.
+  // El control es la FUENTE DE VERDAD de la conversación: el agente conectado
+  // (por despacho o por /api/bot/*) respeta este flag, así que el toggle opera
+  // siempre — `externalActive` solo matiza el texto.
   const aiActive = conversation.aiEnabled && !conversation.handoffAt;
 
   // Aparte del resto: consultar el /health del cerebro externo puede tardar
@@ -235,7 +247,7 @@ export function ContactPanel({
                     ? "En pausa · atención humana"
                     : !conversation.aiEnabled
                       ? "En pausa"
-                      : agentReady || externalActive
+                      : externalActive
                         ? "Respondiendo"
                         : "Activada"}
                 </p>
@@ -252,39 +264,20 @@ export function ContactPanel({
               />
             </div>
 
-            {brain?.warning === "doble_respuesta" ? (
-              <div className="mt-2.5 flex items-start gap-2 rounded-md border border-danger-soft bg-danger-tint p-2.5">
-                <AlertTriangle
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-text"
-                  strokeWidth={1.7}
-                />
-                <div className="text-[11px] leading-relaxed text-danger-text">
-                  <p>
-                    <span className="font-semibold">Doble respuesta:</span> el agente
-                    incluido y tu cerebro externo contestan a la vez.
-                  </p>
-                  <Link
-                    href="/agent"
-                    className="mt-1 inline-block font-medium underline underline-offset-2"
-                  >
-                    Revisar en Agente →
-                  </Link>
-                </div>
-              </div>
-            ) : brain && !agentReady && externalActive ? (
+            {brain && externalActive ? (
               <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-3">
                 <Cable className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} />
                 {externalAnswerLabel(brain)}
               </p>
-            ) : brain && !agentReady && externalDown(brain) ? (
+            ) : brain && brain.dispatch.active && externalDown(brain) ? (
               <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
                 <Cable
                   className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
                   strokeWidth={1.7}
                 />
                 <p className="text-[11px] leading-relaxed text-warning-text">
-                  Tu cerebro externo no está en línea: nadie contesta en automático
-                  hasta que vuelva.
+                  Tu agente no está en línea: nadie contesta en automático hasta
+                  que vuelva.
                   <Link
                     href="/agent"
                     className="ml-1 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
@@ -293,25 +286,36 @@ export function ContactPanel({
                   </Link>
                 </p>
               </div>
-            ) : brain && !agentReady && (
+            ) : brain && brain.dispatch.active ? (
               <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
-                <Sparkles
+                <Power
                   className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
                   strokeWidth={1.7}
                 />
                 <p className="text-[11px] leading-relaxed text-warning-text">
-                  {aiConfigured
-                    ? "El agente de Vocero no responde por su cuenta. Configura lo básico y enciéndelo (o conecta tu propio bot por la API)."
-                    : "Falta el proveedor de IA (o está pausado) para que el agente responda, o conecta tu propio bot por la API."}
+                  Tu agente está conectado pero apagado: contestas tú.
                   <Link
-                    href={aiConfigured ? "/agent" : "/settings/ai"}
+                    href="/agent"
                     className="ml-1 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
                   >
-                    {aiConfigured ? "Configurar agente →" : "Configurar la IA →"}
+                    Encenderlo →
                   </Link>
                 </p>
               </div>
-            )}
+            ) : brain ? (
+              <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-text-3">
+                <Inbox className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={1.7} />
+                <span>
+                  Bandeja manual: sin agente conectado, contestas tú.{" "}
+                  <Link
+                    href="/agent"
+                    className="whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
+                  >
+                    Ver en Agente →
+                  </Link>
+                </span>
+              </p>
+            ) : null}
           </div>
 
           {anuncio && (
@@ -372,7 +376,7 @@ export function ContactPanel({
         <FichaPanel ficha={ficha} onSave={saveFicha} />
 
         {/* Notas */}
-        <section className="p-4">
+        <section className={cn("p-4", onDeleteConversation && "border-b")}>
           <p className="kicker mb-2">Notas</p>
           <Textarea
             rows={5}
@@ -391,7 +395,30 @@ export function ContactPanel({
             {savingNotes ? "Guardando…" : "Guardar notas"}
           </Button>
         </section>
+
+        {/* 026 — Al fondo y sin color de alarma: está a la mano de quien la
+            busca, no en el camino de quien solo vino a leer la ficha. */}
+        {onDeleteConversation && (
+          <section className="p-4">
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="flex items-center gap-1.5 rounded text-[13px] text-text-3 transition-colors hover:text-danger-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.7} />
+              Eliminar conversación…
+            </button>
+          </section>
+        )}
       </div>
+
+      {confirmingDelete && onDeleteConversation && (
+        <DeleteConversationDialog
+          contactName={conversation.contact.name}
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={onDeleteConversation}
+        />
+      )}
     </div>
   );
 }

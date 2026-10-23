@@ -89,7 +89,8 @@ conectado. La 2.0 arregla eso y deja un solo agente: el de fuera.
 - **Retiro del agente incluido** (issue #106): solo cuando el Laboratorio ya
   corre por el contrato. Sin cerebro conectado, Vocero es un CRM de bandeja
   manual; la guía de inicio dice «conecta tu agente» en vez de «enciende el
-  agente».
+  agente». *Hecho en la spec 036* (el cerebro piensa por el CRM con
+  `/api/bot/llm`).
 - **Contrato público** (issue #92): `/api/bot/*` y el despacho documentados
   con OpenAPI, con pruebas gemelas en los dos repositorios, y la guía de
   migración.

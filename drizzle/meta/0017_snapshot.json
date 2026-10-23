@@ -1,5 +1,5 @@
 {
-  "id": "d5c93dae-138e-4f6d-986c-d97cd6f9c009",
+  "id": "d9e8534d-30f5-4dc0-a238-94fe5e1949a6",
   "prevId": "ab36e222-ff78-4f8c-9028-a7d3048db246",
   "version": "7",
   "dialect": "postgresql",
@@ -1876,6 +1876,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "message_ids": {
+          "name": "message_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "last_error": {
           "name": "last_error",
           "type": "text",
@@ -3200,19 +3206,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "provider": {
-          "name": "provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'meta'"
-        },
-        "external_message_id": {
-          "name": "external_message_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3729,31 +3722,6 @@
         },
         "metadata": {
           "name": "metadata",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "whatsapp_provider": {
-          "name": "whatsapp_provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'meta'"
-        },
-        "evolution_api_url": {
-          "name": "evolution_api_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "evolution_api_key": {
-          "name": "evolution_api_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "evolution_instance": {
-          "name": "evolution_instance",
           "type": "text",
           "primaryKey": false,
           "notNull": false

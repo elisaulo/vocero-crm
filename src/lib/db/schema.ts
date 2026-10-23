@@ -135,7 +135,7 @@ export const contact = pgTable(
      * 014: canal por el que vive este contacto. Aditivo y con default: toda
      * fila existente sigue significando exactamente lo mismo.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger"] })
+    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger", "tiktok"] })
       .notNull()
       .default("whatsapp"),
     /**
@@ -183,6 +183,17 @@ export const contact = pgTable(
     source: text("source", {
       enum: ["anuncio", "organico", "referido", "conocido", "otro"],
     }),
+    /**
+     * 027 — El agente no le responde a esta persona: clientes, miembros,
+     * proveedores — gente a la que el dueño quiere atender él mismo.
+     *
+     * Vive en el CONTACTO y no solo en la conversación porque un contacto
+     * importado todavía no tiene conversación (no se crean hilos vacíos), y
+     * porque al eliminar una conversación (026) la siguiente nacería con el
+     * agente encendido. La conversación lo hereda al crearse
+     * (`getOrCreateConversation`); después manda el interruptor de la Bandeja.
+     */
+    aiPaused: boolean("ai_paused").notNull().default(false),
     archivedAt: timestamp("archived_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -359,7 +370,7 @@ export const conversation = pgTable(
      * 014: canal de la conversacion. Denormalizado del contacto a proposito:
      * el ruteo de salida y el filtro de la bandeja lo leen en cada mensaje.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger"] })
+    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger", "tiktok"] })
       .notNull()
       .default("whatsapp"),
     /**
@@ -433,6 +444,11 @@ export const message = pgTable(
     mediaAssetId: text("media_asset_id").references(() => mediaAsset.id, {
       onDelete: "set null",
     }),
+    /**
+     * 039 — `wamid` del mensaje al que responde (cita). Sin FK: el citado
+     * puede no estar en el CRM; se resuelve al leer (`inbox/quotes.ts`).
+     */
+    replyToWaMessageId: text("reply_to_wa_message_id"),
     waTimestamp: timestamp("wa_timestamp"),
     provider: text("provider", { enum: ["meta", "evolution"] })
       .notNull()
@@ -549,8 +565,16 @@ export const instagramCredentials = pgTable(
     tokenCipher: text("token_cipher").notNull(),
     tokenIv: text("token_iv").notNull(),
     tokenTag: text("token_tag").notNull(),
-    /** Secreto HMAC de las entregas (Zernio); null en modo Meta. */
+    /**
+     * 030 — Obsoleta: el secreto iba en claro. Nada la escribe; el arranque
+     * la cifra en las columnas de abajo y la deja en nulo. Se quita en una
+     * versión mayor (spec 030, D6).
+     */
     webhookSecret: text("webhook_secret"),
+    /** 030 — Secreto HMAC de las entregas de Zernio, cifrado como el token. */
+    webhookSecretCipher: text("webhook_secret_cipher"),
+    webhookSecretIv: text("webhook_secret_iv"),
+    webhookSecretTag: text("webhook_secret_tag"),
     status: text("status", { enum: ["connected", "reconnect_required"] })
       .notNull()
       .default("connected"),
@@ -593,8 +617,16 @@ export const messengerCredentials = pgTable(
     tokenCipher: text("token_cipher").notNull(),
     tokenIv: text("token_iv").notNull(),
     tokenTag: text("token_tag").notNull(),
-    /** Secreto HMAC de las entregas (Zernio); null en modo Meta. */
+    /**
+     * 030 — Obsoleta: el secreto iba en claro. Nada la escribe; el arranque
+     * la cifra en las columnas de abajo y la deja en nulo. Se quita en una
+     * versión mayor (spec 030, D6).
+     */
     webhookSecret: text("webhook_secret"),
+    /** 030 — Secreto HMAC de las entregas de Zernio, cifrado como el token. */
+    webhookSecretCipher: text("webhook_secret_cipher"),
+    webhookSecretIv: text("webhook_secret_iv"),
+    webhookSecretTag: text("webhook_secret_tag"),
     status: text("status", { enum: ["connected", "reconnect_required"] })
       .notNull()
       .default("connected"),
@@ -605,6 +637,51 @@ export const messengerCredentials = pgTable(
     uniqueIndex("messenger_credentials_org_uq").on(t.organizationId),
     uniqueIndex("messenger_credentials_page_uq").on(t.pageId),
     index("messenger_credentials_account_ref_idx").on(t.accountRef),
+  ]
+);
+
+/**
+ * 022 — Credenciales del canal de TikTok.
+ *
+ * TikTok no abre su API de mensajes a una app propia como hace Meta: llega por
+ * la API unificada de Zernio. `source` existe, con un solo valor, para que una
+ * fuente futura no pida otra migración (mismo patrón que
+ * `messenger_credentials`).
+ */
+export const tiktokCredentials = pgTable(
+  "tiktok_credentials",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    source: text("source", { enum: ["zernio"] }).notNull().default("zernio"),
+    /** `accountId` de la cuenta en Zernio: por él enruta el webhook. */
+    accountRef: text("account_ref").notNull(),
+    /** Usuario de TikTok, solo para enseñarlo en Ajustes. */
+    username: text("username"),
+    tokenCipher: text("token_cipher").notNull(),
+    tokenIv: text("token_iv").notNull(),
+    tokenTag: text("token_tag").notNull(),
+    /**
+     * 030 — Obsoleta: el secreto iba en claro. Nada la escribe; el arranque
+     * la cifra en las columnas de abajo y la deja en nulo. Se quita en una
+     * versión mayor (spec 030, D6).
+     */
+    webhookSecret: text("webhook_secret"),
+    /** 030 — Secreto HMAC de las entregas de Zernio, cifrado como el token. */
+    webhookSecretCipher: text("webhook_secret_cipher"),
+    webhookSecretIv: text("webhook_secret_iv"),
+    webhookSecretTag: text("webhook_secret_tag"),
+    status: text("status", { enum: ["connected", "reconnect_required"] })
+      .notNull()
+      .default("connected"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("tiktok_credentials_org_uq").on(t.organizationId),
+    uniqueIndex("tiktok_credentials_account_ref_uq").on(t.accountRef),
   ]
 );
 
@@ -621,6 +698,13 @@ export const agentProfile = pgTable(
     instructions: text("instructions"),
     escalationRules: text("escalation_rules"),
     greeting: text("greeting"),
+    /** 034 — El rol del agente (`src/lib/agent-roles.ts`). */
+    role: text("role").notNull().default("calificador"),
+    /**
+     * 034 — Las herramientas encendidas, por clave del catálogo. `null` =
+     * todas: lo que tiene una instalación que actualiza.
+     */
+    tools: jsonb("tools").$type<string[]>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -913,7 +997,7 @@ export const agentTestCase = pgTable(
     veredicto: text("veredicto", { enum: ["verde", "amarillo", "rojo"] }),
     hallazgos: jsonb("hallazgos"),
     status: text("status", {
-      enum: ["pending", "running", "done", "judge_failed"],
+      enum: ["pending", "running", "done", "judge_failed", "agent_failed"],
     })
       .notNull()
       .default("pending"),
@@ -1163,6 +1247,17 @@ export const dispatch = pgTable(
     firstMessageAt: timestamp("first_message_at").notNull(),
     lastMessageAt: timestamp("last_message_at").notNull(),
     leasedUntil: timestamp("leased_until"),
+    /**
+     * 025 — Los entrantes que este despacho le DEBE al cerebro: los que lo
+     * encolaron o lo extendieron.
+     *
+     * La ráfaga se delimita por el último saliente, y eso confunde «sin
+     * responder» con «sin entregar»: lo que el cliente escribe mientras el
+     * cerebro piensa queda DETRÁS de su respuesta. Con los ids anotados, ese
+     * mensaje viaja aunque ya haya una respuesta después de él. Nulo en filas
+     * anteriores a esta columna, que se comportan como antes.
+     */
+    messageIds: jsonb("message_ids").$type<string[]>(),
     /** Motivo del último fallo. Nunca el cuerpo firmado ni la llave. */
     lastError: text("last_error"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

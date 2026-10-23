@@ -3,6 +3,7 @@ import { getDb, schema } from "@/lib/db";
 import { mediaDirStatus } from "@/server/media-dir";
 import { leerConfigDespacho } from "@/server/brains/config";
 import { iniciarWorker, tanda } from "@/server/dispatch/worker";
+import { cifrarSecretosEnClaro } from "@/server/zernio/secreto-guardado";
 
 /**
  * 008 — Aviso al arranque si MEDIA_DIR no es escribible. Sin esto, el primer
@@ -21,6 +22,14 @@ export async function checkMediaDir(): Promise<void> {
   // Sin entorno válido no hay nada que sondear: lo reporta, con detalle, el
   // primer getEnv() de la app.
   if (!media || media.writable) return;
+  if (media.store === "bucket") {
+    // 037 — Sin decir el endpoint completo ni las llaves: solo el host.
+    console.error(
+      `[boot] MEDIA_STORE=bucket pero el bucket${media.dir ? ` (${media.dir})` : ""} no acepta escrituras (${media.code}): los adjuntos, el logo y el icono se guardan en disco mientras tanto. ` +
+        "Revisa MEDIA_BUCKET_ENDPOINT, MEDIA_BUCKET_NAME, MEDIA_BUCKET_KEY_ID y MEDIA_BUCKET_SECRET, y que el bucket exista."
+    );
+    return;
+  }
   console.error(
     `[boot] MEDIA_DIR=${media.dir} no es escribible (${media.code}): los adjuntos entrantes, el logo y el icono NO se van a poder guardar. ` +
       "En Docker: monta un volumen persistente en /data (la imagen ya usa /data/media) y arranca el contenedor como root —el default—, " +
@@ -52,6 +61,27 @@ export async function cleanupOrphanRuns(): Promise<void> {
   } catch (err) {
     // La BD puede no estar lista aún (migraciones corren antes del server).
     console.error("[boot] limpieza de corridas huérfanas falló:", err);
+  }
+}
+
+/**
+ * 030 — Cifra los secretos de firma de Zernio que una versión anterior guardó
+ * en claro. Va aquí y no en `migrate.mjs` porque cifrar necesita la
+ * `ENCRYPTION_KEY` validada y el mismo `encryptSecret` que el token, y porque
+ * así corre también con `next dev` (spec 030, D3). Nunca tumba el arranque:
+ * mientras una fila no esté cifrada, su secreto se sigue leyendo (D5).
+ */
+export async function encryptLegacySecrets(): Promise<void> {
+  try {
+    const cifrados = await cifrarSecretosEnClaro();
+    if (cifrados > 0) {
+      console.log(`[boot] ${cifrados} secreto(s) de firma de Zernio cifrado(s) en reposo`);
+    }
+  } catch (err) {
+    console.error(
+      "[boot] no se pudieron cifrar los secretos de firma de Zernio guardados en claro; se reintenta en el próximo arranque:",
+      err instanceof Error ? err.message : "error desconocido"
+    );
   }
 }
 

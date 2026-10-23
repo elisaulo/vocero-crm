@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SIN_DESPACHO, despachoFallando } from "@/lib/brain-status";
 import { leerConfigDespacho } from "@/server/brains/config";
-import { hayMensajesSinDespachar } from "@/server/brains/deliver";
+import { hayMensajesSinDespachar, sinDespachar } from "@/server/brains/deliver";
 import { dispatchDto } from "@/server/dispatch/estado";
 import { checkDispatch } from "@/server/doctor/checks";
 import { BACKOFF_MS, MAX_INTENTOS, esperaDeReintento } from "@/server/dispatch/outbox";
@@ -160,6 +160,25 @@ describe("hayMensajesSinDespachar — lo que entró con el evento en vuelo", () 
 
   it("ráfaga vacía (ya se contestó) → no", () => {
     expect(hayMensajesSinDespachar(["a"], [])).toBe(false);
+  });
+});
+
+/**
+ * 025 — Cuáles, no solo si hay: son los ids que el despacho siguiente lleva
+ * anotados en `dispatch.message_ids`.
+ */
+describe("sinDespachar — lo que el cerebro todavía no recibió", () => {
+  it("devuelve los que faltan, en el orden de la ráfaga", () => {
+    expect(sinDespachar(["a"], [{ id: "a" }, { id: "b" }, { id: "c" }])).toEqual(["b", "c"]);
+  });
+
+  it("todo entregado → nada", () => {
+    expect(sinDespachar(["a", "b"], [{ id: "a" }, { id: "b" }])).toEqual([]);
+  });
+
+  it("un debido que quedó detrás de la respuesta sigue debiéndose", () => {
+    // `rafagaDe` lo trae por estar anotado, aunque la ráfaga ya esté cerrada.
+    expect(sinDespachar(["a"], [{ id: "b" }])).toEqual(["b"]);
   });
 });
 

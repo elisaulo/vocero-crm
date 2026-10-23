@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const onboardingStatus = vi.hoisted(() => vi.fn());
 vi.mock("@/server/onboarding/status", () => ({ onboardingStatus }));
 
-import { guideFirst, guideFrom } from "@/server/onboarding/guide";
+import { GUIA_DEL_PAR, guideFirst, guideFrom } from "@/server/onboarding/guide";
 import type { ReadinessStep } from "@/server/onboarding/status";
 
 const step = (
@@ -28,7 +28,7 @@ const step = (
 });
 
 const all = (overrides: Partial<Record<ReadinessStep["key"], ReadinessStep["status"]>> = {}) =>
-  (["profile", "ai", "whatsapp", "calendar"] as const).map((k) =>
+  (["profile", "ai", "whatsapp", "brain", "calendar"] as const).map((k) =>
     step(k, overrides[k] ?? "ready", {
       nextAction:
         k === "profile"
@@ -38,21 +38,31 @@ const all = (overrides: Partial<Record<ReadinessStep["key"], ReadinessStep["stat
   );
 
 describe("guía de inicio", () => {
-  it("son cuatro pasos en el orden pedido: agente, IA, número, agenda", () => {
+  it("son cinco pasos en el orden pedido: agente, IA, número, tu agente, agenda", () => {
     const guide = guideFrom({ steps: all(), enabled: false });
-    expect(guide.steps.map((s) => s.key)).toEqual(["agent", "ai", "whatsapp", "calendar"]);
+    expect(guide.steps.map((s) => s.key)).toEqual(["agent", "ai", "whatsapp", "brain", "calendar"]);
     expect(guide.steps.map((s) => s.href)).toEqual([
       "/agent",
       "/settings/ai",
       "/settings/whatsapp",
+      GUIA_DEL_PAR,
       "/settings/calendar",
     ]);
-    expect(guide).toMatchObject({ complete: true, enabled: false });
+    expect(guide).toMatchObject({ complete: true, enabled: false, brainConnected: true });
+  });
+
+  it("036 — «Conecta tu agente» es opcional: sin él la guía se completa (bandeja manual)", () => {
+    const steps = all({ brain: "pending" });
+    steps[3] = step("brain", "pending", { nextAction: "Levanta tu agente", problem: null });
+    const guide = guideFrom({ steps, enabled: false });
+    const brain = guide.steps.find((s) => s.key === "brain");
+    expect(brain).toMatchObject({ done: false, optional: true, hint: "Levanta tu agente" });
+    expect(guide).toMatchObject({ complete: true, brainConnected: false });
   });
 
   it("sin agenda en la instancia el paso desaparece (no se pinta «no aplica»)", () => {
     const guide = guideFrom({ steps: all({ calendar: "not_applicable" }), enabled: false });
-    expect(guide.steps.map((s) => s.key)).toEqual(["agent", "ai", "whatsapp"]);
+    expect(guide.steps.map((s) => s.key)).toEqual(["agent", "ai", "whatsapp", "brain"]);
     expect(guide.complete).toBe(true);
   });
 
@@ -75,16 +85,18 @@ describe("guía de inicio", () => {
     const steps = all();
     steps[1] = step("ai", "pending", { problem: "El proveedor rechazó tu llave." });
     steps[2] = step("whatsapp", "pending", { problem: "Meta dejó de aceptar el token." });
-    steps[3] = step("calendar", "pending", { problem: "Elegiste Zoom pero no está conectado." });
+    steps[3] = step("brain", "pending", { problem: "Falta BOT_API_KEY." });
+    steps[4] = step("calendar", "pending", { problem: "Elegiste Zoom pero no está conectado." });
     const guide = guideFrom({ steps, enabled: false });
     expect(guide.steps.map((s) => s.hint)).toEqual([
       null,
       "El proveedor rechazó tu llave.",
       "Meta dejó de aceptar el token.",
+      "Falta BOT_API_KEY.",
       "Elegiste Zoom pero no está conectado.",
     ]);
     // Un conector desconocido también bloquea: no es «listo» ni «no aplica».
-    steps[3] = step("calendar", "unsupported", { problem: "El conector no existe." });
+    steps[4] = step("calendar", "unsupported", { problem: "El conector no existe." });
     expect(guideFrom({ steps, enabled: false }).complete).toBe(false);
   });
 
@@ -111,6 +123,11 @@ describe("guideFirst: ¿la guía es la primera pantalla?", () => {
   it("…y también con todo listo pero el agente apagado: falta encenderlo", async () => {
     onboardingStatus.mockResolvedValue({ steps: all(), enabled: false });
     expect(await guideFirst({ organizationId: "org_1", role: "owner" })).toBe(true);
+  });
+
+  it("036 — una bandeja manual (sin cerebro) no se queda atrapada en la guía", async () => {
+    onboardingStatus.mockResolvedValue({ steps: all({ brain: "pending" }), enabled: false });
+    expect(await guideFirst({ organizationId: "org_1", role: "owner" })).toBe(false);
   });
 
   it("con todo listo y el agente encendido se entra a la Bandeja como siempre", async () => {

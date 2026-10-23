@@ -100,7 +100,12 @@ export function getWaMockState(): WaMockState {
 }
 
 export function resetWaMockState(): void {
-  globalForMock.__waMockState = freshState();
+  // El contador no vuelve a cero. El sello de `nextOutboundWamid` es por
+  // proceso, así que reiniciarlo aquí repetía ids ya guardados: la segunda
+  // corrida de un arnés contra el mismo `next dev` chocaba con el UNIQUE de
+  // `wa_message_id` y el turno fallaba al enviar.
+  const counter = globalForMock.__waMockState?.counter ?? 0;
+  globalForMock.__waMockState = { ...freshState(), counter };
 }
 
 export function nextN(): number {
