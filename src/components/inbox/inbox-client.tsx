@@ -13,6 +13,7 @@ import type {
 import { CHANNEL_LABEL, type Channel } from "@/lib/channels";
 import { ChannelBadge } from "@/components/channel-badge";
 import { useEvents } from "@/components/use-events";
+import { useNotificationSound } from "@/components/use-notification-sound";
 import { ConversationList } from "./conversation-list";
 import { MessageThread } from "./message-thread";
 import { Composer } from "./composer";
@@ -87,6 +88,7 @@ export function InboxClient({
   // recibir "hola" antes que el renglón siguiente. Sin esta cadena, dos POST
   // simultáneos pueden llegar a Meta en desorden.
   const sendQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const { playNotification } = useNotificationSound();
 
   const refetchConversations = useCallback(async () => {
     const res = await fetch("/api/conversations").catch(() => null);
@@ -158,6 +160,9 @@ export function InboxClient({
         });
       }
       void refetchConversations();
+      // Sonido de notificacion: solo para mensajes entrantes del cliente.
+      const m2 = message as MessageDto;
+      if (m2.direction === "in") playNotification();
       // Un entrante nuevo puede crear/mover el lead: refresca el panel.
       setDetailRev((v) => v + 1);
     },

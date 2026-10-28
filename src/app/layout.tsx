@@ -38,9 +38,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${branding.name} — ${producto}`,
     description: `${producto} con agente de IA y Laboratorio de auto-evaluación`,
-    // El `?v=` cambia con la marca: los navegadores guardan el favicon con una
-    // insistencia notable y, sin eso, el logo nuevo tarda días en aparecer.
-    icons: { icon: faviconHref(branding) },
+    icons: { icon: faviconHref(branding), apple: "/icons/apple-touch-icon.png" },
+    manifest: "/manifest.json",
+    themeColor: "#22c55e",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: branding.name,
+    },
   };
 }
 
@@ -65,7 +70,15 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: accentCssVariables(branding.accent) }}
         />
       </head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        {children}
+        {/* Registro del Service Worker para instalabilidad PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}`,
+          }}
+        />
+      </body>
     </html>
   );
 }

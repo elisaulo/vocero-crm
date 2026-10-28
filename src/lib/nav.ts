@@ -135,6 +135,7 @@ export function settingsSections({
     { href: "/settings/branding", label: "Marca" },
     { href: "/settings/templates", label: "Plantillas" },
     { href: "/settings/team", label: "Equipo" },
+    { href: "/settings/preferencias", label: "Preferencias" },
   ];
   if (atribucion) negocio.push({ href: "/settings/ads", label: "Anuncios" });
 
