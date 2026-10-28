@@ -307,8 +307,10 @@ async function prepareSend(
   // El nucleo no decide la politica: la consulta. WhatsApp exige plantilla
   // fuera de ventana; Instagram etiqueta y sigue; otro canal podria no tener
   // ventana en absoluto.
+  // Evolution API no tiene restriccion de ventana de 24 h: se omite el guard.
   const caps = capabilitiesFor(row.conversation.channel);
   if (
+    !row.conversation.evolutionInstance &&
     caps.windowMs !== null &&
     caps.outsideWindow === "template" &&
     !isWindowOpen(row.conversation.lastInboundAt)

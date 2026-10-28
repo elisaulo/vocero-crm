@@ -27,6 +27,7 @@ producto** — y saberlo antes de leerla ahorra una confusión.
 | `027-importar-contactos` | Ligero, con el modelo de datos dentro | spec (importar un CSV de contactos con vista previa y marcar contactos «sin agente»; puerto de Vocero Cloud #108, migración aditiva `0019`) |
 | `030-secreto-zernio-cifrado` | Ciclo completo | spec, plan, tasks (el secreto de firma de Zernio de los tres canales sociales pasa a AES-256-GCM; migración aditiva `0020` y los secretos ya guardados se cifran al arrancar la app) |
 | `025-despacho-recuerda` | Ciclo completo | spec, plan, tasks (el despacho anota qué mensajes debe; puerto de Vocero Cloud #111, #116 y #117, migración aditiva `0017`; enmienda el contrato del 021) |
+| `044-enrutamiento-intencion` | Ligero | spec, plan, tasks (las cinco rutas de intención, el blindaje anti-alucinación y el límite de dos oraciones viven como datos del perfil que ya publica `/api/bot/profile`; sin migración ni cambio de contrato) |
 
 Los tres carriles —ciclo completo, ligero y exento— están definidos en el
 [Principio VI de la constitución](../.specify/memory/constitution.md). El

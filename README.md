@@ -115,6 +115,10 @@ El interruptor de esa pantalla dice si el CRM le pasa las conversaciones a tu
 agente. Solo se enciende con un agente conectado y en línea; apagado, todo se
 queda en la bandeja para tu equipo.
 
+📖 **[Guía del agente](docs/guia-agente.md)**: cómo escribir las cinco rutas de
+intención, la frase de blindaje ante conocimiento vacío, el límite de dos
+frases y las reglas de escalado, y cómo verificarlo todo en el Laboratorio.
+
 ### 🔌 Tu agente al lado del CRM
 
 Quien contesta es un servicio aparte, en tu mismo servidor:

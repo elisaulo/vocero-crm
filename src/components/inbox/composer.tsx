@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useEffect,
@@ -86,8 +86,10 @@ export function Composer({
   // se cuenta la profundidad para que el indicador no parpadee.
   const dragDepth = useRef(0);
   const [dragging, setDragging] = useState(false);
-  // Hay caja de texto libre (ventana normal, o la humana de Instagram/Messenger).
-  const textoLibre = conversation.windowOpen || Boolean(conversation.humanWindow?.open);
+  // Hay caja de texto libre (ventana normal, la humana de Instagram/Messenger,
+  // o Evolution API que no tiene restricción de ventana de 24 h).
+  const esEvoApi = conversation.evolutionInstance !== null;
+  const textoLibre = esEvoApi || conversation.windowOpen || Boolean(conversation.humanWindow?.open);
 
   useEffect(() => {
     let cancelled = false;
@@ -395,7 +397,8 @@ export function Composer({
 
   // 022 — TikTok no tiene plantillas ni otra forma de reabrir: con la ventana
   // cerrada no hay nada que ofrecer, solo decir qué pasa y qué lo arregla.
-  if (!conversation.windowOpen && conversation.channel === "tiktok") {
+  // Evolution API no tiene restricción de ventana: se omite el bloqueo.
+  if (!esEvoApi && !conversation.windowOpen && conversation.channel === "tiktok") {
     return withDropZone(
       <div className="border-t bg-background px-[18px] py-3.5">
         <div className="flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-sm text-warning-text">
@@ -417,9 +420,10 @@ export function Composer({
   // 024 — Instagram y Messenger no tienen plantillas. Pasadas 24 horas una
   // persona todavía puede contestar (hasta 7 días, sigue abajo con su aviso);
   // pasado ese plazo no hay nada que ofrecer salvo esperar al cliente.
+  // Evolution API no tiene restricción de ventana: se omite el bloqueo.
   const human = conversation.humanWindow;
   const canal = CHANNEL_LABEL[conversation.channel];
-  if (!conversation.windowOpen && human && !human.open) {
+  if (!esEvoApi && !conversation.windowOpen && human && !human.open) {
     return withDropZone(
       <div className="border-t bg-background px-[18px] py-3.5">
         <div
@@ -441,7 +445,9 @@ export function Composer({
     );
   }
 
-  if (!conversation.windowOpen && !human) {
+  // Evolution API no tiene restricción de ventana: se omite el bloqueo y
+  // la pantalla de «envía una plantilla».
+  if (!esEvoApi && !conversation.windowOpen && !human) {
     return withDropZone(
       <div className="border-t bg-background px-[18px] py-3.5">
         <div className="mb-3 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-sm text-warning-text">
@@ -463,7 +469,7 @@ export function Composer({
 
   const canSubmit = file !== null || text.trim().length > 0;
 
-  const soloPersona = !conversation.windowOpen && Boolean(human?.open);
+  const soloPersona = !esEvoApi && !conversation.windowOpen && Boolean(human?.open);
 
   return withDropZone(
     <div className="relative border-t bg-background px-[18px] pb-3.5 pt-3">
@@ -734,7 +740,9 @@ export function Composer({
           <span />
         )}
         <p className="font-mono text-[10.5px] tracking-[0.04em] text-text-3">
-          {soloPersona
+          {esEvoApi
+            ? "Evolution API · sin restricción de ventana"
+            : soloPersona
             ? `Ventana humana · quedan ${formatRemainingLong(human!.remainingMs)}`
             : `Ventana abierta · quedan ${formatRemaining(conversation.windowRemainingMs)}`}
         </p>

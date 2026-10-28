@@ -13,6 +13,8 @@ const config = [
       "next-env.d.ts",
       ".tmp-seed-demo.mjs",
       ".tmp-*.mjs",
+      // Subdirectorio anidado generado automáticamente; no es código fuente del proyecto.
+      "vocero-crm/**",
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
