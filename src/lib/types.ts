@@ -42,6 +42,12 @@ export type ConversationDto = {
    * de número/instancia en la bandeja y enrutar la respuesta de vuelta.
    */
   evolutionInstance: string | null;
+  /**
+   * Proveedor de WhatsApp activo en la organización. `"evolution"` cuando la
+   * org usa Evolution API — en ese caso no aplica la restricción de ventana
+   * de 24 h aunque `evolutionInstance` sea null en conversaciones antiguas.
+   */
+  whatsappProvider: "meta" | "evolution";
 };
 
 

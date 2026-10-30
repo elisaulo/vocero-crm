@@ -58,6 +58,15 @@ export async function listConversations(
     limit 1
   )`;
 
+  // Proveedor de WhatsApp de la org: una sola consulta para todas las
+  // conversaciones (es el mismo para toda la lista).
+  const [orgRow] = await db
+    .select({ whatsappProvider: schema.organization.whatsappProvider })
+    .from(schema.organization)
+    .where(scoped(schema.organization.id, organizationId))
+    .limit(1);
+  const whatsappProvider = orgRow?.whatsappProvider ?? "meta";
+
   const rows = await db
     .select({
       conversation: schema.conversation,
@@ -88,7 +97,8 @@ export async function listConversations(
       r.contact,
       r.preview,
       r.stageName,
-      aAnuncioDeLista(r.anuncio)
+      aAnuncioDeLista(r.anuncio),
+      whatsappProvider
     )
   );
 }
@@ -151,7 +161,8 @@ export function serializeConversation(
   contact: typeof schema.contact.$inferSelect,
   preview: string | null = null,
   stageName: string | null = null,
-  anuncio: ConversationDto["anuncio"] = null
+  anuncio: ConversationDto["anuncio"] = null,
+  whatsappProvider: "meta" | "evolution" = "meta"
 ): ConversationDto {
   const caps = capabilitiesFor(c.channel);
   // 024: la extensión humana solo existe en los canales que la declaran.
@@ -190,6 +201,8 @@ export function serializeConversation(
     anuncio,
     // 0024: instancia de Evolution API (null en otros canales/proveedores).
     evolutionInstance: c.evolutionInstance ?? null,
+    // Proveedor activo: determina si aplica la restricción de ventana de 24 h.
+    whatsappProvider,
   };
 }
 

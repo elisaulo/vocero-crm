@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: `${producto} con agente de IA y Laboratorio de auto-evaluación`,
     icons: { icon: faviconHref(branding), apple: "/icons/apple-touch-icon.png" },
     manifest: "/manifest.json",
-    themeColor: "#22c55e",
+    themeColor: "#0b1327",
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",

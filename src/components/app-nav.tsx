@@ -158,7 +158,7 @@ export function AppNav({
       {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
           de arriba abajo como una lista de lo que hay. Un grupo sin título
           (Resultados) es una entrada suelta separada por el espacio. */}
-      <nav className="flex flex-col gap-4" aria-label="Secciones">
+      <nav className="min-h-0 flex-1 overflow-y-auto flex flex-col gap-4" aria-label="Secciones">
         {groups.map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
             {group.title && (
@@ -171,7 +171,7 @@ export function AppNav({
         ))}
       </nav>
 
-      <div className="flex-1" />
+      <div className="shrink-0" />
 
       {/* Ajustes va abajo, solo: no es trabajo del día. */}
       {renderItem(SETTINGS_ITEM)}

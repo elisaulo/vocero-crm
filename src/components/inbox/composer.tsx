@@ -88,7 +88,12 @@ export function Composer({
   const [dragging, setDragging] = useState(false);
   // Hay caja de texto libre (ventana normal, la humana de Instagram/Messenger,
   // o Evolution API que no tiene restricción de ventana de 24 h).
-  const esEvoApi = conversation.evolutionInstance !== null;
+  // EvoAPI: instancia anotada en la conversación (multi-instancia, conversaciones
+  // nuevas) O proveedor de la org en modo Evolution (conversaciones migradas /
+  // antiguas que no tienen evolutionInstance registrado en la tabla conversation).
+  const esEvoApi =
+    conversation.evolutionInstance !== null ||
+    conversation.whatsappProvider === "evolution";
   const textoLibre = esEvoApi || conversation.windowOpen || Boolean(conversation.humanWindow?.open);
 
   useEffect(() => {

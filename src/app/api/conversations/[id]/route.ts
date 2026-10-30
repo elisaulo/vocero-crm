@@ -7,6 +7,8 @@ import { avisarOlvido, type ResultadoOlvido } from "@/server/brains/deliver";
 import { publish } from "@/server/events/bus";
 import { eliminarConversacion } from "@/server/inbox/eliminar";
 import { serializeConversation, getConversation, updateConversation } from "@/server/inbox/queries";
+import { getDb, schema } from "@/lib/db";
+import { scoped } from "@/lib/db/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +30,18 @@ export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
 
   const row = await getConversation(session.organizationId, id);
   if (row) {
+    const [orgRow] = await getDb()
+      .select({ whatsappProvider: schema.organization.whatsappProvider })
+      .from(schema.organization)
+      .where(scoped(schema.organization.id, session.organizationId))
+      .limit(1);
     const dto = serializeConversation(
       row.conversation,
       row.contact,
       null,
       null,
-      row.anuncio
+      row.anuncio,
+      orgRow?.whatsappProvider ?? "meta"
     );
     publish(session.organizationId, {
       type: "conversation.updated",
