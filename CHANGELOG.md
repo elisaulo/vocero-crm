@@ -5,6 +5,31 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.0.1 — 2026-10-30
+
+Correcciones de UI y lógica de integración. No requiere migración de base de
+datos ni cambio en variables de entorno.
+
+### Corregido
+
+- **Sidebar** (`app-nav.tsx`): el `<nav>` ahora usa `min-h-0 flex-1
+  overflow-y-auto` para que los ítems scrolleen internamente; el spacer cambia
+  a `shrink-0`. El perfil de usuario, el botón de Ajustes y la etiqueta de
+  versión ya no se cortan fuera del viewport en ningún tamaño de pantalla.
+- **Theme-color PWA**: `#22c55e` (verde brillante) cambiado a `#0b1327` (azul
+  marino oscuro del sidebar) en `layout.tsx`, `manifest.json` y
+  `manifest.webmanifest`. La barra de estado del navegador y la barra de la PWA
+  instalada ahora coinciden con la paleta oscura de la aplicación.
+- **Bloqueo de ventana falso en EvoAPI** (`composer.tsx`, `queries.ts`):
+  - Se añade `whatsappProvider` al `ConversationDto` para que el compositor
+    distinga el proveedor de la organización.
+  - `esEvoApi` ahora combina `evolutionInstance !== null` (conversaciones
+    nuevas) con `whatsappProvider === "evolution"` (organizaciones migradas o
+    con conversaciones antiguas sin instancia registrada). En ambos casos se
+    suprime el aviso de ventana cerrada de 24 h.
+  - `listConversations` hace una consulta extra a la org (1 por lista, no por
+    conversación) para obtener el proveedor activo.
+
 ## 2.0.0 — 2026-10-20
 
 El agente sale del CRM y se conecta por contrato. Vocero se queda con lo suyo
