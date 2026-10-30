@@ -69,6 +69,8 @@ export default async function RootLayout({
         <style
           dangerouslySetInnerHTML={{ __html: accentCssVariables(branding.accent) }}
         />
+        {/* PWA: link explícito al manifiesto en formato estándar W3C */}
+        <link rel="manifest" href="/manifest.webmanifest" />
       </head>
       <body className="font-sans">
         {children}
