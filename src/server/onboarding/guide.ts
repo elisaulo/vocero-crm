@@ -1,4 +1,4 @@
-import type { SessionContext } from "@/lib/auth/session";
+﻿import type { SessionContext } from "@/lib/auth/session";
 import { canConfigure } from "@/lib/auth/roles";
 import {
   onboardingStatus,
@@ -47,7 +47,7 @@ export type Guide = {
 
 /** 036 — A dónde lleva «Conecta tu agente»: la receta del par. */
 export const GUIA_DEL_PAR =
-  "https://github.com/kevinrivm/vocero-crm/blob/main/docs/migrar-a-2.0.md#el-par-crm--nea";
+  "https://github.com/elisaulo/vocero-crm/blob/main/docs/migrar-a-2.0.md#el-par-crm--nea";
 
 const ready = (s: ReadinessStep | undefined) => s?.status === "ready";
 

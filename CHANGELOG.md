@@ -1,4 +1,4 @@
-# Cambios
+﻿# Cambios
 
 Qué trae cada versión de Vocero CRM y qué hacer para actualizar. La versión
 sigue el SemVer del [README](README.md#versiones): una menor trae funciones
@@ -17,7 +17,7 @@ docker compose up -d`.
   los servicios obsoletos `evolution-api` (`atendai/evolution-api:v2.1.1`),
   `caddy` y `nea` del compose principal. Contiene solo `app` y `postgres`,
   con labels de Traefik para TLS automático con Let's Encrypt sobre la red
-  `coolify` (externa). La imagen pasa de `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`
+  `coolify` (externa). La imagen pasa de `ghcr.io/elisaulo/vocero-crm:X.Y.Z`
   a `elisaulo/vocero-crm:local` (construida desde el repo con `--build`).
   `postgres` tiene `container_name: vocero-crm-postgres-1` y
   `hostname: vocero-db` para compatibilidad con la `DATABASE_URL` por defecto.
@@ -57,7 +57,7 @@ datos ni cambio en variables de entorno.
 
 El agente sale del CRM y se conecta por contrato. Vocero se queda con lo suyo
 —bandeja, pipeline, agenda, perfil del agente, conocimiento, la llave de IA y
-el Laboratorio— y contesta [Nea](https://github.com/kevinrivm/nea-agent) (MIT)
+el Laboratorio— y contesta [Nea](https://github.com/elisaulo/nea-agent) (MIT)
 u otro cerebro conectado al lado. Sin agente, Vocero es una bandeja manual.
 
 ### Actualizar desde 1.6.0
@@ -80,7 +80,7 @@ agente incluido, Nea 1.x delante, cerebro propio), es
 ### ⚠️ Rompe: hay que hacer algo a mano
 
 - **El CRM ya no trae agente** (036). Quien contesta es el cerebro que
-  conectas al lado: [Nea](https://github.com/kevinrivm/nea-agent) (MIT) u
+  conectas al lado: [Nea](https://github.com/elisaulo/nea-agent) (MIT) u
   otro, por el despacho (`BRAIN_DISPATCH_URL` + `BOT_API_KEY`) y
   `/api/bot/*`. Sin cerebro, Vocero es un CRM de bandeja manual: recibe, se
   contesta a mano, pipeline y agenda. **Si usabas el agente incluido, nadie
@@ -328,7 +328,7 @@ corren solas al arrancar.
 - Si ya tienes Nea delante del CRM, **no pongas `BRAIN_DISPATCH_URL` todavía**:
   Nea 1.x recibe el webhook por su cuenta y le llegaría cada mensaje dos
   veces. El despacho es para la Nea que lo reciba
-  ([nea-agent#37](https://github.com/kevinrivm/nea-agent/issues/37)).
+  ([nea-agent#37](https://github.com/elisaulo/nea-agent/issues/37)).
 
 ## 1.5.0 — 2026-10-08
 
@@ -492,7 +492,7 @@ reconectar. Respalda la base antes, como en cualquier actualización.
     un solo hueco.
   - Lo demás es aditivo (`booking` en el contexto, `date` y `query` en los
     huecos): un bot que no lee los campos nuevos no nota nada.
-- **Imagen publicada.** `ghcr.io/kevinrivm/vocero-crm:1.4.0`, solo
+- **Imagen publicada.** `ghcr.io/elisaulo/vocero-crm:1.4.0`, solo
   `linux/amd64`, con el commit horneado. Es el camino nuevo para instalar
   ([INSTALL-IA.md](INSTALL-IA.md)). Una instancia que construye desde el repo
   puede seguir así. Si la pasas a la imagen con otra app de Coolify, su
@@ -589,22 +589,22 @@ Gracias a @Diony7004, @federicorv25, @fondeur27-09-73, @dev-bahari,
 ## 1.3.0 y anteriores
 
 Sin entrada aquí: lo anterior está en el tag
-[`v1.3.0`](https://github.com/kevinrivm/vocero-crm/tree/v1.3.0) (2026-09-01).
+[`v1.3.0`](https://github.com/elisaulo/vocero-crm/tree/v1.3.0) (2026-09-01).
 
-[#54]: https://github.com/kevinrivm/vocero-crm/pull/54
-[#55]: https://github.com/kevinrivm/vocero-crm/pull/55
-[#56]: https://github.com/kevinrivm/vocero-crm/pull/56
-[#57]: https://github.com/kevinrivm/vocero-crm/pull/57
-[#58]: https://github.com/kevinrivm/vocero-crm/pull/58
-[#63]: https://github.com/kevinrivm/vocero-crm/pull/63
-[#64]: https://github.com/kevinrivm/vocero-crm/pull/64
-[#65]: https://github.com/kevinrivm/vocero-crm/pull/65
-[#66]: https://github.com/kevinrivm/vocero-crm/pull/66
-[#67]: https://github.com/kevinrivm/vocero-crm/pull/67
-[#68]: https://github.com/kevinrivm/vocero-crm/pull/68
-[#69]: https://github.com/kevinrivm/vocero-crm/pull/69
-[#70]: https://github.com/kevinrivm/vocero-crm/pull/70
-[#71]: https://github.com/kevinrivm/vocero-crm/pull/71
-[#72]: https://github.com/kevinrivm/vocero-crm/pull/72
-[#73]: https://github.com/kevinrivm/vocero-crm/pull/73
-[#74]: https://github.com/kevinrivm/vocero-crm/pull/74
+[#54]: https://github.com/elisaulo/vocero-crm/pull/54
+[#55]: https://github.com/elisaulo/vocero-crm/pull/55
+[#56]: https://github.com/elisaulo/vocero-crm/pull/56
+[#57]: https://github.com/elisaulo/vocero-crm/pull/57
+[#58]: https://github.com/elisaulo/vocero-crm/pull/58
+[#63]: https://github.com/elisaulo/vocero-crm/pull/63
+[#64]: https://github.com/elisaulo/vocero-crm/pull/64
+[#65]: https://github.com/elisaulo/vocero-crm/pull/65
+[#66]: https://github.com/elisaulo/vocero-crm/pull/66
+[#67]: https://github.com/elisaulo/vocero-crm/pull/67
+[#68]: https://github.com/elisaulo/vocero-crm/pull/68
+[#69]: https://github.com/elisaulo/vocero-crm/pull/69
+[#70]: https://github.com/elisaulo/vocero-crm/pull/70
+[#71]: https://github.com/elisaulo/vocero-crm/pull/71
+[#72]: https://github.com/elisaulo/vocero-crm/pull/72
+[#73]: https://github.com/elisaulo/vocero-crm/pull/73
+[#74]: https://github.com/elisaulo/vocero-crm/pull/74

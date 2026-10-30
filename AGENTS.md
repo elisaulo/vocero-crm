@@ -1,4 +1,4 @@
-# AGENTS.md — Guía de Vocero CRM para agentes y personas
+﻿# AGENTS.md — Guía de Vocero CRM para agentes y personas
 
 Vocero es un CRM de WhatsApp open source (MIT) y self-hosted: bandeja en tiempo
 real, pipeline kanban, el perfil y el conocimiento del agente, y un Laboratorio
@@ -29,7 +29,7 @@ de skills, scripts ni plugins de ningún asistente.
 | Tiempo real | SSE en `GET /api/events` sobre un bus in-process (`src/server/events/bus.ts`); sin WebSockets ni colas: el trabajo en segundo plano corre dentro del proceso |
 | UI | Tailwind CSS con tokens en `src/app/globals.css`, tema claro/oscuro, white-label por organización |
 | Pruebas | Vitest (`tests/unit/`) + guiones E2E (`tests/e2e/*.md`) conducidos por `scripts/e2e-*.mjs` (fetch y, algunos, Playwright) contra la app con mocks |
-| Imagen | Docker multi-stage standalone, healthcheck `/api/health`, publicada en `ghcr.io/kevinrivm/vocero-crm:X.Y.Z` por `.github/workflows/imagen.yml` |
+| Imagen | Docker multi-stage standalone, healthcheck `/api/health`, publicada en `ghcr.io/elisaulo/vocero-crm:X.Y.Z` por `.github/workflows/imagen.yml` |
 
 ## Cómo correrlo
 

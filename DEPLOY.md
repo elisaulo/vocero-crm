@@ -1,4 +1,4 @@
-# Guía de Despliegue en VPS — Vocero CRM con Proveedor Dual (Meta + Evolution API)
+﻿# Guía de Despliegue en VPS — Vocero CRM con Proveedor Dual (Meta + Evolution API)
 
 Esta guía detalla los pasos para desplegar Vocero CRM en un servidor VPS propio utilizando Docker Compose, Caddy para SSL automático, PostgreSQL y Evolution API v2 para sesiones de WhatsApp por código QR.
 
@@ -16,7 +16,7 @@ Esta guía detalla los pasos para desplegar Vocero CRM en un servidor VPS propio
 
 1. Clona el repositorio en tu servidor VPS:
    ```bash
-   git clone https://github.com/kevinrivm/vocero-crm.git
+   git clone https://github.com/elisaulo/vocero-crm.git
    cd vocero-crm
    ```
 

@@ -1,6 +1,6 @@
-# Vocero CRM
+﻿# Vocero CRM
 
-[![CI](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml)
+[![CI](https://github.com/elisaulo/vocero-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/elisaulo/vocero-crm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **El CRM de WhatsApp open source para tu agente de IA, con un Laboratorio que lo pone a prueba.**
@@ -12,7 +12,7 @@ hable con clientes reales. Una instancia = un negocio, en tu propio servidor,
 con tus datos.
 
 Vocero no trae agente: contesta el que conectas al lado.
-[Nea](https://github.com/kevinrivm/nea-agent) (MIT) es el recomendado y se
+[Nea](https://github.com/elisaulo/nea-agent) (MIT) es el recomendado y se
 levanta con el mismo `docker compose`; también puedes conectar el tuyo por el
 [contrato público](#-tu-agente-al-lado-del-crm). Sin agente, Vocero es un CRM
 de bandeja manual y contestas tú. El token de WhatsApp nunca sale del CRM.
@@ -122,7 +122,7 @@ frases y las reglas de escalado, y cómo verificarlo todo en el Laboratorio.
 ### 🔌 Tu agente al lado del CRM
 
 Quien contesta es un servicio aparte, en tu mismo servidor:
-[Nea](https://github.com/kevinrivm/nea-agent) (MIT; entiende audio, imagen y
+[Nea](https://github.com/elisaulo/nea-agent) (MIT; entiende audio, imagen y
 PDF, escala a humano, agenda y da seguimiento) o un cerebro tuyo. Se conecta
 con una `BOT_API_KEY` por la API de servicio: tu agente conversa a través del
 CRM, así que **el token de WhatsApp nunca sale de aquí** y todo queda en la
@@ -291,13 +291,13 @@ Meta y tu proveedor LLM opcional.
 - Un número de WhatsApp en la Cloud API de Meta (ver [Conexión](#conexión-del-número-de-whatsapp)).
 - Opcional: una API key de [OpenRouter](https://openrouter.ai) (o cualquier
   proveedor compatible) para tu agente y el juez del Laboratorio.
-- Opcional: un agente al lado del CRM ([Nea](https://github.com/kevinrivm/nea-agent)
+- Opcional: un agente al lado del CRM ([Nea](https://github.com/elisaulo/nea-agent)
   u otro). Sin él, Vocero funciona como bandeja manual.
 
 ## Instalación (~15 minutos)
 
 Cada versión se publica como imagen de Docker:
-`ghcr.io/kevinrivm/vocero-crm:<versión>` (p. ej. `2.0.0`). Instalar desde
+`ghcr.io/elisaulo/vocero-crm:<versión>` (p. ej. `2.0.0`). Instalar desde
 la imagen es el camino recomendado: tu servidor la descarga en vez de
 construirla. Construir desde el código sigue funcionando, y es lo que
 necesitas en un VPS ARM o si tu fork cambia el código.
@@ -319,7 +319,7 @@ variante que construye desde el repositorio.
 ### Ruta B — docker compose
 
 ```bash
-git clone https://github.com/kevinrivm/vocero-crm.git vocero && cd vocero
+git clone https://github.com/elisaulo/vocero-crm.git vocero && cd vocero
 pnpm install && pnpm init-env --domain crm.tudominio.com   # crea .env con los secretos ya generados
 pnpm doctor                                                 # revisa el .env antes de arrancar
 docker compose up -d
@@ -372,7 +372,7 @@ webhook), el token de OpenRouter y, con dominio propio, `APP_BASE_URL`. El
 disco exige plan de pago (`starter` + `basic-256mb`; la base `free` caduca a
 los 30 días).
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/kevinrivm/vocero-crm)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/elisaulo/vocero-crm)
 
 **Fly.io** — [`fly.toml`](fly.toml) declara imagen, volumen `/data`, puerto
 3000, healthcheck, tamaño de máquina y las variables no secretas; Fly no deja
@@ -391,7 +391,7 @@ el dominio y las variables se crean con la CLI, con los comandos exactos
 escritos en el propio archivo (`railway add --database postgres`,
 `railway volume add --mount-path /data`, `railway domain --port 3000`,
 `railway variable set …`, `railway up`). Para la imagen publicada sin build:
-`railway add --image ghcr.io/kevinrivm/vocero-crm:2.0.0`, y entonces el
+`railway add --image ghcr.io/elisaulo/vocero-crm:2.0.0`, y entonces el
 healthcheck se fija en el panel. Railway declaró obsoleto este formato a
 favor de su Infrastructure as Code (`.railway/railway.ts`); lo sigue leyendo
 hasta el 2026-12-01.
@@ -848,7 +848,7 @@ junto con el default de `VOCERO_CRM_VERSION` en `docker-compose.yml` y la
 etiqueta de la imagen en `render.yaml`, `fly.toml` y `railway.toml` (dos
 pruebas exigen que coincidan) y su entrada en [`CHANGELOG.md`](CHANGELOG.md),
 que dice qué trae cada versión y qué hacer para actualizar. Al crear el tag
-`vX.Y.Z`, el CI publica la imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
+`vX.Y.Z`, el CI publica la imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
 ## Roadmap
 

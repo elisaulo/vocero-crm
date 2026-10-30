@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { envSchema } from "@/lib/env";
@@ -18,7 +18,7 @@ const RAIZ = path.resolve(import.meta.dirname, "..", "..");
 const pkg = JSON.parse(
   readFileSync(path.join(RAIZ, "package.json"), "utf8")
 ) as { version: string };
-const IMAGEN = `ghcr.io/kevinrivm/vocero-crm:${pkg.version}`;
+const IMAGEN = `ghcr.io/elisaulo/vocero-crm:${pkg.version}`;
 
 // Un checkout de Windows con autocrlf deja CRLF: se normaliza para que las
 // expresiones con `\n` lean lo mismo en cualquier máquina.
