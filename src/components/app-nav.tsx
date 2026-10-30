@@ -133,8 +133,11 @@ export function AppNav({
         // nombre del usuario, el nombre white-label en BrandLogo) hereda el
         // color YA CALCULADO en <body> con el tema de la página, no el de
         // `.nav-dark` — y un texto oscuro sobre este fondo oscuro se pierde.
-        "nav-dark fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto border-r bg-subtle px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200",
-        "lg:static lg:visible lg:z-auto lg:h-dvh lg:w-56 lg:translate-x-0 lg:overflow-y-auto lg:transition-none",
+        "nav-dark fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-hidden border-r bg-subtle px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200",
+        // Desktop: sticky ancla el aside al viewport aunque el <main> haga
+        // scroll internamente. overflow-hidden evita barra de scroll en el
+        // propio aside; el nav interior la absorbe si hace falta.
+        "lg:static lg:sticky lg:top-0 lg:visible lg:z-auto lg:h-dvh lg:w-56 lg:translate-x-0 lg:overflow-hidden lg:transition-none",
         open ? "visible translate-x-0 shadow-pop" : "invisible -translate-x-full"
       )}
     >
@@ -157,8 +160,14 @@ export function AppNav({
 
       {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
           de arriba abajo como una lista de lo que hay. Un grupo sin título
-          (Resultados) es una entrada suelta separada por el espacio. */}
-      <nav className="min-h-0 flex-1 overflow-y-auto flex flex-col gap-4" aria-label="Secciones">
+          (Resultados) es una entrada suelta separada por el espacio.
+          flex-1 + min-h-0 + overflow-y-auto: el nav absorbe el espacio
+          disponible y hace scroll interno si los items no caben; scrollbar-none
+          lo oculta visualmente (la rueda del ratón sigue funcionando). */}
+      <nav
+        className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Secciones"
+      >
         {groups.map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
             {group.title && (
@@ -171,65 +180,59 @@ export function AppNav({
         ))}
       </nav>
 
-      <div className="shrink-0" />
+      {/* Bloque inferior: Ajustes + perfil + versión.
+          shrink-0: nunca se comprime aunque el nav crezca.
+          mt-auto: se pega al fondo del aside en todo momento.
+          border-t: separador visual del nav. */}
+      <div className="shrink-0 mt-auto pt-3 border-t border-white/10 flex flex-col gap-0">
+        {/* Ajustes va abajo, solo: no es trabajo del día. */}
+        {renderItem(SETTINGS_ITEM)}
 
-      {/* Ajustes va abajo, solo: no es trabajo del día. */}
-      {renderItem(SETTINGS_ITEM)}
-
-      <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
-          {initials(userName)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold">{userName}</span>
-          <span className="block truncate text-[11px] text-text-3">
-            {role === "owner" ? "Propietario" : "Equipo"} · En línea
+        <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
+            {initials(userName)}
           </span>
-        </span>
-        <ThemeToggle initial={theme} />
-        <button
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          className="rounded p-1 text-text-3 hover:text-foreground"
-          onClick={async () => {
-            await signOut();
-            router.push("/login");
-            router.refresh();
-          }}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold">{userName}</span>
+            <span className="block truncate text-[11px] text-text-3">
+              {role === "owner" ? "Propietario" : "Equipo"} · En línea
+            </span>
+          </span>
+          <ThemeToggle initial={theme} />
+          <button
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="rounded p-1 text-text-3 hover:text-foreground"
+            onClick={async () => {
+              await signOut();
+              router.push("/login");
+              router.refresh();
+            }}
+          >
+            <LogOut className="h-4 w-4" strokeWidth={1.7} />
+          </button>
+        </div>
+
+        {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
+            "¿ya se desplegó?" aparece justo cuando algo no funciona, y mandar a
+            alguien a comparar commits en el servidor significa que no lo hará. */}
+        <p
+          className="mt-1 px-2.5 pb-1 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
+          title={versionTitle(branding.name, version)}
         >
-          <LogOut className="h-4 w-4" strokeWidth={1.7} />
-        </button>
+          {versionLabel(version.commit)}
+          {version.commit && !version.verified && (
+            <span className="mt-0.5 flex items-center gap-1">
+              <AlertTriangle
+                className="h-3 w-3 shrink-0 text-warning-text"
+                strokeWidth={2}
+                aria-hidden
+              />
+              {UNVERIFIED_COMMIT_NOTE}
+            </span>
+          )}
+        </p>
       </div>
-
-      {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
-          "¿ya se desplegó?" aparece justo cuando algo no funciona, y mandar a
-          alguien a comparar commits en el servidor significa que no lo hará. */}
-      {/* `text-2` y no `text-3`: a 10.5px, el gris más claro no pasa AA contra
-          el fondo de la barra. Discreta sí, ilegible no. */}
-      {/* El nombre sale de la marca, no de una constante: esto es white-label,
-          y una instancia rebautizada que dice "Vocero" en el tooltip delata el
-          producto de debajo justo donde el operador la mira todos los días. */}
-      {/* Un commit que no salió del build lo dice (#50): presentarlo igual
-          que uno verificado es la insignia mintiendo justo cuando alguien la
-          consulta para saber qué código corre. El aviso es el ícono (color de
-          advertencia: basta 3:1 para un gráfico) y el texto va en `text-2`,
-          que pasa AA sobre la barra en cualquier tema. */}
-      <p
-        className="mt-2 px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
-        title={versionTitle(branding.name, version)}
-      >
-        {versionLabel(version.commit)}
-        {version.commit && !version.verified && (
-          <span className="mt-0.5 flex items-center gap-1">
-            <AlertTriangle
-              className="h-3 w-3 shrink-0 text-warning-text"
-              strokeWidth={2}
-              aria-hidden
-            />
-            {UNVERIFIED_COMMIT_NOTE}
-          </span>
-        )}
-      </p>
     </aside>
   );
 }

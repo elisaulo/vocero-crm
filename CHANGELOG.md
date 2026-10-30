@@ -1,9 +1,32 @@
-﻿# Cambios
+# Cambios
 
 Qué trae cada versión de Vocero CRM y qué hacer para actualizar. La versión
 sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
+
+## 2.1.1 — 2026-10-30
+
+Corrección definitiva del layout sticky del sidebar. No requiere migración
+de base de datos ni cambio en variables de entorno.
+
+### Corregido
+
+- **Sidebar anclado al viewport** (`app-shell.tsx`, `app-nav.tsx`): el
+  sidebar ya no se desplaza junto con el documento al hacer scroll en páginas
+  largas (como `/onboarding`). Solución en dos capas:
+  - `<main>` en `AppShell` pasa de `overflow-hidden` a `overflow-y-auto`:
+    ahora es el contenido derecho el que hace scroll, no el `window`.
+  - `<aside>` en `AppNav` en desktop: `lg:sticky lg:top-0 lg:h-dvh
+    lg:overflow-hidden` — el aside queda fijo mientras el main scrollea.
+- **Scrollbar fea eliminada del nav** (`app-nav.tsx`): el `<nav>` central
+  usa `[scrollbar-width:none] [&::-webkit-scrollbar]:hidden` para ocultar
+  visualmente la barra (la rueda del ratón sigue funcionando si hubiera
+  más ítems que espacio).
+- **Bloque inferior unificado** (`app-nav.tsx`): Ajustes, perfil de usuario
+  y etiqueta de versión se agrupan en un `div` con `shrink-0 mt-auto pt-3
+  border-t border-white/10`, garantizando que siempre estén pegados al fondo
+  y separados visualmente del nav.
 
 ## 2.1.0 — 2026-10-30
 
