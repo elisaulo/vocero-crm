@@ -5,6 +5,20 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.1.5 — 2026-10-30
+
+Blindaje de seguridad del puerto Docker. No requiere migración de BD ni
+cambio en variables de entorno.
+
+### Seguridad
+
+- **Puerto 3000 restringido a `localhost`** (`docker-compose.yml`): el binding
+  cambia de `"3000:3000"` a `"127.0.0.1:3000:3000"`. El puerto ya no es
+  accesible directamente desde la IP pública del VPS — todo el tráfico externo
+  debe pasar obligatoriamente por Traefik hacia `crm.vocero.bid` (HTTPS con
+  TLS/Let's Encrypt). Traefik sigue alcanzando el contenedor internamente por
+  la red `coolify` y el label `loadbalancer.server.port=3000`.
+
 ## 2.1.4 — 2026-10-30
 
 Sidebar colapsable en escritorio y corrección definitiva del scroll en

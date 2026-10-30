@@ -27,7 +27,9 @@ services:
     container_name: vocero-crm-app-1
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Expuesto SOLO en localhost: bloquea acceso directo por IP pública del VPS.
+      # Todo el tráfico externo debe pasar por Traefik → crm.vocero.bid (HTTPS).
+      - "127.0.0.1:3000:3000"
     environment:
       APP_BASE_URL: ${APP_BASE_URL:-https://crm.vocero.bid}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:segura123@vocero-db:5432/vocero}
