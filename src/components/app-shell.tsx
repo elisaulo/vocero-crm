@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Branding } from "@/lib/branding";
 import type { ThemePreference } from "@/lib/theme";
 import type { ResolvedCommit } from "@/lib/version";
@@ -12,7 +12,9 @@ import { BrandLogo } from "@/components/brand-mark";
 /**
  * Cascarón de la app en dos modos:
  *
- * - Escritorio (lg+): el panel lateral es una columna fija, como siempre.
+ * - Escritorio (lg+): el panel lateral es una columna sticky con h-dvh.
+ *   El usuario puede colapsarlo/expandirlo con el botón de toggle (estado
+ *   persistido en localStorage para sobrevivir navegaciones).
  * - Móvil/tableta: el lateral sale de la izquierda como cajón sobre un velo,
  *   y arriba queda una barra azul marino con el hamburguesa y la marca. El
  *   cajón se cierra solo al navegar (el `pathname` cambia) y con Escape.
@@ -20,6 +22,9 @@ import { BrandLogo } from "@/components/brand-mark";
  * La altura usa `100dvh` (no `100vh`) porque en el navegador móvil la barra de
  * direcciones se encoge al hacer scroll: con `vh` el compositor de la Bandeja
  * queda debajo del borde visible.
+ *
+ * El scroll global está bloqueado en html+body (layout.tsx). El único elemento
+ * que hace scroll vertical es el <main> de aquí abajo (overflow-y-auto).
  */
 export function AppShell({
   branding,
@@ -56,8 +61,30 @@ export function AppShell({
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
 
-  // Navegar = cerrar el cajón. Sin esto, tocar "Pipeline" deja el velo encima
-  // de la pantalla recién cargada.
+  // Estado del sidebar colapsado en desktop: se persiste en localStorage para
+  // que sobreviva navegaciones y recargas. Inicial false (expandido).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Hidratación del estado desde localStorage (solo en cliente).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sidebar-collapsed");
+      if (saved === "true") setSidebarCollapsed(true);
+    } catch {}
+  }, []);
+
+  function toggleSidebar() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebar-collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  }
+
+  // Navegar = cerrar el cajón móvil. Sin esto, tocar «Pipeline» deja el velo
+  // encima de la pantalla recién cargada.
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
@@ -91,26 +118,47 @@ export function AppShell({
         agenda={agenda}
         kicker={kicker}
         open={navOpen}
+        collapsed={sidebarCollapsed}
         onClose={() => setNavOpen(false)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Misma pieza que la barra lateral (`nav-dark`): en el teléfono la
-            franja azul marino de arriba es lo que queda del bicolor. */}
-        <header className="nav-dark flex h-12 shrink-0 items-center gap-1.5 border-b bg-subtle px-2 text-foreground lg:hidden">
+        {/* Barra superior: en móvil es la tira azul marino con hamburguesa.
+            En desktop muestra el botón de colapso del sidebar. */}
+        <header className="nav-dark flex h-12 shrink-0 items-center gap-1.5 border-b bg-subtle px-2 text-foreground lg:bg-transparent lg:border-transparent lg:text-current">
+          {/* Hamburguesa — solo móvil */}
           <button
             onClick={() => setNavOpen(true)}
             aria-label="Abrir el menú"
             aria-expanded={navOpen}
-            className="rounded-md p-2 text-text-2 hover:bg-accent hover:text-foreground"
+            className="rounded-md p-2 text-text-2 hover:bg-accent hover:text-foreground lg:hidden"
           >
             <Menu className="h-5 w-5" strokeWidth={1.8} />
           </button>
-          <BrandLogo branding={branding} className="min-w-0" />
+
+          {/* Logo móvil */}
+          <BrandLogo branding={branding} className="min-w-0 lg:hidden" />
+
+          {/* Toggle colapso — solo desktop */}
+          <button
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? "Expandir el menú lateral" : "Colapsar el menú lateral"}
+            title={sidebarCollapsed ? "Expandir el menú lateral" : "Colapsar el menú lateral"}
+            className="hidden rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground lg:flex"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="h-5 w-5" strokeWidth={1.8} />
+            ) : (
+              <PanelLeftClose className="h-5 w-5" strokeWidth={1.8} />
+            )}
+          </button>
         </header>
 
         {aviso}
 
+        {/* main es el único elemento autorizado a hacer scroll vertical.
+            El html+body y el AppShell tienen overflow-hidden para bloquear
+            cualquier scroll global que desplacería el sidebar. */}
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

@@ -5,6 +5,32 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.1.4 — 2026-10-30
+
+Sidebar colapsable en escritorio y corrección definitiva del scroll en
+`/onboarding`. No requiere migración de BD ni cambio en variables de entorno.
+
+### Nuevo
+
+- **Sidebar colapsable en desktop** (`app-shell.tsx`, `app-nav.tsx`): botón
+  `PanelLeftClose` / `PanelLeftOpen` en la cabecera que colapsa el aside de
+  `w-56` a `w-14` con transición suave (`transition-[width] duration-200`).
+  En modo colapsado solo se muestran iconos (con `title` como tooltip). El
+  estado se persiste en `localStorage` (`sidebar-collapsed`) y sobrevive
+  navegaciones y recargas de página.
+
+### Corregido
+
+- **Scroll global bloqueado en la raíz** (`layout.tsx`): `html` y `body`
+  reciben `h-dvh overflow-hidden` para eliminar cualquier scroll a nivel de
+  `window` que desplace el sidebar junto con el documento.
+- **Scroll confinado al `<main>`** (`app-shell.tsx`): es el único elemento
+  autorizado a hacer `overflow-y-auto`; el `<aside>` con `lg:sticky lg:top-0
+  lg:h-dvh` permanece fijo al viewport aunque `/onboarding` sea largo.
+- **Scrollbar interna del nav eliminada** (`app-nav.tsx`): se usa
+  `[scrollbar-width:none]` para ocultar la barra visualmente manteniendo
+  la funcionalidad con la rueda del ratón.
+
 ## 2.1.1 — 2026-10-30
 
 Corrección definitiva del layout sticky del sidebar. No requiere migración

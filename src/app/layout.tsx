@@ -59,9 +59,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${archivo.variable} ${instrumentSerif.variable} ${plexMono.variable}`}
-      // La preferencia siempre es explícita: el tema viaja resuelto en el HTML
-      // del servidor, así que no hay divergencia con el cliente ni parpadeo.
+      className={`${archivo.variable} ${instrumentSerif.variable} ${plexMono.variable} h-dvh overflow-hidden`}
       data-theme={theme}
     >
       <head>
@@ -72,7 +70,7 @@ export default async function RootLayout({
         {/* PWA: link explícito al manifiesto en formato estándar W3C */}
         <link rel="manifest" href="/manifest.webmanifest" />
       </head>
-      <body className="font-sans">
+      <body className="h-dvh overflow-hidden font-sans">
         {children}
         {/* Registro del Service Worker para instalabilidad PWA */}
         <script
