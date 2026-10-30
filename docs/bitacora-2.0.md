@@ -1,4 +1,4 @@
-# Bitácora — Vocero 1.6 y 2.0
+﻿# Bitácora — Vocero 1.6 y 2.0
 
 Qué se hizo, cómo se probó y dónde vive cada cosa. Una entrada por spec.
 Nunca valores de secretos: como mucho, sus últimos 4. El plan está en
@@ -6,7 +6,7 @@ Nunca valores de secretos: como mucho, sus últimos 4. El plan está en
 
 ## 2026-10-13 — 025: el despacho recuerda qué debe
 
-**PR**: [#111](https://github.com/kevinrivm/vocero-crm/pull/111), rama
+**PR**: [#111](https://github.com/elisaulo/vocero-crm/pull/111), rama
 `feat/025-despacho-recuerda`. Spec antes del código (`94e5457`); la
 implementación en `c083037`; un arreglo del selftest en `b91e0dc`.
 
@@ -119,7 +119,7 @@ Para repetir la prueba: `node ops/relay.mjs 3281 <url>`, túnel a `:3281`,
 
 ## 2026-10-13 — 022: canal de TikTok por Zernio
 
-**PR**: [#112](https://github.com/kevinrivm/vocero-crm/pull/112), rama
+**PR**: [#112](https://github.com/elisaulo/vocero-crm/pull/112), rama
 `feat/022-canal-tiktok`. Spec antes del código (`b32d4da`); implementación en
 `6bd9b4d`. **Abierto, sin mergear**: falta la prueba en vivo.
 
@@ -209,7 +209,7 @@ final.
 
 ### Versión 1.5.1
 
-PR #113 (`dad742f`), tag `v1.5.1`, imagen `ghcr.io/kevinrivm/vocero-crm:1.5.1`
+PR #113 (`dad742f`), tag `v1.5.1`, imagen `ghcr.io/elisaulo/vocero-crm:1.5.1`
 y release en GitHub. Saca la 025 antes que la 1.6.0, junto con el despacho al
 cerebro que ya estaba en `main`.
 
@@ -304,7 +304,7 @@ su prueba unitaria.
 
 Para probar una rama en una instancia que corre desde imagen se publicó un
 **prelanzamiento**: tag `v1.6.0-rc.1` sobre el commit `53afca9` de la rama.
-Publica `ghcr.io/kevinrivm/vocero-crm:1.6.0-rc.1`; `latest` y `1.5.1` no se
+Publica `ghcr.io/elisaulo/vocero-crm:1.6.0-rc.1`; `latest` y `1.5.1` no se
 movieron (se comprobó por digest). `/api/health` sigue diciendo `1.5.1` porque
 `package.json` no se tocó: lo que distingue la imagen es el commit.
 
@@ -683,7 +683,7 @@ con la imagen `rc.7`: todo bien.
   desde 1.5.1», imagen `1.6.0` en README, INSTALL-IA, docker-compose y los
   manifiestos de Render, Fly y Railway (la prueba `manifests-plataformas` lo
   exige). Gates verdes, CI verde.
-- **Tag `v1.6.0`** sobre `da32409` → imagen `ghcr.io/kevinrivm/vocero-crm:1.6.0`;
+- **Tag `v1.6.0`** sobre `da32409` → imagen `ghcr.io/elisaulo/vocero-crm:1.6.0`;
   `latest` apunta al mismo digest. Release de GitHub «Vocero CRM 1.6.0 —
   multicanal» con las notas del CHANGELOG.
 - **`vocero-clase`** pasa a la estable: deploy `cet0mi9crrphwrwknqofgfun` de
@@ -740,8 +740,8 @@ bandera: ningún cambio al CRM, ningún PR.
 
 ## 2026-10-19 — 031: Nea entra solo por el despacho (2.0, nea#37)
 
-PRs: [#125](https://github.com/kevinrivm/vocero-crm/pull/125) (CRM) y
-[nea-agent#43](https://github.com/kevinrivm/nea-agent/pull/43), ramas
+PRs: [#125](https://github.com/elisaulo/vocero-crm/pull/125) (CRM) y
+[nea-agent#43](https://github.com/elisaulo/nea-agent/pull/43), ramas
 `feat/031-nea-por-despacho` en los dos repos. Ciclo completo: spec, plan y
 tareas antes del código (`73c4450`). **Abiertos, sin mergear.**
 
@@ -805,8 +805,8 @@ El DM real de Instagram se hizo después, en Coolify (abajo).
 
 Kevin autorizó en el chat montar el par en `vocero-16` desde las ramas. Tags de
 prelanzamiento `v2.0.0-rc.1` en los dos repos (sobre `1770a7a` y `f57eeba`):
-publicaron `ghcr.io/kevinrivm/vocero-crm:2.0.0-rc.1` y
-`ghcr.io/kevinrivm/nea-agent:2.0.0-rc.1` sin mover `latest`.
+publicaron `ghcr.io/elisaulo/vocero-crm:2.0.0-rc.1` y
+`ghcr.io/elisaulo/nea-agent:2.0.0-rc.1` sin mover `latest`.
 
 - Servicio `vocero20-par` (`dlh4zhtqg8avc2qlxfb8eodz`): CRM
   (`dbatl4la70eknhflxs1sfk8i`), Nea (`cgzk4ndoeg1yd1doarbzlpmq`) y Postgres
@@ -884,8 +884,8 @@ la lista de permitidos; luego #91 (Laboratorio por contrato).
 
 ## 2026-10-20 — 033: Laboratorio por contrato (#91)
 
-PRs: [#127](https://github.com/kevinrivm/vocero-crm/pull/127) (CRM) y
-[nea-agent#45](https://github.com/kevinrivm/nea-agent/pull/45), ramas
+PRs: [#127](https://github.com/elisaulo/vocero-crm/pull/127) (CRM) y
+[nea-agent#45](https://github.com/elisaulo/nea-agent/pull/45), ramas
 `feat/033-laboratorio-por-contrato`. Ciclo completo: spec, plan y tareas
 antes del código (`c5930cd`). Antes de empezar, con autorización de Kevin en
 el chat («tu mergea y sigue»), se mergearon #125 y nea-agent#43 (031).
@@ -947,8 +947,8 @@ Que Kevin revise y mergee #127 y nea-agent#45; luego #90 (roles como datos).
 
 ## 2026-10-20 — 034: roles como datos (#90)
 
-PRs: [#128](https://github.com/kevinrivm/vocero-crm/pull/128) (CRM) y
-[nea-agent#46](https://github.com/kevinrivm/nea-agent/pull/46), ramas
+PRs: [#128](https://github.com/elisaulo/vocero-crm/pull/128) (CRM) y
+[nea-agent#46](https://github.com/elisaulo/nea-agent/pull/46), ramas
 `feat/034-roles-como-datos`. Ciclo completo: spec, plan y tareas antes del
 código (`337c37a`). Antes de empezar, con autorización de Kevin en el chat,
 se mergearon #127 y nea-agent#45 (033) y se cerró #91.
@@ -1370,7 +1370,7 @@ con `+`, el starter lo copió tal cual a `ALLOWED_WA_IDS`, y Nea 2.0.0 no le
 quita el `+`: la lista nunca coincide con la identidad del CRM (solo
 dígitos). Hay dos arreglos:
 - en el starter (`421d82c`), que escribe solo dígitos y lo avisa;
-- en Nea, kevinrivm/nea-agent#50 (será 2.0.1): la lista acepta `+`,
+- en Nea, elisaulo/nea-agent#50 (será 2.0.1): la lista acepta `+`,
   espacios y guiones. Sin mergear.
 
 Para el ensayo se corrigieron `ALLOWED_WA_IDS` y `TESTER_WA_IDS` en
@@ -1405,13 +1405,13 @@ de publicar la 3.0.0:
 
 ## 2026-10-21 — Nea 2.0.1
 
-Kevin autorizó mergear kevinrivm/nea-agent#50 y publicar Nea 2.0.1. Arregla
+Kevin autorizó mergear elisaulo/nea-agent#50 y publicar Nea 2.0.1. Arregla
 `ALLOWED_WA_IDS` y `TESTER_WA_IDS`, que ahora aceptan el teléfono con `+`,
 espacios o guiones (hallado en el ensayo del starter 3.0.0).
 
 - Merge `aed4515`. Tag `v2.0.1` sobre ese commit. Release «Nea 2.0.1 —
   ALLOWED_WA_IDS acepta el teléfono con +», marcado como Latest.
-- Imagen `ghcr.io/kevinrivm/nea-agent:2.0.1` = `2.0` = `latest`
+- Imagen `ghcr.io/elisaulo/nea-agent:2.0.1` = `2.0` = `latest`
   (`sha256:cf867d73…6effcf`). Dentro de la imagen, `NEA_VERSION=2.0.1`,
   commit `aed4515` y el arreglo presente.
 
@@ -1449,7 +1449,7 @@ rechazado; queda pendiente de Kevin, que puede hacerlo desde el panel.
 
 ## 2026-10-22 — 039: responder citando un mensaje
 
-**PR**: [#138](https://github.com/kevinrivm/vocero-crm/pull/138), rama
+**PR**: [#138](https://github.com/elisaulo/vocero-crm/pull/138), rama
 `039-responder-citando`. Spec, plan y tareas antes del código (`a4d8ca4`).
 Puerto de una función que ya usa un CRM de cliente; aquí se montó otra vez
 sobre `main` (2.0), sin sus datos.
@@ -1485,7 +1485,7 @@ sobre `main` (2.0), sin sus datos.
 
 ## 2026-10-22 — 040: ligas clicables en los mensajes
 
-**PR**: [#139](https://github.com/kevinrivm/vocero-crm/pull/139), rama
+**PR**: [#139](https://github.com/elisaulo/vocero-crm/pull/139), rama
 `040-ligas-clicables`. Spec ligera antes del código (`9efb1cd`). Puerto de una
 función que ya usa un CRM de cliente; las pruebas se reescribieron con
 ejemplos neutros (las del original traían datos de ese negocio).
@@ -1517,7 +1517,7 @@ ejemplos neutros (las del original traían datos de ese negocio).
 
 ## 2026-10-22 — 041: selector de emojis en el compositor
 
-**PR**: [#140](https://github.com/kevinrivm/vocero-crm/pull/140), rama
+**PR**: [#140](https://github.com/elisaulo/vocero-crm/pull/140), rama
 `041-selector-emojis`. Spec ligera antes del código (`f9f3ad8`). Puerto de una
 función que ya usa un CRM de cliente, montada otra vez sobre `main`.
 
@@ -1549,7 +1549,7 @@ función que ya usa un CRM de cliente, montada otra vez sobre `main`.
 
 ## 2026-10-22 — 042: pegar y reenviar imágenes en WhatsApp
 
-**PR**: [#141](https://github.com/kevinrivm/vocero-crm/pull/141), rama
+**PR**: [#141](https://github.com/elisaulo/vocero-crm/pull/141), rama
 `042-pegar-reenviar-imagenes`. Spec ligera antes del código (`81d4625`).
 Puerto de una función que ya usa un CRM de cliente; se volvió a montar sobre
 la 2.0 y el almacenamiento de la 037.
@@ -1595,7 +1595,7 @@ la 2.0 y el almacenamiento de la 037.
 
 ## 2026-10-22 — 043: arrastrar una imagen al chat
 
-**PR**: [#142](https://github.com/kevinrivm/vocero-crm/pull/142), rama
+**PR**: [#142](https://github.com/elisaulo/vocero-crm/pull/142), rama
 `043-arrastrar-imagen`, **encima de la 042** (#141): reutiliza su validación y
 el mismo compositor. Spec ligera antes del código (`b2d1d96`). Puerto de una
 función que ya usa un CRM de cliente, montada otra vez sobre `main`.

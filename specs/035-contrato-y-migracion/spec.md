@@ -1,4 +1,4 @@
-# 035 — Contrato público y guía de migración a 2.0
+﻿# 035 — Contrato público y guía de migración a 2.0
 
 **Feature Branch**: `feat/035-contrato-y-migracion`
 
@@ -6,7 +6,7 @@
 
 **Status**: Especificada antes de escribir código.
 
-**Input**: cuarta pieza de la 2.0.0 (`PLAN-2.0.md`): kevinrivm/vocero-crm#92.
+**Input**: cuarta pieza de la 2.0.0 (`PLAN-2.0.md`): elisaulo/vocero-crm#92.
 Kevin autorizó en el chat del 2026-10-20 mergear la 034 y seguir con la #92.
 
 **Carril**: ciclo completo (Principio VI). Publica el contrato del par y
@@ -72,7 +72,7 @@ recién recuperado (la regla que protege a una agencia). Quitar el de la WABA
 es lo que hace que la recuperación dure.
 
 **D6 — El compose levanta el par.** `docker-compose.yml` suma el servicio
-`nea` (`ghcr.io/kevinrivm/nea-agent:${NEA_VERSION:-2.0.0}`) sobre la **misma
+`nea` (`ghcr.io/elisaulo/nea-agent:${NEA_VERSION:-2.0.0}`) sobre la **misma
 base**, en su esquema `nea`. El CRM despacha a `http://nea:8000` por defecto y
 le lee el `/health`. Nea pide su llave de IA (`LLM_API_KEY`) hasta que la #106
 la mueva al CRM. *Decidido al implementar:* mientras la imagen de Nea 2.0.0

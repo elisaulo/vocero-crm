@@ -1,4 +1,4 @@
-# 034 — Roles como datos
+﻿# 034 — Roles como datos
 
 **Feature Branch**: `feat/034-roles-como-datos` (en `vocero-crm` y en `nea-agent`)
 
@@ -6,7 +6,7 @@
 
 **Status**: Especificada antes de escribir código.
 
-**Input**: tercera pieza de la 2.0.0 (`PLAN-2.0.md`): kevinrivm/vocero-crm#90.
+**Input**: tercera pieza de la 2.0.0 (`PLAN-2.0.md`): elisaulo/vocero-crm#90.
 Kevin autorizó en el chat del 2026-10-20 mergear la 033 y seguir con la #90.
 
 **Carril**: ciclo completo (Principio VI). Toca el modelo de datos (migración

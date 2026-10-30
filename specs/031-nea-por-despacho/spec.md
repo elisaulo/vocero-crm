@@ -1,4 +1,4 @@
-# 031 — Nea entra solo por el despacho
+﻿# 031 — Nea entra solo por el despacho
 
 **Feature Branch**: `feat/031-nea-por-despacho` (en `vocero-crm` y en `nea-agent`)
 
@@ -7,7 +7,7 @@
 **Status**: Especificada antes de escribir código. Implementada; gates, e2e del par y prueba en vivo (WhatsApp e Instagram, local y Coolify) en verde. Bitácora del 2026-10-19 y 20.
 
 **Input**: primera pieza de la 2.0.0 (`PLAN-2.0.md`, aprobado por el dueño el
-2026-10-13): kevinrivm/nea-agent#37. Kevin aprobó en el chat del 2026-10-19
+2026-10-13): elisaulo/nea-agent#37. Kevin aprobó en el chat del 2026-10-19
 seguir con la 2.0 y las dos recomendaciones abiertas: **el cerebro piensa por
 el CRM** (#106) y **una sola base para los dos** (D8).
 

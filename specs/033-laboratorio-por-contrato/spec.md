@@ -1,4 +1,4 @@
-# 033 — Laboratorio por contrato
+﻿# 033 — Laboratorio por contrato
 
 **Feature Branch**: `feat/033-laboratorio-por-contrato` (en `vocero-crm` y en `nea-agent`)
 
@@ -6,7 +6,7 @@
 
 **Status**: Especificada antes de escribir código.
 
-**Input**: segunda pieza de la 2.0.0 (`PLAN-2.0.md`): kevinrivm/vocero-crm#91.
+**Input**: segunda pieza de la 2.0.0 (`PLAN-2.0.md`): elisaulo/vocero-crm#91.
 Kevin autorizó en el chat del 2026-10-20 mergear la 031 y seguir. Es la
 condición previa para retirar el agente incluido (#106).
 

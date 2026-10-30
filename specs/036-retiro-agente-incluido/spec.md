@@ -1,4 +1,4 @@
-# 036 — Retiro del agente incluido
+﻿# 036 — Retiro del agente incluido
 
 **Feature Branch**: `feat/036-retiro-agente-incluido`
 
@@ -6,7 +6,7 @@
 
 **Status**: Especificada antes de escribir código.
 
-**Input**: quinta pieza de la 2.0.0 (`PLAN-2.0.md`): kevinrivm/vocero-crm#106.
+**Input**: quinta pieza de la 2.0.0 (`PLAN-2.0.md`): elisaulo/vocero-crm#106.
 Kevin autorizó en el chat del 2026-10-20 mergear la 035 y seguir con la #106.
 Decisiones de producto ya tomadas por Kevin para la 2.0: el cerebro piensa
 por el CRM (`/api/bot/llm`, opción recomendada del issue) y el par usa una

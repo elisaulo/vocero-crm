@@ -1,4 +1,4 @@
-# 037 — Almacenamiento: disco por defecto, bucket S3 opcional
+﻿# 037 — Almacenamiento: disco por defecto, bucket S3 opcional
 
 **Feature Branch**: `feat/037-almacenamiento`
 
@@ -6,7 +6,7 @@
 
 **Status**: Especificada antes de escribir código.
 
-**Input**: sexta pieza de la 2.0.0 (`PLAN-2.0.md`): kevinrivm/vocero-crm#93.
+**Input**: sexta pieza de la 2.0.0 (`PLAN-2.0.md`): elisaulo/vocero-crm#93.
 Kevin autorizó en el chat del 2026-10-20 mergear la 036 y seguir con la #93.
 
 **Carril**: ciclo completo (Principio VI). Entra un conector opcional

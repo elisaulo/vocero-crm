@@ -2,8 +2,31 @@
 
 Qué trae cada versión de Vocero CRM y qué hacer para actualizar. La versión
 sigue el SemVer del [README](README.md#versiones): una menor trae funciones
-nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
-imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
+nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
+imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
+
+## 2.1.0 — 2026-10-30
+
+Reestructuración de infraestructura Docker y limpieza de autoría. No requiere
+migración de base de datos. Actualizar: `git pull && docker compose build &&
+docker compose up -d`.
+
+### Nuevo
+
+- **`docker-compose.yml` para Coolify + Traefik** (`crm.vocero.bid`): elimina
+  los servicios obsoletos `evolution-api` (`atendai/evolution-api:v2.1.1`),
+  `caddy` y `nea` del compose principal. Contiene solo `app` y `postgres`,
+  con labels de Traefik para TLS automático con Let's Encrypt sobre la red
+  `coolify` (externa). La imagen pasa de `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`
+  a `elisaulo/vocero-crm:local` (construida desde el repo con `--build`).
+  `postgres` tiene `container_name: vocero-crm-postgres-1` y
+  `hostname: vocero-db` para compatibilidad con la `DATABASE_URL` por defecto.
+
+### Corregido
+
+- **Eliminación total de referencias a `kevinrivm`**: reemplazadas por
+  `elisaulo` en `docker-compose.yml`, `.github/workflows/imagen.yml`,
+  `docs/migrar-a-2.0.md`, `docs/bitacora-2.0.md` y todos los `specs/`.
 
 ## 2.0.1 — 2026-10-30
 

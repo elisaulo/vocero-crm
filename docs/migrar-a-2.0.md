@@ -3,7 +3,7 @@
 En la 2.0 **el agente sale del CRM**. Vocero se queda con lo suyo —bandeja,
 pipeline, agenda, perfil del agente, conocimiento, Laboratorio— y quien
 contesta es un cerebro aparte, conectado por un contrato público:
-[Nea](https://github.com/kevinrivm/nea-agent) (MIT) u otro.
+[Nea](https://github.com/elisaulo/nea-agent) (MIT) u otro.
 
 Es una versión mayor porque hay algo que hacer a mano. Qué, depende de dónde
 vienes.
@@ -48,7 +48,7 @@ docker compose up -d
 ### Coolify
 
 Dentro del proyecto del CRM, un servicio más desde la imagen
-`ghcr.io/kevinrivm/nea-agent:2.0.0`, puerto 8000, sin dominio público:
+`ghcr.io/elisaulo/nea-agent:2.0.0`, puerto 8000, sin dominio público:
 
 | Variable de Nea | Valor |
 |---|---|
@@ -103,7 +103,7 @@ contesta 503 a Meta para que reintente, y su `/health` enseña
 `RELAY_BACKOFF_CAP_SECONDS`, `COALESCE_SECONDS`, `TYPING_DELAY_SECONDS` y
 `TURN_RETRY_DELAYS` ya no se leen. Si siguen en el entorno, Nea lo avisa al
 arrancar. Detalle en el
-[CHANGELOG de Nea](https://github.com/kevinrivm/nea-agent/blob/main/CHANGELOG.md).
+[CHANGELOG de Nea](https://github.com/elisaulo/nea-agent/blob/main/CHANGELOG.md).
 
 ## El contrato
 
