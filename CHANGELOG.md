@@ -5,6 +5,40 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.1.6 — 2026-10-31
+
+Sincronización con `upstream/main` (kevinrivm/vocero-crm v2.7.0). No requiere
+migración de BD manual — las migraciones nuevas se aplican al arrancar.
+Actualizar: `git pull && docker compose build && docker compose up -d`.
+
+### Absorbido del upstream (v2.2.0 → v2.7.0)
+
+- **Respuestas rápidas** (049): plantillas reutilizables en el compositor
+- **Notas internas** (050): comentarios privados en las conversaciones
+- **Borrador por conversación** (051): persistencia del texto en edición
+- **Filtros de ventana** (052): filtrar bandeja por estado de ventana
+- **Eventos en el hilo** (054): actividad del lead visible en el chat
+- **Atajos de teclado** (055): navegación rápida por el teclado
+- **Avisos y sin conexión** (056): banner de desconexión en tiempo real
+- **Reenviar y deslizar** (059): reenvío de mensajes y gesto de respuesta
+- **Apariencia / temas** (062): selector de fuente, densidad y tema
+- **Fondo de chat con dibujos** (063): fondos personalizados en el hilo
+- **Lista compartida rápida** (064): optimización de rendimiento de la bandeja
+- **Cuenta de mensajes** (065): contador de mensajes en la conversación
+- **Embedded Signup v4** (066): conectar cuenta de WhatsApp desde la UI
+- **Fuentes locales** (fix/fuentes-locales): woff2 en el repo, sin CDN
+- **Zod 4** (chore/zod-4): actualización de la librería de validación
+- **PWA mejorada** (048): manifest dinámico, íconos e instalabilidad
+
+### Preservado (nuestras personalizaciones)
+
+- `docker-compose.yml`: puerto `127.0.0.1:3000:3000` (seguridad) + imagen
+  `elisaulo/vocero-crm:local` + red `coolify` + labels Traefik para `crm.vocero.bid`
+- `src/components/app-shell.tsx`: sidebar colapsable con localStorage
+- `src/components/app-nav.tsx`: sidebar sticky + collapsed mode + v2.1.6
+- `src/app/layout.tsx`: `html` y `body` con `h-dvh overflow-hidden`
+- `AGENTS.md`, specs, docs: autoría `elisaulo` en todas las referencias
+
 ## 2.1.5 — 2026-10-30
 
 Blindaje de seguridad del puerto Docker. No requiere migración de BD ni

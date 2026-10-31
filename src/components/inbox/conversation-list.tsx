@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Inbox, Megaphone, Search, Smartphone, Sparkles, UserRound, X } from "lucide-react";
+import { Clock3, Inbox, Megaphone, SlidersHorizontal, Search, Sparkles, UserRound, X } from "lucide-react";
 import type { ConversationDto } from "@/lib/types";
 import { etiquetaDeOrigen, titularDeOrigen } from "@/lib/anuncios";
 import { CHANNEL_LABEL, type Channel } from "@/lib/channels";
@@ -542,16 +542,6 @@ export function ConversationList({
                             </span>
                           </span>
                         )}
-                        {c.evolutionInstance && (
-                          <span
-                            className="inline-flex min-w-0 items-center gap-1 rounded-full border border-success-soft bg-success-tint px-2 py-0.5 text-[11px] font-medium text-success-text"
-                            title={`Número Evolution: ${c.evolutionInstance}`}
-                          >
-                            <Smartphone className="h-3 w-3 shrink-0" strokeWidth={1.7} />
-                            <span className="max-w-[80px] truncate">{c.evolutionInstance}</span>
-                          </span>
-                        )}
-
                       </span>
                     </span>
                   </button>

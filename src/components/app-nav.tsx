@@ -77,7 +77,6 @@ export function AppNav({
   kicker = "CRM · WhatsApp",
   open = false,
   onClose,
-  collapsed = false,
 }: {
   branding: Branding;
   userName: string;
@@ -100,11 +99,6 @@ export function AppNav({
   /** Solo aplica por debajo de `lg`: en escritorio el lateral es fijo. */
   open?: boolean;
   onClose?: () => void;
-  /**
-   * Solo desktop (lg+): cuando es `true` el sidebar se contrae a un rail
-   * estrecho mostrando solo iconos. El estado lo gestiona `AppShell`.
-   */
-  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -205,26 +199,17 @@ export function AppNav({
       <Link
         key={item.href}
         href={item.href}
-        className={cn(
-          navItemClass(active),
-          collapsed && "lg:justify-center lg:px-0"
-        )}
+        className={navItemClass(active)}
         aria-current={active ? "page" : undefined}
-        title={collapsed ? item.label : undefined}
       >
         <item.icon
           className={cn("h-5 w-5 shrink-0", active ? "text-brand" : "text-text-3")}
           strokeWidth={1.8}
           aria-hidden
         />
-        <span className={cn("flex-1", collapsed && "lg:hidden")}>{item.label}</span>
+        <span className="flex-1">{item.label}</span>
         {item.badge && unread > 0 && (
-          <span
-            className={cn(
-              "flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1.5 text-[10.5px] font-bold text-brand-fg",
-              collapsed && "lg:absolute lg:right-0.5 lg:top-0.5 lg:h-3.5 lg:min-w-[14px] lg:px-0.5 lg:text-[8px]"
-            )}
-          >
+          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1.5 text-[10.5px] font-bold text-brand-fg">
             {unread}
           </span>
         )}
@@ -294,22 +279,18 @@ export function AppNav({
       // cajón visible mientras se desliza y recién entonces lo oculta, que es
       // lo que lo saca del orden de tabulación en móvil.
       className={cn(
-        // `text-foreground` explícito: sin él el texto sin color propio hereda
-        // el color calculado en <body> con el tema de la página, no el de
-        // `.nav-dark` — texto oscuro sobre fondo oscuro se pierde.
-        "nav-dark fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col overflow-hidden border-r bg-subtle px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility,width] duration-200",
-        // Móvil: ancho completo del cajón.
-        "w-[17rem]",
-        // Desktop: sticky al viewport; ancho transiciona entre expandido (w-56)
-        // y colapsado (w-14 — solo iconos). overflow-hidden evita barra de scroll
-        // en el aside; el nav interior la absorbe si hay más items que espacio.
-        "lg:static lg:sticky lg:top-0 lg:visible lg:z-auto lg:h-dvh lg:translate-x-0 lg:overflow-hidden lg:transition-[width] lg:duration-200",
-        collapsed ? "lg:w-14 lg:px-1" : "lg:w-56",
+        // `text-foreground` explícito: sin él, el texto sin color propio (el
+        // nombre del usuario, el nombre white-label en BrandLogo) hereda el
+        // color YA CALCULADO en <body> con el tema de la página, no el de
+        // `.nav-dark` — y un texto oscuro sobre este fondo oscuro se pierde.
+        // 061 — Solo el teléfono: en escritorio el menú es el riel de iconos
+        // (abajo). Ya no lleva la barra azul marino: los neutros del tema.
+        "fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto rounded-r-[var(--radio-tarjeta)] bg-background px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200 lg:hidden",
         open ? "visible translate-x-0 shadow-pop" : "invisible -translate-x-full"
       )}
     >
-      {/* Marca: logo o inicial white-label. En modo colapsado solo el ícono. */}
-      <div className={cn("mb-4 flex items-start gap-1.5 px-2 pt-0.5", collapsed && "lg:justify-center lg:px-0")}>
+      {/* Marca: el logo de Vocero o, white-label, la inicial y el nombre */}
+      <div className="mb-5 flex items-start gap-1.5 px-2 pt-0.5">
         {/* En móvil el cajón necesita su propio cierre: el velo no siempre es
             alcanzable con el pulgar. */}
         <button
@@ -319,8 +300,7 @@ export function AppNav({
         >
           <X className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </button>
-        {/* En modo colapsado desktop ocultamos el texto del logo */}
-        <div className={cn("min-w-0", collapsed && "lg:hidden")}>
+        <div className="min-w-0">
           <BrandLogo branding={branding} />
           <span className="kicker mt-2 block">{kicker}</span>
         </div>
@@ -328,18 +308,11 @@ export function AppNav({
 
       {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
           de arriba abajo como una lista de lo que hay. Un grupo sin título
-          (Resultados) es una entrada suelta separada por el espacio.
-          flex-1 + min-h-0 + overflow-y-auto: el nav absorbe el espacio
-          disponible y hace scroll interno si los items no caben; scrollbar-none
-          lo oculta visualmente (la rueda del ratón sigue funcionando). */}
-      <nav
-        className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Secciones"
-      >
+          (Resultados) es una entrada suelta separada por el espacio. */}
+      <nav className="flex flex-col gap-4" aria-label="Secciones">
         {groups.map((group, i) => (
           <div key={group.title ?? i} className="flex flex-col gap-0.5">
-            {/* En modo colapsado los títulos de grupo desaparecen */}
-            {group.title && !collapsed && (
+            {group.title && (
               <span className="kicker mb-1 block px-2.5" aria-hidden>
                 {group.title}
               </span>
@@ -349,64 +322,59 @@ export function AppNav({
         ))}
       </nav>
 
-      {/* Bloque inferior: Ajustes + perfil + versión.
-          shrink-0 + mt-auto: siempre pegado al fondo, sin comprimirse.
-          En modo colapsado solo se muestran iconos centrados. */}
-      <div className="shrink-0 mt-auto pt-3 border-t border-white/10 flex flex-col gap-0">
-        {renderItem(SETTINGS_ITEM)}
+      <div className="flex-1" />
 
-        <div
-          className={cn(
-            "mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent",
-            collapsed && "lg:justify-center lg:px-1"
-          )}
-          title={collapsed ? `${userName} · ${role === "owner" ? "Propietario" : "Equipo"}` : undefined}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
-            {initials(userName)}
+      {/* 048 — Solo cuando el navegador ofrece instalar la app: una fila
+          propia y no un icono más en el pie, que ya va lleno. */}
+      <BotonActivarAvisos className={navItemClass(false)} />
+      <BotonInstalar className={navItemClass(false)} />
+
+      {/* Ajustes va abajo, solo: no es trabajo del día. */}
+      {renderItem(SETTINGS_ITEM)}
+
+      <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
+          {initials(userName)}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold">{userName}</span>
+          <span className="block truncate text-[11px] text-text-3">
+            {role === "owner" ? "Propietario" : "Equipo"} · En línea
           </span>
-          <span className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
-            <span className="block truncate text-[13px] font-semibold">{userName}</span>
-            <span className="block truncate text-[11px] text-text-3">
-              {role === "owner" ? "Propietario" : "Equipo"} · En línea
-            </span>
-          </span>
-          <ThemeToggle initial={theme} />
+        </span>
+        <span className="flex shrink-0 items-center">
+          {campana}
+          <ThemeToggle initial={apariencia} />
           <button
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
-            className={cn("rounded p-1 text-text-3 hover:text-foreground", collapsed && "lg:hidden")}
-            onClick={async () => {
-              await signOut();
-              router.push("/login");
-              router.refresh();
-            }}
+            className="rounded p-1 text-text-3 hover:text-foreground"
+            onClick={() => void salir()}
           >
             <LogOut className="h-4 w-4" strokeWidth={1.7} />
           </button>
-        </div>
-
-        {/* Etiqueta de versión: oculta en modo colapsado (no hay espacio). */}
-        <p
-          className={cn(
-            "mt-1 px-2.5 pb-1 font-mono text-[10.5px] tracking-[0.06em] text-text-2",
-            collapsed && "lg:hidden"
-          )}
-          title={versionTitle(branding.name, version)}
-        >
-          {versionLabel(version.commit)}
-          {version.commit && !version.verified && (
-            <span className="mt-0.5 flex items-center gap-1">
-              <AlertTriangle
-                className="h-3 w-3 shrink-0 text-warning-text"
-                strokeWidth={2}
-                aria-hidden
-              />
-              {UNVERIFIED_COMMIT_NOTE}
-            </span>
-          )}
-        </p>
+        </span>
       </div>
+
+      {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
+          "¿ya se desplegó?" aparece justo cuando algo no funciona, y mandar a
+          alguien a comparar commits en el servidor significa que no lo hará. */}
+      {/* `text-2` y no `text-3`: a 10.5px, el gris más claro no pasa AA contra
+          el fondo de la barra. Discreta sí, ilegible no. */}
+      {/* El nombre sale de la marca, no de una constante: esto es white-label,
+          y una instancia rebautizada que dice "Vocero" en el tooltip delata el
+          producto de debajo justo donde el operador la mira todos los días. */}
+      {/* Un commit que no salió del build lo dice (#50): presentarlo igual
+          que uno verificado es la insignia mintiendo justo cuando alguien la
+          consulta para saber qué código corre. El aviso es el ícono (color de
+          advertencia: basta 3:1 para un gráfico) y el texto va en `text-2`,
+          que pasa AA sobre la barra en cualquier tema. */}
+      <p
+        className="mt-2 px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
+        title={versionTitle(branding.name, version)}
+      >
+        {versionTexto}
+      </p>
     </aside>
     </>
   );

@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
 import { apiError, parseBody, withAuth } from "@/lib/api";
-import { getDb, schema } from "@/lib/db";
 import {
   desconectarCanal,
   getCredentialsByOrg,
@@ -24,95 +22,46 @@ import {
 export const dynamic = "force-dynamic";
 
 export const GET = withAuth(async (session) => {
-  const db = getDb();
-  const [creds, orgs] = await Promise.all([
-    getCredentialsByOrg(session.organizationId),
-    db
-      .select()
-      .from(schema.organization)
-      .where(eq(schema.organization.id, session.organizationId))
-      .limit(1),
-  ]);
-
-  const org = orgs[0];
-
+  const creds = await getCredentialsByOrg(session.organizationId);
+  if (!creds) return Response.json({ connection: null });
   return Response.json({
-    whatsappProvider: org?.whatsappProvider ?? "meta",
-    connection: creds
-      ? {
-          wabaId: creds.wabaId,
-          phoneNumberId: creds.phoneNumberId,
-          displayPhoneNumber: creds.displayPhoneNumber,
-          verifiedName: creds.verifiedName,
-          status: creds.status,
-          tokenLast4: tokenLast4(creds.token),
-        }
-      : null,
-    evolution: {
-      apiUrl: org?.evolutionApiUrl ?? "",
-      apiKeyLast4: org?.evolutionApiKey ? tokenLast4(org.evolutionApiKey) : "",
-      instance: org?.evolutionInstance ?? "",
+    connection: {
+      wabaId: creds.wabaId,
+      messagingAccountId: creds.messagingAccountId,
+      phoneNumberId: creds.phoneNumberId,
+      displayPhoneNumber: creds.displayPhoneNumber,
+      verifiedName: creds.verifiedName,
+      status: creds.status,
+      tokenLast4: tokenLast4(creds.token),
     },
   });
 });
 
-const putSchema = z.union([
-  z.object({
-    provider: z.enum(["meta", "evolution"]),
-  }),
-  z.object({
-    evolutionApiUrl: z.string().trim().min(1),
-    evolutionApiKey: z.string().trim().min(1),
-    evolutionInstance: z.string().trim().min(1),
-  }),
-  z.object({
-    wabaId: z.string().trim().min(1),
-    phoneNumberId: z.string().trim().min(1),
-    token: z.string().trim().min(1),
-  }),
-]);
+const putSchema = z.object({
+  wabaId: z.string().trim().min(1),
+  phoneNumberId: z.string().trim().min(1),
+  token: z.string().trim().min(1),
+  /**
+   * 065 — La Cuenta de mensajes del split de 2026 (plantillas y pago).
+   * Ausente: se conserva la guardada, o se intenta descubrir. Vacía: se borra.
+   */
+  messagingAccountId: z.string().trim().regex(/^\d*$/, "Debe ser un ID numérico").optional(),
+});
 
+/**
+ * Guarda la conexión: re-valida contra Meta, cifra (FR-040) y registra el
+ * webhook de esta instancia en el número.
+ *
+ * Antes el CRM solo suscribía la app a la WABA y la URL había que pegarla a
+ * mano en el panel de Meta. Si Meta rechaza el registro, la conexión YA está
+ * guardada y es válida: se avisa en `webhook` y la tarjeta del webhook ofrece
+ * reintentar (o pegar la URL a mano, que sigue a la vista).
+ */
 export const PUT = withAuth(async (session, req: Request) => {
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
 
-  if ("provider" in body.data) {
-    const db = getDb();
-    await db
-      .update(schema.organization)
-      .set({ whatsappProvider: body.data.provider })
-      .where(eq(schema.organization.id, session.organizationId));
-
-    return Response.json({ ok: true, provider: body.data.provider });
-  }
-
-  if ("evolutionApiUrl" in body.data) {
-    const db = getDb();
-    await db
-      .update(schema.organization)
-      .set({
-        whatsappProvider: "evolution",
-        evolutionApiUrl: body.data.evolutionApiUrl,
-        evolutionApiKey: body.data.evolutionApiKey,
-        evolutionInstance: body.data.evolutionInstance,
-      })
-      .where(eq(schema.organization.id, session.organizationId));
-
-    return Response.json({
-      ok: true,
-      provider: "evolution",
-      evolution: {
-        apiUrl: body.data.evolutionApiUrl,
-        instance: body.data.evolutionInstance,
-      },
-    });
-  }
-
-  // Meta Cloud API Connection
-  const check = await testConnection(
-    body.data.phoneNumberId,
-    body.data.token
-  );
+  const check = await testConnection(body.data.phoneNumberId, body.data.token);
   if (!check.ok) {
     const status = check.code === "meta_unavailable" ? 503 : 422;
     return apiError(status, check.code, check.message);
@@ -133,16 +82,6 @@ export const PUT = withAuth(async (session, req: Request) => {
     verifiedName: check.verifiedName,
   });
 
-  try {
-    const db = getDb();
-    await db
-      .update(schema.organization)
-      .set({ whatsappProvider: "meta" })
-      .where(eq(schema.organization.id, session.organizationId));
-  } catch {
-    // En pruebas unitarias donde getDb no se conecta a Postgres real, ignorar
-  }
-
   const webhook = await registerWebhookForNumber({
     wabaId: body.data.wabaId,
     phoneNumberId: body.data.phoneNumberId,
@@ -160,6 +99,31 @@ export const PUT = withAuth(async (session, req: Request) => {
   });
 });
 
+/**
+ * 065 — Qué Cuenta de mensajes se guarda: la que vino; si no vino, la ya
+ * guardada (rotar el token no la borra); si no había, la que Meta diga
+ * (best-effort). Cadena vacía = quitarla a propósito.
+ */
+async function resolverCuentaDeMensajes(
+  organizationId: string,
+  data: { wabaId: string; token: string; messagingAccountId?: string }
+): Promise<string | null> {
+  if (data.messagingAccountId !== undefined) return data.messagingAccountId || null;
+  const guardada = (await getCredentialsByOrg(organizationId))?.messagingAccountId;
+  if (guardada) return guardada;
+  return descubrirCuentaDeMensajes(data.wabaId, data.token);
+}
+
+/**
+ * Desconectar el número. Sin esto, conectar era una calle de un solo
+ * sentido: la unicidad del número impedía moverlo a otra instancia y no había
+ * pantalla donde soltarlo.
+ *
+ * Primero quita el override del webhook que puso el guardado —con el token
+ * todavía a mano; sin él no se podría— y después borra las credenciales. No
+ * borra la bandeja: las conversaciones son de la organización, no de la
+ * conexión. Idempotente: sin conexión responde 200 igual.
+ */
 export const DELETE = withAuth(async (session) => {
   const creds = await getCredentialsByOrg(session.organizationId);
   if (creds) {

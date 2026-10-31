@@ -71,14 +71,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${branding.name} — ${producto}`,
     description: `${producto} con agente de IA y Laboratorio de auto-evaluación`,
-    icons: { icon: faviconHref(branding), apple: "/icons/apple-touch-icon.png" },
-    manifest: "/manifest.json",
-    themeColor: "#0b1327",
-    appleWebApp: {
-      capable: true,
-      statusBarStyle: "black-translucent",
-      title: branding.name,
+    // El `?v=` cambia con la marca: los navegadores guardan el favicon con una
+    // insistencia notable y, sin eso, el logo nuevo tarda días en aparecer.
+    icons: {
+      icon: faviconHref(branding),
+      // 048 — El icono de «Agregar a inicio» del iPhone: PNG de 180, a sangre.
+      apple: appIconHref(branding, 180),
     },
+    // 048 — Instalada desde Safari, abre sin la barra del navegador. Barra de
+    // estado negra y no translúcida: la página no tiene margen para el notch.
+    appleWebApp: { capable: true, title: shortAppName(branding.name), statusBarStyle: "black" },
   };
 }
 
@@ -97,25 +99,25 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${archivo.variable} ${instrumentSerif.variable} ${plexMono.variable} h-dvh overflow-hidden`}
-      data-theme={theme}
+      className={`${urbanist.variable} ${archivo.variable} ${inter.variable} ${plexSans.variable} ${instrumentSerif.variable} ${plexMono.variable} h-dvh overflow-hidden`}
+      // La preferencia siempre es explícita: viaja resuelta en el HTML del
+      // servidor, así que no hay divergencia con el cliente ni parpadeo.
+      {...atributosHtml(apariencia)}
     >
       <head>
         {/* Acento white-label inyectado en SSR: sin flash de tema */}
         <style
           dangerouslySetInnerHTML={{ __html: accentCssVariables(branding.accent) }}
         />
-        {/* PWA: link explícito al manifiesto en formato estándar W3C */}
-        <link rel="manifest" href="/manifest.webmanifest" />
+        {/* 062 — Los temas listos (todos, para cambiar en vivo) y el propio. */}
+        <style
+          id="vocero-temas"
+          dangerouslySetInnerHTML={{ __html: cssDeTemas() + cssDePropio(apariencia) }}
+        />
       </head>
       <body className="h-dvh overflow-hidden font-sans">
         {children}
-        {/* Registro del Service Worker para instalabilidad PWA */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}`,
-          }}
-        />
+        <RegistrarServiceWorker />
       </body>
     </html>
   );

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { atajoBandeja } from "@/lib/atajos";
 import { hayDialogoAbierto } from "@/components/atajos-globales";
@@ -85,15 +85,42 @@ export function Composer({
   // se cuenta la profundidad para que el indicador no parpadee.
   const dragDepth = useRef(0);
   const [dragging, setDragging] = useState(false);
-  // Hay caja de texto libre (ventana normal, la humana de Instagram/Messenger,
-  // o Evolution API que no tiene restricción de ventana de 24 h).
-  // EvoAPI: instancia anotada en la conversación (multi-instancia, conversaciones
-  // nuevas) O proveedor de la org en modo Evolution (conversaciones migradas /
-  // antiguas que no tienen evolutionInstance registrado en la tabla conversation).
-  const esEvoApi =
-    conversation.evolutionInstance !== null ||
-    conversation.whatsappProvider === "evolution";
-  const textoLibre = esEvoApi || conversation.windowOpen || Boolean(conversation.humanWindow?.open);
+  // 044 — La grabadora ocupa el lugar de la caja mientras está abierta.
+  const [grabando, setGrabando] = useState(false);
+  // 049 — Respuestas rápidas: la lista de la organización (null = sin cargar),
+  // el `/atajo` que se está escribiendo y la opción resaltada. `cerradoEn`
+  // guarda dónde empezaba el token que se cerró con Escape: no vuelve a abrir
+  // hasta que se escriba otra `/`.
+  const [respuestas, setRespuestas] = useState<RespuestaRapida[] | null>(null);
+  const [puedeEditarRespuestas, setPuedeEditarRespuestas] = useState(false);
+  const [token, setToken] = useState<{ inicio: number; consulta: string } | null>(null);
+  const [activa, setActiva] = useState(0);
+  const [cerradoEn, setCerradoEn] = useState<number | null>(null);
+  // 050 — Responder al cliente o anotar para el equipo.
+  const [modo, setModo] = useState<"responder" | "nota">("responder");
+  const notaRef = useRef<HTMLTextAreaElement>(null);
+  // 055 · D3 — Alt+R escribe una respuesta y Alt+N una nota interna, también
+  // con el foco en la caja. Con un diálogo abierto no actúan.
+  const hayNotas = Boolean(onNota);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const atajo = atajoBandeja(e);
+      if (atajo !== "responder" && atajo !== "nota") return;
+      if (hayDialogoAbierto()) return;
+      if (atajo === "nota" && !hayNotas) return;
+      e.preventDefault();
+      setModo(atajo === "nota" ? "nota" : "responder");
+      setError(null);
+      // Tras pintar la otra pestaña: el foco va a su caja.
+      requestAnimationFrame(() => (atajo === "nota" ? notaRef : taRef).current?.focus());
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hayNotas]);
+  const [nota, setNota] = useState(() => leerBorrador("nota", conversation.id));
+  const [guardandoNota, setGuardandoNota] = useState(false);
+  // Hay caja de texto libre (ventana normal, o la humana de Instagram/Messenger).
+  const textoLibre = conversation.windowOpen || Boolean(conversation.humanWindow?.open);
 
   useEffect(() => {
     let cancelled = false;
@@ -421,8 +448,107 @@ export function Composer({
 
   // 022 — TikTok no tiene plantillas ni otra forma de reabrir: con la ventana
   // cerrada no hay nada que ofrecer, solo decir qué pasa y qué lo arregla.
-  // Evolution API no tiene restricción de ventana: se omite el bloqueo.
-  if (!esEvoApi && !conversation.windowOpen && conversation.channel === "tiktok") {
+  // 050 — Las pestañas van arriba en TODAS las ramas: anotar no depende de
+  // la ventana de Meta, y con la ventana cerrada es cuando más se necesita.
+  const pestanas = onNota ? (
+    <div role="tablist" aria-label="Qué escribir" className="mb-2 flex gap-1">
+      {(
+        [
+          ["responder", "Responder"],
+          ["nota", "Nota interna"],
+        ] as const
+      ).map(([valor, etiqueta]) => (
+        <button
+          key={valor}
+          type="button"
+          role="tab"
+          aria-selected={modo === valor}
+          onClick={() => {
+            setModo(valor);
+            setError(null);
+          }}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+            modo === valor
+              ? valor === "nota"
+                ? "bg-warning-tint text-warning-text ring-1 ring-warning-soft"
+                : "bg-brand-tint text-brand-text"
+              : "text-text-3 hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          {valor === "nota" && <Lock className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />}
+          {etiqueta}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  async function guardarNota() {
+    const texto = nota.trim();
+    if (!onNota || !texto || guardandoNota) return;
+    setGuardandoNota(true);
+    setError(null);
+    const err = await onNota(texto);
+    setGuardandoNota(false);
+    if (err) setError(err);
+    else setNota("");
+  }
+
+  if (onNota && modo === "nota") {
+    return withDropZone(
+      <div className="px-[18px] pb-3.5 pt-2">
+        {pestanas}
+        <div
+          data-modo="nota"
+          className="flex items-end gap-2 rounded-[18px] border border-warning-soft bg-warning-tint py-1.5 pl-3 pr-1.5"
+        >
+          <Lock className="mb-2 h-4 w-4 shrink-0 text-warning-text" strokeWidth={1.8} aria-hidden />
+          <textarea
+            ref={notaRef}
+            value={nota}
+            rows={2}
+            autoFocus
+            placeholder="Nota interna: solo la ve tu equipo…"
+            aria-label="Nota interna"
+            onChange={(e) => setNota(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void guardarNota();
+              } else if (e.key === "Escape") {
+                setModo("responder");
+              }
+            }}
+            className="max-h-[120px] w-full resize-none self-center bg-transparent py-1 text-sm leading-relaxed text-foreground outline-none placeholder:text-warning-text placeholder:opacity-70"
+          />
+          <button
+            onClick={() => void guardarNota()}
+            disabled={guardandoNota || !nota.trim()}
+            className={cn(
+              "shrink-0 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity",
+              (guardandoNota || !nota.trim()) && "opacity-40"
+            )}
+          >
+            {guardandoNota ? "Guardando…" : "Guardar nota"}
+          </button>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between">
+          {error ? (
+            <p role="alert" className="text-xs text-destructive">
+              {error}
+            </p>
+          ) : (
+            <span />
+          )}
+          <p className="font-mono text-[10.5px] tracking-[0.04em] text-text-3">
+            No se envía al cliente
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!conversation.windowOpen && conversation.channel === "tiktok") {
     return withDropZone(
       <div className="px-[18px] py-3.5">
         {pestanas}
@@ -445,10 +571,9 @@ export function Composer({
   // 024 — Instagram y Messenger no tienen plantillas. Pasadas 24 horas una
   // persona todavía puede contestar (hasta 7 días, sigue abajo con su aviso);
   // pasado ese plazo no hay nada que ofrecer salvo esperar al cliente.
-  // Evolution API no tiene restricción de ventana: se omite el bloqueo.
   const human = conversation.humanWindow;
   const canal = CHANNEL_LABEL[conversation.channel];
-  if (!esEvoApi && !conversation.windowOpen && human && !human.open) {
+  if (!conversation.windowOpen && human && !human.open) {
     return withDropZone(
       <div className="px-[18px] py-3.5">
         {pestanas}
@@ -471,9 +596,7 @@ export function Composer({
     );
   }
 
-  // Evolution API no tiene restricción de ventana: se omite el bloqueo y
-  // la pantalla de «envía una plantilla».
-  if (!esEvoApi && !conversation.windowOpen && !human) {
+  if (!conversation.windowOpen && !human) {
     return withDropZone(
       <div className="px-[18px] py-3.5">
         {pestanas}
@@ -502,7 +625,7 @@ export function Composer({
   // 044 — Con la caja vacía el botón graba, como en WhatsApp.
   const puedeGrabar = conversation.composer.media && !file && !text.trim();
 
-  const soloPersona = !esEvoApi && !conversation.windowOpen && Boolean(human?.open);
+  const soloPersona = !conversation.windowOpen && Boolean(human?.open);
 
   return withDropZone(
     <div className="relative px-[18px] pb-3.5 pt-2">
@@ -738,9 +861,7 @@ export function Composer({
           <span />
         )}
         <p className="font-mono text-[10.5px] tracking-[0.04em] text-text-3">
-          {esEvoApi
-            ? "Evolution API · sin restricción de ventana"
-            : soloPersona
+          {soloPersona
             ? `Ventana humana · quedan ${formatRemainingLong(human!.remainingMs)}`
             : `Ventana abierta · quedan ${formatRemaining(conversation.windowRemainingMs)}`}
         </p>
