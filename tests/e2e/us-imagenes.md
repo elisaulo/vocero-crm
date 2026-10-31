@@ -16,7 +16,7 @@ viva, `WA_MOCK_ENABLED=true` y `META_GRAPH_BASE_URL` apuntando a wa-mock.
    y dos a la vez. **Esperado:** cada una avisa; el adjunto y el pie siguen.
 5. Enviar con la red caída. **Esperado:** «No se pudo conectar…»; el adjunto
    y el pie se quedan. Reintentar con red: sale una sola vez al hilo y a Graph.
-6. En otra conversación, «Reenviar imagen» sobre una imagen del cliente.
+6. En otra conversación, el icono «Reenviar» (059) sobre una imagen del cliente.
    **Esperado:** el diálogo enseña la imagen, su pie, y destinos de WhatsApp
    sin el origen; el de ventana cerrada, deshabilitado; la búsqueda filtra.
 7. Elegir un destino. **Esperado:** el botón dice «Reenviar a {nombre}» y no
@@ -27,6 +27,20 @@ viva, `WA_MOCK_ENABLED=true` y `META_GRAPH_BASE_URL` apuntando a wa-mock.
    cambia.
 9. En 390 px de ancho, abrir el diálogo. **Esperado:** cabe, sin
    desplazamiento horizontal.
+
+## El archivo se perdió del volumen
+
+> Automatizado en `scripts/e2e-adjunto-perdido.mjs` (13 checks). Caso real del
+> 2026-10-23 en crm-dev: la app corría sin volumen en `/data`, un
+> redespliegue se llevó los archivos y todos los audios e imágenes daban 410,
+> aunque Meta todavía los tenía.
+
+1. Entra una imagen y se descarga. Se borra su archivo del volumen.
+   **Esperado:** `GET /api/media/{id}` responde 200 con el mismo contenido: el
+   CRM la vuelve a bajar de Meta y la deja otra vez en el volumen.
+2. Igual, pero Meta ya no la tiene (id caducado). **Esperado:** 410 «ya no
+   está en el volumen ni en WhatsApp» en menos de 10 s, sin 500, y el adjunto
+   queda como no disponible («contenido no disponible» en la bandeja).
 
 ## Fuera del guion
 

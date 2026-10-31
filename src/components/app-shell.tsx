@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Branding } from "@/lib/branding";
-import type { ThemePreference } from "@/lib/theme";
+import type { Apariencia } from "@/lib/temas";
 import type { ResolvedCommit } from "@/lib/version";
 import { AppNav } from "@/components/app-nav";
 import { BrandLogo } from "@/components/brand-mark";
+import { cn } from "@/lib/utils";
+import { BandaSinConexion } from "@/components/banda-sin-conexion";
+import { AtajosGlobales } from "@/components/atajos-globales";
 
 /**
  * Cascarón de la app en dos modos:
@@ -30,7 +33,7 @@ export function AppShell({
   branding,
   userName,
   role,
-  theme,
+  apariencia,
   commit,
   agenda = false,
   kicker,
@@ -40,7 +43,7 @@ export function AppShell({
   branding: Branding;
   userName: string;
   role: string;
-  theme: ThemePreference;
+  apariencia: Apariencia;
   /** Commit resuelto en el servidor, con su procedencia (ver `resolveCommit`). */
   commit?: ResolvedCommit;
   /** 015 — ¿esta instancia tiene agenda? Lo decide el servidor. */
@@ -59,6 +62,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const esBandeja = pathname === "/inbox" || pathname.startsWith("/inbox/");
   const [navOpen, setNavOpen] = useState(false);
 
   // Estado del sidebar colapsado en desktop: se persiste en localStorage para
@@ -99,7 +103,9 @@ export function AppShell({
   }, [navOpen]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    // 061 · D1 — El marco: en escritorio la app son tarjetas separadas sobre
+    // un fondo suave; en el teléfono la pantalla entera es la tarjeta.
+    <div className="app-marco app-escala flex overflow-hidden lg:gap-[var(--hueco)] lg:p-[var(--hueco)]">
       {navOpen && (
         <button
           aria-label="Cerrar el menú"
@@ -114,7 +120,7 @@ export function AppShell({
         commit={commit}
         userName={userName}
         role={role}
-        theme={theme}
+        apariencia={apariencia}
         agenda={agenda}
         kicker={kicker}
         open={navOpen}
@@ -155,6 +161,10 @@ export function AppShell({
         </header>
 
         {aviso}
+        {/* 056 — El tiempo real caído se ve desde cualquier pantalla. */}
+        <BandaSinConexion />
+        {/* 055 — Ctrl+K y «?» desde cualquier pantalla. */}
+        <AtajosGlobales agenda={agenda} role={role} />
 
         {/* main es el único elemento autorizado a hacer scroll vertical.
             El html+body y el AppShell tienen overflow-hidden para bloquear

@@ -67,7 +67,9 @@ dentro: README → «Instalación» → «Otras plataformas».
 a propósito: la imagen ya la trae (`/data/media`, dentro del volumen de `/data`).
 
 Opcionales, que NO se preguntan (el usuario los agrega después; la guía de
-cada uno está en `.env.example`): `META_APP_SECRET`, `BOT_API_KEY`,
+cada uno está en `.env.example`): `META_APP_SECRET`, `META_APP_ID` +
+`META_EMBEDDED_CONFIG_ID` (botón «Conectar con Meta»; panel de Meta en
+[`docs/embedded-signup.md`](docs/embedded-signup.md)), `BOT_API_KEY`,
 `BRAIN_DISPATCH_URL` y `BRAIN_HEALTH_URL` (un cerebro externo como Nea),
 `AGENDA=on`, `ATRIBUCION=on` y `CHANNELS`.
 
@@ -115,7 +117,7 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
 6. **Despliega** y espera el healthcheck verde (`/api/health`; el start-period
    cubre las migraciones).
 7. **Verifica**: `https://<dominio>/api/health` responde
-   `{"ok":true,"version":"2.0.0",…}` y `https://<dominio>/login` carga. Si la
+   `{"ok":true,"version":"2.7.0",…}` y `https://<dominio>/login` carga. Si la
    respuesta trae `"mediaWritable"` (desde 1.5.0), `true`
    confirma que el volumen del paso 3 quedó bien montado.
 
@@ -158,7 +160,7 @@ docker compose up -d
   `BRAIN_HEALTH_URL` en el `.env` (valores en `docs/migrar-a-2.0.md`) y
   `docker compose up -d`.
 - Verifica: `docker compose ps` (tres servicios healthy, cuatro con Nea) y
-  `https://<dominio>/api/health` → `{"ok":true,"version":"2.0.0",…}` (`"mediaWritable":true` confirma el volumen).
+  `https://<dominio>/api/health` → `{"ok":true,"version":"2.7.0",…}` (`"mediaWritable":true` confirma el volumen).
 
 ## Cierre (obligatorio decirlo al usuario)
 
@@ -182,7 +184,7 @@ docker compose up -d
 - App unhealthy al arrancar → revisa logs del contenedor: casi siempre es una
   variable faltante (la validación de entorno lista cuál) o la BD inaccesible.
 - Coolify no puede descargar la imagen → revisa la etiqueta: va sin `v`
-  (`2.0.0`, no `v2.0.0`). En un VPS ARM la imagen no corre: usa la variante
+  (`2.7.0`, no `v2.7.0`). En un VPS ARM la imagen no corre: usa la variante
   que construye desde el código.
 - `ENCRYPTION_KEY` inválida → debe ser EXACTAMENTE 32 bytes en base64
   (44 caracteres): regénérala con `openssl rand -base64 32`.

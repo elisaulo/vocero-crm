@@ -1,5 +1,7 @@
 "use client";
 
+import { atajoBandeja } from "@/lib/atajos";
+import { hayDialogoAbierto } from "@/components/atajos-globales";
 import {
   useEffect,
   useLayoutEffect,
@@ -11,10 +13,10 @@ import {
 import {
   Clock3,
   FileText,
-  MapPin,
+  Lock,
+  Mic,
   Paperclip,
   Send,
-  UserRound,
   X,
 } from "lucide-react";
 import type { ConversationDto, MessageDto, TemplateDto } from "@/lib/types";
@@ -31,22 +33,16 @@ import { TemplateSender } from "./template-sender";
 import { validarImagenAdjunta } from "@/lib/imagen-adjunta";
 import { EmojiPicker } from "./emoji-picker";
 import { insertAtSelection } from "@/lib/emojis";
-
-/** 008 — Panel secundario del clip: formulario de ubicación o contacto. */
-type AttachPanel = "location" | "contact" | null;
-
-/** Extrae lat,long de "21.019, -101.257" o de un enlace de Google Maps. */
-function parseCoords(raw: string): { latitude: number; longitude: number } | null {
-  const m =
-    raw.match(/(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/) ??
-    raw.match(/@(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)/);
-  if (!m) return null;
-  const latitude = Number(m[1]);
-  const longitude = Number(m[2]);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
-  return { latitude, longitude };
-}
+import { VoiceRecorder, type NotaGrabada } from "./voice-recorder";
+import { QuickReplyMenu } from "./quick-reply-menu";
+import { guardarBorrador, leerBorrador } from "@/lib/borradores";
+import {
+  aplicarRespuesta,
+  filtrarRespuestas,
+  rellenarVariables,
+  tokenRapido,
+  type RespuestaRapida,
+} from "@/lib/respuestas-rapidas";
 
 export function Composer({
   conversation,
@@ -55,6 +51,7 @@ export function Composer({
   replyTo = null,
   onReplyChange,
   children,
+  onNota,
 }: {
   conversation: ConversationDto;
   onSend: (text: string, replyTo: MessageDto | null) => Promise<string | null>;
@@ -64,18 +61,20 @@ export function Composer({
   onReplyChange?: (m: MessageDto | null) => void;
   /** 043 — El hilo: la zona donde se suelta una imagen es la conversación entera. */
   children?: ReactNode;
+  /**
+   * 050 — Guardar una nota interna (solo la ve el equipo). Con ella aparecen
+   * las pestañas «Responder | Nota interna», también con la ventana cerrada.
+   * Devuelve el error a mostrar, o `null`.
+   */
+  onNota?: (texto: string) => Promise<string | null>;
 }) {
-  const [text, setText] = useState("");
+  // 051 — Lo que quedó escrito en esta conversación vuelve al regresar a ella.
+  const [text, setText] = useState(() => leerBorrador("responder", conversation.id));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [panel, setPanel] = useState<AttachPanel>(null);
-  const [coordsRaw, setCoordsRaw] = useState("");
-  const [placeName, setPlaceName] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   // 042 — `sending` tarda un render en verse; esto corta el doble envío ya.
@@ -115,9 +114,6 @@ export function Composer({
     if (replyTo) taRef.current?.focus();
   }, [replyTo]);
 
-  /** 039: el id citado, para los envíos que esperan respuesta del servidor. */
-  const replyField = replyTo ? { replyToMessageId: replyTo.id } : {};
-
   // 043 — Soltar un archivo fuera del chat abriría el archivo en la pestaña y
   // el CRM (con el borrador) se perdería. Mientras haya conversación abierta,
   // un archivo soltado en otro punto de la página no hace nada.
@@ -142,6 +138,37 @@ export function Composer({
     };
   }, [filePreview]);
 
+  // 051 — Cada cambio se guarda como borrador (vaciar la caja lo borra; enviar
+  // la vacía). El adjunto no: 028 D5.
+  useEffect(() => {
+    guardarBorrador("responder", conversation.id, text);
+  }, [text, conversation.id]);
+  useEffect(() => {
+    guardarBorrador("nota", conversation.id, nota);
+  }, [nota, conversation.id]);
+  // Un borrador largo vuelve con la caja a su altura.
+  useEffect(() => {
+    // Solo al montar: después lo hace onChange.
+    autogrow();
+  }, []);
+
+  // 049 — La lista se pide una vez: el compositor se monta de nuevo con cada
+  // conversación (028 D5).
+  useEffect(() => {
+    let vivo = true;
+    fetch("/api/quick-replies")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { respuestas?: RespuestaRapida[]; puedeEditar?: boolean } | null) => {
+        if (!vivo || !d) return;
+        setRespuestas(d.respuestas ?? []);
+        setPuedeEditarRespuestas(Boolean(d.puedeEditar));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const el = taRef.current;
     if (!el || emojiCaret.current === null) return;
@@ -156,6 +183,30 @@ export function Composer({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }
+
+  /** 049 — Relee el `/atajo` que hay antes del cursor (al teclear, hacer clic o moverse). */
+  function releerToken() {
+    const el = taRef.current;
+    if (!el) return;
+    const t = el.selectionStart === el.selectionEnd ? tokenRapido(el.value, el.selectionStart) : null;
+    setToken((antes) => {
+      if (t?.inicio !== antes?.inicio || t?.consulta !== antes?.consulta) setActiva(0);
+      return t;
+    });
+    if (!t) setCerradoEn(null);
+  }
+
+  /** 049 — Cambia el `/atajo` por la respuesta (con `{nombre}` relleno); no envía. */
+  function elegirRespuesta(r: RespuestaRapida) {
+    const el = taRef.current;
+    if (!el || !token) return;
+    const insercion = rellenarVariables(r.texto, conversation.contact.name);
+    const next = aplicarRespuesta(text, token.inicio, el.selectionStart, insercion);
+    emojiCaret.current = next.cursor;
+    setText(next.texto);
+    setToken(null);
+    setCerradoEn(null);
   }
 
   /** 041 — El emoji entra en el cursor (o en lugar de la selección); no envía. */
@@ -178,7 +229,6 @@ export function Composer({
     if (filePreview) URL.revokeObjectURL(filePreview);
     setFile(f);
     setFilePreview(f && f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
-    setPanel(null);
     setError(null);
   }
 
@@ -225,7 +275,10 @@ export function Composer({
       <div
         role="region"
         aria-label="Chat: adjuntar imagen"
-        className="relative flex min-h-0 flex-1 flex-col"
+        // 061 — El hilo con su compositor es una tarjeta en escritorio. El
+        // fondo (con sus dibujos) es de la tarjeta: hilo y compositor van
+        // transparentes encima, así los dibujos no se cortan entre los dos.
+        className="thread-bg relative flex min-h-0 flex-1 flex-col bg-chat lg:tarjeta lg:overflow-hidden"
         onDragEnter={(e) => {
           if (!isFileDrag(e)) return;
           e.preventDefault();
@@ -343,61 +396,27 @@ export function Composer({
     }
   }
 
-  async function submitLocation() {
-    const coords = parseCoords(coordsRaw);
-    if (!coords) {
-      setError("Coordenadas inválidas — pega «lat, long» o un enlace de Google Maps");
-      return;
-    }
+  /** 044 — La nota grabada sale por el mismo envío de adjuntos, marcada como voz. */
+  async function enviarNota(nota: NotaGrabada): Promise<string | null> {
+    if (mediaSending.current) return "Ya se está enviando un adjunto.";
+    mediaSending.current = true;
     setSending(true);
     setError(null);
-    const err = await apiSend(`/api/conversations/${conversation.id}/messages`, {
+    const form = new FormData();
+    form.set("file", nota.archivo);
+    form.set("voice", "1");
+    if (replyTo) form.set("replyToMessageId", replyTo.id);
+    const err = await apiSend(`/api/conversations/${conversation.id}/messages/media`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        type: "location",
-        location: { ...coords, ...(placeName.trim() ? { name: placeName.trim() } : {}) },
-        ...replyField,
-      }),
+      body: form,
     });
     setSending(false);
-    if (err) {
-      setError(err);
-      return;
-    }
-    setPanel(null);
-    setCoordsRaw("");
-    setPlaceName("");
+    mediaSending.current = false;
+    if (err) return err;
+    setGrabando(false);
     onReplyChange?.(null);
     onSent();
-  }
-
-  async function submitContact() {
-    if (!contactName.trim() || contactPhone.trim().length < 5) {
-      setError("El contacto necesita nombre y teléfono");
-      return;
-    }
-    setSending(true);
-    setError(null);
-    const err = await apiSend(`/api/conversations/${conversation.id}/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        type: "contacts",
-        contacts: [{ name: contactName.trim(), phone: contactPhone.trim() }],
-        ...replyField,
-      }),
-    });
-    setSending(false);
-    if (err) {
-      setError(err);
-      return;
-    }
-    setPanel(null);
-    setContactName("");
-    setContactPhone("");
-    onReplyChange?.(null);
-    onSent();
+    return null;
   }
 
   // 022 — TikTok no tiene plantillas ni otra forma de reabrir: con la ventana
@@ -405,7 +424,8 @@ export function Composer({
   // Evolution API no tiene restricción de ventana: se omite el bloqueo.
   if (!esEvoApi && !conversation.windowOpen && conversation.channel === "tiktok") {
     return withDropZone(
-      <div className="border-t bg-background px-[18px] py-3.5">
+      <div className="px-[18px] py-3.5">
+        {pestanas}
         <div className="flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-sm text-warning-text">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.7} />
           <div>
@@ -430,7 +450,8 @@ export function Composer({
   const canal = CHANNEL_LABEL[conversation.channel];
   if (!esEvoApi && !conversation.windowOpen && human && !human.open) {
     return withDropZone(
-      <div className="border-t bg-background px-[18px] py-3.5">
+      <div className="px-[18px] py-3.5">
+        {pestanas}
         <div
           data-window="closed"
           className="flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-sm text-warning-text"
@@ -454,7 +475,8 @@ export function Composer({
   // la pantalla de «envía una plantilla».
   if (!esEvoApi && !conversation.windowOpen && !human) {
     return withDropZone(
-      <div className="border-t bg-background px-[18px] py-3.5">
+      <div className="px-[18px] py-3.5">
+        {pestanas}
         <div className="mb-3 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-sm text-warning-text">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.7} />
           <div>
@@ -472,12 +494,19 @@ export function Composer({
     );
   }
 
+  // 049 — El menú de respuestas rápidas, si hay una `/` escribiéndose.
+  const opcionesRapidas = token ? filtrarRespuestas(respuestas ?? [], token.consulta).slice(0, 50) : [];
+  const menuRapido = token !== null && respuestas !== null && cerradoEn !== token.inicio;
+
   const canSubmit = file !== null || text.trim().length > 0;
+  // 044 — Con la caja vacía el botón graba, como en WhatsApp.
+  const puedeGrabar = conversation.composer.media && !file && !text.trim();
 
   const soloPersona = !esEvoApi && !conversation.windowOpen && Boolean(human?.open);
 
   return withDropZone(
-    <div className="relative border-t bg-background px-[18px] pb-3.5 pt-3">
+    <div className="relative px-[18px] pb-3.5 pt-2">
+      {pestanas}
 
       {soloPersona && (
         <div
@@ -492,7 +521,7 @@ export function Composer({
           </p>
         </div>
       )}
-      {templates.length > 0 && !file && panel === null && (
+      {templates.length > 0 && !file && (
         <div className="mb-2.5 flex flex-wrap gap-1.5">
           {templates.slice(0, 4).map((t) => (
             <button
@@ -562,82 +591,20 @@ export function Composer({
         </div>
       )}
 
-      {panel === "location" && (
-        <div className="mb-2.5 flex flex-wrap items-end gap-2 rounded-md border bg-subtle p-2.5">
-          <label className="min-w-0 flex-1 text-xs text-text-2">
-            Coordenadas o enlace de Google Maps
-            <input
-              value={coordsRaw}
-              onChange={(e) => setCoordsRaw(e.target.value)}
-              placeholder="21.019, -101.257"
-              className="mt-1 w-full rounded-md border border-border-strong bg-background px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand focus:ring-[3px] focus:ring-brand-soft"
-            />
-          </label>
-          <label className="min-w-0 flex-1 text-xs text-text-2">
-            Nombre del lugar (opcional)
-            <input
-              value={placeName}
-              onChange={(e) => setPlaceName(e.target.value)}
-              placeholder="Oficina AISHIA"
-              className="mt-1 w-full rounded-md border border-border-strong bg-background px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand focus:ring-[3px] focus:ring-brand-soft"
-            />
-          </label>
-          <button
-            onClick={() => void submitLocation()}
-            disabled={sending}
-            className="rounded-full bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-fg shadow-sm hover:bg-brand-hover disabled:opacity-40"
-          >
-            Enviar ubicación
-          </button>
-          <button
-            onClick={() => setPanel(null)}
-            aria-label="Cancelar"
-            className="rounded p-1 text-text-3 hover:bg-secondary"
-          >
-            <X className="h-4 w-4" strokeWidth={1.7} />
-          </button>
-        </div>
-      )}
-
-      {panel === "contact" && (
-        <div className="mb-2.5 flex flex-wrap items-end gap-2 rounded-md border bg-subtle p-2.5">
-          <label className="min-w-0 flex-1 text-xs text-text-2">
-            Nombre
-            <input
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              placeholder="Xavier Pérez"
-              className="mt-1 w-full rounded-md border border-border-strong bg-background px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand focus:ring-[3px] focus:ring-brand-soft"
-            />
-          </label>
-          <label className="min-w-0 flex-1 text-xs text-text-2">
-            Teléfono
-            <input
-              value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
-              placeholder="+52 462 123 4567"
-              className="mt-1 w-full rounded-md border border-border-strong bg-background px-2.5 py-1.5 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand focus:ring-[3px] focus:ring-brand-soft"
-            />
-          </label>
-          <button
-            onClick={() => void submitContact()}
-            disabled={sending}
-            className="rounded-full bg-brand px-3.5 py-1.5 text-sm font-semibold text-brand-fg shadow-sm hover:bg-brand-hover disabled:opacity-40"
-          >
-            Enviar contacto
-          </button>
-          <button
-            onClick={() => setPanel(null)}
-            aria-label="Cancelar"
-            className="rounded p-1 text-text-3 hover:bg-secondary"
-          >
-            <X className="h-4 w-4" strokeWidth={1.7} />
-          </button>
-        </div>
-      )}
-
-      {/* La caja de escritura en píldora, como la del mockup de la landing */}
-      <div className="flex items-end gap-2 rounded-[23px] border border-border-strong bg-background py-1.5 pl-2 pr-1.5 shadow-sm transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand-soft">
+      {grabando ? (
+        <VoiceRecorder
+          onSend={enviarNota}
+          onCancel={() => setGrabando(false)}
+          onError={(msg) => {
+            setGrabando(false);
+            setError(msg);
+          }}
+        />
+      ) : (
+      /* 061 · D5 — La caja en cápsula y, aparte, el botón redondo de enviar
+         (o grabar), como en la referencia del diseño de tarjetas. */
+      <div className="flex items-end gap-2.5">
+      <div className="flex min-w-0 flex-1 items-end gap-2 rounded-[23px] border border-border bg-background py-1.5 pl-2 pr-3 shadow-sm transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand-soft">
         <input
           ref={fileRef}
           type="file"
@@ -649,48 +616,30 @@ export function Composer({
             e.target.value = "";
           }}
         />
-        <EmojiPicker disabled={sending} onSelect={insertEmoji} onOpen={() => setPanel(null)} />
-        {/* 028: solo lo que el canal puede mandar; en las redes, la caja sola. */}
-        {(conversation.composer.media || conversation.composer.structured) && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {conversation.composer.media && (
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={sending}
-                aria-label="Adjuntar archivo"
-                title="Adjuntar imagen, video, audio o documento"
-                className="rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.7} />
-              </button>
-            )}
-            {conversation.composer.structured && (
-              <>
-                <button
-                  onClick={() => setPanel(panel === "location" ? null : "location")}
-                  aria-label="Enviar ubicación"
-                  title="Enviar ubicación"
-                  className={cn(
-                    "rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground",
-                    panel === "location" && "bg-secondary text-brand"
-                  )}
-                >
-                  <MapPin className="h-[18px] w-[18px]" strokeWidth={1.7} />
-                </button>
-                <button
-                  onClick={() => setPanel(panel === "contact" ? null : "contact")}
-                  aria-label="Compartir contacto"
-                  title="Compartir contacto"
-                  className={cn(
-                    "rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground",
-                    panel === "contact" && "bg-secondary text-brand"
-                  )}
-                >
-                  <UserRound className="h-[18px] w-[18px]" strokeWidth={1.7} />
-                </button>
-              </>
-            )}
-          </div>
+        {menuRapido && (
+          <QuickReplyMenu
+            opciones={opcionesRapidas}
+            activa={activa}
+            vacio={(respuestas ?? []).length === 0}
+            puedeEditar={puedeEditarRespuestas}
+            onElegir={elegirRespuesta}
+            onActiva={setActiva}
+          />
+        )}
+        <EmojiPicker disabled={sending} onSelect={insertEmoji} />
+        {/* 028: solo lo que el canal puede mandar; en las redes, la caja sola.
+            045: ubicación y contacto ya no se ofrecen (el servidor los sigue
+            sabiendo enviar, para un cerebro conectado). */}
+        {conversation.composer.media && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+            aria-label="Adjuntar archivo"
+            title="Adjuntar imagen, video, audio o documento"
+            className="shrink-0 rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.7} />
+          </button>
         )}
         <textarea
           ref={taRef}
@@ -713,8 +662,32 @@ export function Composer({
           onChange={(e) => {
             setText(e.target.value);
             autogrow();
+            releerToken();
           }}
+          onSelect={releerToken}
+          onBlur={() => setToken(null)}
           onKeyDown={(e) => {
+            // 049 — Con el menú abierto, el teclado es suyo.
+            if (menuRapido) {
+              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                const n = opcionesRapidas.length;
+                if (n) setActiva((i) => (i + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
+                return;
+              }
+              if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") {
+                e.preventDefault();
+                const elegida = opcionesRapidas[activa];
+                if (elegida) elegirRespuesta(elegida);
+                else setCerradoEn(token!.inicio);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setCerradoEn(token!.inicio);
+                return;
+              }
+            }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               void submit();
@@ -724,18 +697,38 @@ export function Composer({
           }}
           className="max-h-[120px] w-full resize-none self-center bg-transparent py-1 text-sm leading-relaxed outline-none placeholder:text-text-3"
         />
-        <button
-          onClick={() => void submit()}
-          disabled={sending || !canSubmit}
-          aria-label="Enviar"
-          className={cn(
-            "flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-brand text-brand-fg transition-[opacity,background-color] hover:bg-brand-hover",
-            (sending || !canSubmit) && "opacity-40"
-          )}
-        >
-          <Send className="h-4 w-4" strokeWidth={1.7} />
-        </button>
       </div>
+        {puedeGrabar ? (
+          <button
+            onClick={() => {
+              setError(null);
+              setGrabando(true);
+            }}
+            disabled={sending}
+            aria-label="Grabar nota de voz"
+            title="Grabar nota de voz"
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              sending && "opacity-40"
+            )}
+          >
+            <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </button>
+        ) : (
+          <button
+            onClick={() => void submit()}
+            disabled={sending || !canSubmit}
+            aria-label="Enviar"
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              (sending || !canSubmit) && "opacity-40"
+            )}
+          >
+            <Send className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
+      )}
       <div className="mt-1.5 flex items-center justify-between">
         {error ? (
           <p role="alert" className="text-xs text-destructive">

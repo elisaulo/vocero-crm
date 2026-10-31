@@ -1,5 +1,6 @@
 "use client";
 
+import { HANDOFF_LABELS } from "@/lib/eventos-hilo";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -33,13 +34,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { FichaPanel } from "@/components/ficha-panel";
 import { DeleteConversationDialog } from "./delete-conversation-dialog";
 
-const HANDOFF_LABELS: Record<string, string> = {
-  cliente: "El cliente pidió un humano",
-  modelo: "El agente decidió escalar",
-  error: "Error del proveedor de IA",
-  ventana: "Ventana de 24h cerrada",
-  manual_reply: "Respondiste desde el teléfono — IA en pausa",
-};
 
 export function ContactPanel({
   conversation,
@@ -377,10 +371,10 @@ export function ContactPanel({
 
         {/* Notas */}
         <section className={cn("p-4", onDeleteConversation && "border-b")}>
-          <p className="kicker mb-2">Notas</p>
+          <p className="kicker mb-2">Notas del contacto</p>
           <Textarea
             rows={5}
-            placeholder="Notas internas sobre este contacto…"
+            placeholder="Lo fijo del cliente: dirección, cómo prefiere pagar… (lo de esta conversación va en Nota interna)"
             value={notes}
             disabled={!notesLoaded}
             onChange={(e) => setNotes(e.target.value)}
@@ -392,7 +386,7 @@ export function ContactPanel({
             disabled={savingNotes || !notesLoaded}
             onClick={() => void saveNotes()}
           >
-            {savingNotes ? "Guardando…" : "Guardar notas"}
+            {savingNotes ? "Guardando…" : "Guardar notas del contacto"}
           </Button>
         </section>
 

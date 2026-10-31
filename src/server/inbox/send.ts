@@ -33,6 +33,7 @@ import {
   type TiktokCredentials,
 } from "@/server/tiktok/credentials";
 import { sendTiktokText } from "@/server/tiktok/send";
+import { prepararAudioSaliente } from "@/server/whatsapp/nota-de-voz";
 import {
   cabeOtroMensaje,
   salientesDesdeElUltimoEntrante,
@@ -642,9 +643,16 @@ export async function sendMediaMessage(input: {
   caption?: string;
   /** 039: id local del mensaje al que se responde citando. */
   replyToMessageId?: string;
+  /** 044: grabado en el compositor; sale como nota de voz si es Ogg/Opus. */
+  voz?: boolean;
 }): Promise<SendResult> {
+  // 044: un WebM grabado se pasa a Ogg antes de validar (WhatsApp no acepta WebM).
+  const audio = input.file.mimeType.startsWith("audio/")
+    ? prepararAudioSaliente(input.file, input.voz === true)
+    : { file: input.file, voice: false };
+  const file = audio.file;
   // Validación previa (FR-007): tipo y tamaño antes de tocar disco o red.
-  const kind = validateOutgoing(input.file.mimeType, input.file.data.byteLength);
+  const kind = validateOutgoing(file.mimeType, file.data.byteLength);
 
   const target = await prepareSend(input.conversationId, input.organizationId);
   const { credentials } = target;
@@ -662,8 +670,8 @@ export async function sendMediaMessage(input: {
   const storagePath = await saveMediaFile(
     input.organizationId,
     assetId,
-    input.file.data,
-    input.file.mimeType
+    file.data,
+    file.mimeType
   );
   const assetRows = await db
     .insert(schema.mediaAsset)
@@ -671,9 +679,9 @@ export async function sendMediaMessage(input: {
       id: assetId,
       organizationId: input.organizationId,
       kind,
-      mimeType: input.file.mimeType,
-      fileName: input.file.fileName ?? null,
-      fileSize: input.file.data.byteLength,
+      mimeType: file.mimeType,
+      fileName: file.fileName ?? null,
+      fileSize: file.data.byteLength,
       caption: input.caption ?? null,
       storagePath,
       fetchStatus: "available",
@@ -682,7 +690,7 @@ export async function sendMediaMessage(input: {
   const asset = assetRows[0]!;
 
   try {
-    const waMediaId = await uploadGraphMedia(credentials!, input.file);
+    const waMediaId = await uploadGraphMedia(credentials!, file);
     await db
       .update(schema.mediaAsset)
       .set({ waMediaId, updatedAt: new Date() })
@@ -690,8 +698,9 @@ export async function sendMediaMessage(input: {
 
     const mediaPayload: Record<string, unknown> = { id: waMediaId };
     if (input.caption && kind !== "audio") mediaPayload.caption = input.caption;
-    if (kind === "document" && input.file.fileName) {
-      mediaPayload.filename = input.file.fileName;
+    if (kind === "audio" && audio.voice) mediaPayload.voice = true;
+    if (kind === "document" && file.fileName) {
+      mediaPayload.filename = file.fileName;
     }
     const waMessageId = await callGraphSend(
       credentials!,

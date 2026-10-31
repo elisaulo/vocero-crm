@@ -9,8 +9,10 @@ import {
   tokenLast4,
 } from "@/server/whatsapp/credentials";
 import {
+  descubrirCuentaDeMensajes,
   registerWebhookForNumber,
   testConnection,
+  unregisterWebhookForMessagingAccount,
   unregisterWebhookForNumber,
 } from "@/server/whatsapp/connect";
 import {
@@ -116,9 +118,15 @@ export const PUT = withAuth(async (session, req: Request) => {
     return apiError(status, check.code, check.message);
   }
 
+  const messagingAccountId = await resolverCuentaDeMensajes(
+    session.organizationId,
+    body.data
+  );
+
   await saveCredentials({
     organizationId: session.organizationId,
     wabaId: body.data.wabaId,
+    messagingAccountId,
     phoneNumberId: body.data.phoneNumberId,
     token: body.data.token,
     displayPhoneNumber: check.displayPhoneNumber,
@@ -141,11 +149,13 @@ export const PUT = withAuth(async (session, req: Request) => {
     token: body.data.token,
     webhookUrl: webhookUrl("wa"),
     verifyToken: webhookVerifyToken(),
+    messagingAccountId,
   });
 
   return Response.json({
     ok: true,
     displayPhoneNumber: check.displayPhoneNumber,
+    messagingAccountId,
     webhook,
   });
 });
@@ -158,6 +168,13 @@ export const DELETE = withAuth(async (session) => {
       token: creds.token,
       webhookPath: webhookPath("wa"),
     });
+    if (creds.messagingAccountId && creds.messagingAccountId !== creds.wabaId) {
+      await unregisterWebhookForMessagingAccount({
+        messagingAccountId: creds.messagingAccountId,
+        token: creds.token,
+        webhookPath: webhookPath("wa"),
+      });
+    }
   }
   await desconectarCanal(session.organizationId);
   return Response.json({ ok: true });
