@@ -12,14 +12,15 @@
  * reconocible.
  */
 
-/** Cuerpo de la "v": se pinta con el color del contexto. */
+/** Brazo izquierdo de la V + base central: se pinta con el color del contexto. */
 export const BRAND_MARK_BODY =
-  "M4 5c2 8 5 14.5 7.8 14.7 2.3.2 3.7-4.1 4.7-8.2";
+  "M2.5 4C4.5 9.5 7.5 16.5 11 19.2C12.5 20.3 12 20 12 20";
 
-/** Remate corto, siempre cian. */
-export const BRAND_MARK_TAIL = "M16.5 11.5c.8-3 2-5.5 4-6.1";
+/** Brazo derecho de la V + onda de voz: siempre en degradado cian/azul. */
+export const BRAND_MARK_TAIL =
+  "M12 20C12 20 13.5 17.5 16 13.5C18 10 19.5 7 20 5.5M17.5 8.5C18 7.2 18.8 6.5 19.5 7.1C20.2 7.7 20.8 6.5 21.5 5.8";
 
-export const BRAND_MARK_STROKE = 3.4;
+export const BRAND_MARK_STROKE = 2.8;
 
 /** Cian sobre fondos claros (texto azul al lado). */
 export const BRAND_CYAN = "#00c6f5";

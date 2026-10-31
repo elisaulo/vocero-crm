@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fondo transparente, solo la V para el tile del sidebar colapsado -->
+  <defs>
+    <linearGradient id="vGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38BDF8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#38BDF8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:0.6" />
+    </linearGradient>
+  </defs>
+  <!-- V dinámica: brazo izquierdo -->
+  <path d="M100 140 C120 200 170 310 220 360 C240 380 256 385 256 385"
+    stroke="url(#vGrad)" stroke-width="38" stroke-linecap="round" fill="none"/>
+  <!-- V dinámica: brazo derecho -->
+  <path d="M256 385 C256 385 275 360 310 300 C340 250 365 200 375 160"
+    stroke="url(#vGrad)" stroke-width="38" stroke-linecap="round" fill="none"/>
+  <!-- Onda de voz -->
+  <path d="M330 195 C340 175 350 165 360 175 C370 185 378 165 390 155 C400 145 410 155 415 140"
+    stroke="url(#waveGrad)" stroke-width="18" stroke-linecap="round" fill="none"/>
+</svg>

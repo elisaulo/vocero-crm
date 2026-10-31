@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 export type BrandingMark = Pick<Branding, "name" | "accent" | "favicon">;
 
 /**
- * El trazo de la marca: la "v" caligráfica con remate cian de vocerocrm.com.
- * El cuerpo hereda `currentColor`; píntalo con `text-brand` (o blanco sobre el
- * mosaico) y el remate sigue siendo cian.
+ * El trazo de la marca: la "V" dinámica con onda de voz de Vocero CRM.
+ * Brazo izquierdo: color del contexto (hereda acento). Brazo derecho + onda:
+ * degradado de azul (#2563EB) a celeste (#38BDF8).
  */
 export function BrandMark({
   className,
@@ -28,8 +28,16 @@ export function BrandMark({
   className?: string;
   cyan?: string;
 }) {
+  const gradId = "vcr-grad";
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="100%" stopColor={cyan} />
+        </linearGradient>
+      </defs>
+      {/* Brazo izquierdo de la V — hereda currentColor (acento del tema) */}
       <path
         d={BRAND_MARK_BODY}
         stroke="currentColor"
@@ -37,9 +45,10 @@ export function BrandMark({
         strokeLinecap="round"
         fill="none"
       />
+      {/* Brazo derecho + onda de voz — degradado azul→celeste */}
       <path
         d={BRAND_MARK_TAIL}
-        stroke={cyan}
+        stroke={`url(#${gradId})`}
         strokeWidth={BRAND_MARK_STROKE}
         strokeLinecap="round"
         fill="none"
@@ -47,6 +56,7 @@ export function BrandMark({
     </svg>
   );
 }
+
 
 /**
  * Mosaico cuadrado con degradado del acento: es el favicon en grande. Con un
