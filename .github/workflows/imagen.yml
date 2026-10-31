@@ -1,6 +1,6 @@
 name: Imagen
 
-# La imagen Docker de la instancia.
+# La imagen Docker de la instancia. Versión del proyecto: v2.1.6
 #
 # - En cada PR y en cada push a main se CONSTRUYE sin publicar. Atrapa lo que
 #   `pnpm build` no ve: el Dockerfile, el entrypoint y la etapa runner. Hasta

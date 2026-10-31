@@ -1,6 +1,7 @@
 name: CI
 
 # Los cuatro gates del proyecto, corridos por una máquina en cada PR.
+# Versión del proyecto: v2.1.6
 #
 # Existe sobre todo por los PRs de fuera: quien manda uno no tiene la base de
 # datos ni el `.env` de nadie, así que hoy la única forma de saber si su cambio
