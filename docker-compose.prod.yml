@@ -1,0 +1,100 @@
+# ============================================================
+# Vocero CRM — Despliegue en PRODUCCIÓN (VPS con Coolify + Traefik)
+#
+# Este archivo es un alias explícito de docker-compose.yml para
+# entornos de producción. Mantiene el puerto 3000 restringido a
+# localhost, obligando que TODO el tráfico externo pase por
+# Traefik → crm.vocero.bid (HTTPS).
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Versión: 2.7.2
+# ============================================================
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: elisaulo/vocero-crm:local
+    container_name: vocero-crm-app-1
+    restart: unless-stopped
+    ports:
+      # SEGURIDAD: expuesto SOLO en localhost.
+      # Bloquea acceso directo por IP pública del VPS.
+      # Todo el tráfico externo debe pasar por Traefik → crm.vocero.bid (HTTPS).
+      - "127.0.0.1:3000:3000"
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:-https://crm.vocero.bid}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:segura123@vocero-db:5432/vocero}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-U8x9P2mK5vN1qR4wZ7yB0cDfG3hJ6kL9}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-Ui3KfhXI97QrKlZaCWP/KwT7tv7mWE/qytUjsL3ojo0=}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:-token_seguro_1234567890}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-v25.0}
+      OPENROUTER_API_TOKEN: ${OPENROUTER_API_TOKEN:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-}
+      AGENT_COALESCE_MS: ${AGENT_COALESCE_MS:-6000}
+      CHANNELS: ${CHANNELS:-whatsapp,instagram,messenger,tiktok}
+      AGENDA: ${AGENDA:-}
+      ATRIBUCION: ${ATRIBUCION:-}
+      BOT_API_KEY: ${BOT_API_KEY:-bot_key_segura_1234567890}
+      BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-http://nea:8000/health}
+      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-http://nea:8000/vocero/dispatch}
+      MEDIA_STORE: ${MEDIA_STORE:-}
+      MEDIA_BUCKET_ENDPOINT: ${MEDIA_BUCKET_ENDPOINT:-}
+      MEDIA_BUCKET_NAME: ${MEDIA_BUCKET_NAME:-}
+      MEDIA_BUCKET_REGION: ${MEDIA_BUCKET_REGION:-us-east-1}
+      MEDIA_BUCKET_KEY_ID: ${MEDIA_BUCKET_KEY_ID:-}
+      MEDIA_BUCKET_SECRET: ${MEDIA_BUCKET_SECRET:-}
+    volumes:
+      - vocero_app_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.vocero-http.rule=Host(`crm.vocero.bid`)"
+      - "traefik.http.routers.vocero-http.entrypoints=http"
+      - "traefik.http.routers.vocero-http.service=vocero-svc"
+      - "traefik.http.routers.vocero-https.rule=Host(`crm.vocero.bid`)"
+      - "traefik.http.routers.vocero-https.entrypoints=https"
+      - "traefik.http.routers.vocero-https.tls=true"
+      - "traefik.http.routers.vocero-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.vocero-https.service=vocero-svc"
+      - "traefik.http.services.vocero-svc.loadbalancer.server.port=3000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: vocero-crm-postgres-1
+    hostname: vocero-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-segura123}
+      POSTGRES_DB: ${POSTGRES_DB:-vocero}
+    volumes:
+      - vocero_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vocero"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+volumes:
+  vocero_pg:
+  vocero_app_data:
+
+networks:
+  default:
+    driver: bridge
+  coolify:
+    external: true
