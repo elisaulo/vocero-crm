@@ -107,41 +107,38 @@ export function settingsSections({
   tiktok = false,
 }: {
   agenda?: boolean;
-  /** 016 — "Anuncios" existe solo con la bandera ATRIBUCION. */
   atribucion?: boolean;
-  /** 023 — "Instagram" solo si el canal está encendido con CHANNELS. */
   instagram?: boolean;
-  /** 017 — "Messenger", igual. */
   messenger?: boolean;
-  /** 022 — "TikTok", igual: solo con el canal en CHANNELS. */
   tiktok?: boolean;
 }): SettingsSection[] {
-  const canales: SettingsLink[] = [];
-  // 023 — "Estado" reúne todos los canales; con WhatsApp solo no aporta nada
-  // que su pantalla no diga, así que no existe (ADR-001).
-  if (instagram || messenger || tiktok) {
-    canales.push({ href: "/settings/channels", label: "Estado" });
-  }
-  canales.push({ href: "/settings/whatsapp", label: "WhatsApp" });
-  if (instagram) canales.push({ href: "/settings/instagram", label: "Instagram" });
-  if (messenger) canales.push({ href: "/settings/messenger", label: "Messenger" });
-  if (tiktok) canales.push({ href: "/settings/tiktok", label: "TikTok" });
+  // Canales: siempre visibles — las rutas existen aunque la bandera CHANNELS
+  // no esté activa. El operador puede ver la pantalla y entender qué falta.
+  void instagram; void messenger; void tiktok;
+  const canales: SettingsLink[] = [
+    { href: "/settings/channels", label: "Estado" },
+    { href: "/settings/whatsapp", label: "WhatsApp" },
+    { href: "/settings/instagram", label: "Instagram" },
+    { href: "/settings/messenger", label: "Messenger" },
+    { href: "/settings/tiktok", label: "TikTok" },
+  ];
 
-  // #85 — el proveedor de IA se configura aquí; el entorno queda de respaldo.
   const agente: SettingsLink[] = [{ href: "/settings/ai", label: "IA" }];
-  if (agenda) agente.push({ href: "/settings/calendar", label: "Agenda" });
+  // Agenda: siempre visible (la ruta existe).
+  void agenda;
+  agente.push({ href: "/settings/calendar", label: "Agenda" });
 
   const negocio: SettingsLink[] = [
     { href: "/settings/branding", label: "Marca" },
-    // 062 — Tema, letra, tamaño y densidad (cada quien la suya).
     { href: "/settings/appearance", label: "Apariencia" },
     { href: "/settings/templates", label: "Plantillas" },
-    // 049 — lo que el equipo inserta con «/atajo» en la Bandeja.
     { href: "/settings/quick-replies", label: "Respuestas rápidas" },
     { href: "/settings/team", label: "Equipo" },
     { href: "/settings/preferencias", label: "Preferencias" },
+    // Anuncios: siempre visible (la ruta existe).
+    { href: "/settings/ads", label: "Anuncios" },
   ];
-  if (atribucion) negocio.push({ href: "/settings/ads", label: "Anuncios" });
+  void atribucion;
 
   return [
     { title: "Canales", links: canales },

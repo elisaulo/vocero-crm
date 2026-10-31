@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Bell, BellOff, LogOut, X } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { BrandTile } from "@/components/brand-mark";
 import { BotonInstalar } from "@/components/pwa";
 import { BotonActivarAvisos } from "@/components/activar-avisos";
@@ -381,9 +381,10 @@ export function AppNav({
 }
 
 /**
- * 061 · D2 — El riel de iconos del escritorio: la marca arriba, las mismas
- * entradas del menú (según rol y banderas) como botones redondos, y abajo la
- * campana, Ajustes y la cuenta. La activa va rellena con la tinta del tema.
+ * 061 · D2 — Riel lateral del escritorio: expandible/colapsable.
+ * - Expandido (w-56): ícono + label + versión al pie.
+ * - Colapsado (w-[76px]): solo íconos centrados con tooltip.
+ * Estado persistido en localStorage("sidebar-expanded").
  */
 function Riel({
   branding,
@@ -428,8 +429,44 @@ function Riel({
     };
   }, [cuenta]);
 
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    setExpanded(localStorage.getItem("sidebar-expanded") !== "false");
+  }, []);
+  const toggleExpanded = () => {
+    setExpanded((v) => {
+      const next = !v;
+      localStorage.setItem("sidebar-expanded", String(next));
+      return next;
+    });
+  };
+
   const boton = (item: NavItem) => {
     const active = isNavActive(pathname, item.href);
+    if (expanded) {
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active
+              ? "bg-riel-activo text-riel-activo-texto"
+              : "text-text-2 hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <item.icon className="h-[19px] w-[19px] shrink-0" strokeWidth={1.8} aria-hidden />
+          <span className="truncate">{item.label}</span>
+          {item.badge && unread > 0 && (
+            <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-fg">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </Link>
+      );
+    }
     return (
       <Link
         key={item.href}
@@ -458,57 +495,92 @@ function Riel({
   return (
     <nav
       aria-label="Secciones"
-      className="tarjeta hidden w-[76px] shrink-0 flex-col items-center py-4 lg:flex"
+      className={cn(
+        "tarjeta hidden shrink-0 flex-col py-4 transition-[width] duration-200 lg:flex",
+        "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        expanded ? "w-56 items-stretch px-3" : "w-[76px] items-center"
+      )}
     >
-      <Link href="/inbox" aria-label={branding.name} title={branding.name} className="rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link
+        href="/inbox"
+        aria-label={branding.name}
+        title={branding.name}
+        className={cn("mb-5 rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", expanded && "self-start")}
+      >
         <BrandTile branding={branding} className="h-11 w-11 rounded-[14px] text-[18px]" />
       </Link>
-      <div className="mt-7 flex min-h-0 flex-1 flex-col items-center gap-2.5 overflow-y-auto">
+
+      <div className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        expanded ? "gap-1" : "items-center gap-2.5"
+      )}>
         {groups.map((g, i) => (
-          <div key={g.title ?? i} className="flex flex-col items-center gap-2.5">
-            {i > 0 && <span className="my-0.5 h-px w-6 bg-border" aria-hidden />}
+          <div key={g.title ?? i} className={cn("flex flex-col", expanded ? "gap-0.5" : "items-center gap-2.5")}>
+            {i > 0 && (
+              <span className={cn("bg-border", expanded ? "my-1 h-px w-full" : "my-0.5 h-px w-6")} aria-hidden />
+            )}
             {g.items.map(boton)}
           </div>
         ))}
       </div>
-      <div className="mt-3 flex flex-col items-center gap-2.5">
-        <span className="flex h-11 w-11 items-center justify-center">{campana}</span>
-        {boton(SETTINGS_ITEM)}
-        <div ref={cuentaRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setCuenta((v) => !v)}
-            aria-label="Tu cuenta"
-            aria-expanded={cuenta}
-            aria-haspopup="dialog"
-            title={userName}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-riel-activo text-[13px] font-bold text-riel-activo-texto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {initials(userName)}
-          </button>
-          {cuenta && (
-            <div
-              role="dialog"
+
+      <div className={cn("mt-3 flex flex-col", expanded ? "gap-0.5" : "items-center gap-2.5")}>
+        {expanded ? (
+          <>
+            <span className="flex items-center gap-3 rounded-xl px-3 py-2 text-text-2">{campana}</span>
+            {boton(SETTINGS_ITEM)}
+          </>
+        ) : (
+          <>
+            <span className="flex h-11 w-11 items-center justify-center">{campana}</span>
+            {boton(SETTINGS_ITEM)}
+          </>
+        )}
+
+        <div ref={cuentaRef} className={cn("relative", expanded && "w-full")}>
+          {expanded ? (
+            <div className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-accent">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-riel-activo text-[13px] font-bold text-riel-activo-texto">
+                {initials(userName)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold">{userName}</span>
+                <span className="block truncate text-[11px] text-text-3">
+                  {role === "owner" ? "Propietario" : "Equipo"}
+                </span>
+              </span>
+              <ThemeToggle initial={apariencia} />
+              <button type="button" onClick={onSalir} aria-label="Cerrar sesión" title="Cerrar sesión"
+                className="rounded p-1 text-text-3 hover:text-foreground">
+                <LogOut className="h-4 w-4" strokeWidth={1.7} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCuenta((v) => !v)}
               aria-label="Tu cuenta"
-              className="absolute bottom-0 left-full z-50 ml-3 w-64 space-y-1 rounded-2xl border bg-popover p-2 text-popover-foreground shadow-pop"
+              aria-expanded={cuenta}
+              aria-haspopup="dialog"
+              title={userName}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-riel-activo text-[13px] font-bold text-riel-activo-texto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              {initials(userName)}
+            </button>
+          )}
+          {cuenta && !expanded && (
+            <div role="dialog" aria-label="Tu cuenta"
+              className="absolute bottom-0 left-full z-50 ml-3 w-64 space-y-1 rounded-2xl border bg-popover p-2 text-popover-foreground shadow-pop">
               <div className="px-2.5 pb-1.5 pt-1">
                 <p className="truncate text-[14px] font-semibold">{userName}</p>
-                <p className="text-[12px] text-text-3">
-                  {role === "owner" ? "Propietario" : "Equipo"} · En línea
-                </p>
+                <p className="text-[12px] text-text-3">{role === "owner" ? "Propietario" : "Equipo"} · En línea</p>
               </div>
               <div className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[13.5px] text-text-2">
-                Tema
-                <ThemeToggle initial={apariencia} />
+                Tema <ThemeToggle initial={apariencia} />
               </div>
               <BotonActivarAvisos className={navItemClass(false)} />
               <BotonInstalar className={navItemClass(false)} />
-              <button
-                type="button"
-                onClick={onSalir}
-                className={cn(navItemClass(false), "w-full")}
-              >
+              <button type="button" onClick={onSalir} className={cn(navItemClass(false), "w-full")}>
                 <LogOut className="h-5 w-5 shrink-0 text-text-3" strokeWidth={1.8} aria-hidden />
                 Cerrar sesión
               </button>
@@ -518,7 +590,34 @@ function Riel({
             </div>
           )}
         </div>
+
+        {expanded && (
+          <p className="mt-1 px-3 font-mono text-[10.5px] tracking-[0.06em] text-text-2" title={versionTitulo}>
+            {version}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={toggleExpanded}
+          aria-label={expanded ? "Colapsar menú" : "Expandir menú"}
+          title={expanded ? "Colapsar menú" : "Expandir menú"}
+          className={cn(
+            "mt-1 flex items-center rounded-xl p-2 text-text-3 transition-colors hover:bg-accent hover:text-foreground",
+            expanded ? "gap-3 px-3" : "h-11 w-11 justify-center"
+          )}
+        >
+          {expanded ? (
+            <>
+              <PanelLeftClose className="h-5 w-5 shrink-0" strokeWidth={1.8} aria-hidden />
+              <span className="text-[13px] font-semibold">Colapsar</span>
+            </>
+          ) : (
+            <PanelLeftOpen className="h-5 w-5" strokeWidth={1.8} aria-hidden />
+          )}
+        </button>
       </div>
     </nav>
   );
 }
+
