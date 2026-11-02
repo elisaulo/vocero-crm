@@ -4,6 +4,8 @@ import {
   BRAND_MARK_STROKE,
   BRAND_MARK_TAIL,
   isVoceroName,
+  isJombeName,
+  JOMBE_ICON_32,
 } from "./brand";
 import { resolveAccentSet, type Branding } from "./branding";
 
@@ -159,5 +161,11 @@ export function faviconCacheKey(
 export function faviconHref(
   branding: Pick<Branding, "name" | "accent" | "favicon">
 ): string {
+  // Jombe: el ícono es la imagen estática oficial, inmutable. Nunca se
+  // genera con la inicial sobre el acento. La clave de caché sigue colgada
+  // para que un cambio futuro de activo rompa la caché del navegador.
+  if (!branding.favicon && isJombeName(branding.name)) {
+    return `${JOMBE_ICON_32}?v=${faviconCacheKey(branding)}`;
+  }
   return `/api/branding/favicon?v=${faviconCacheKey(branding)}`;
 }

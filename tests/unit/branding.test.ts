@@ -63,20 +63,21 @@ describe("white-label: acento", () => {
     expect(lum).toBeLessThan(0xd0);
   });
 
-  it("hex inválido cae al default (el azul Vocero)", () => {
-    expect(resolveAccentSet("rojo")).toEqual(ACCENT_PRESETS["#0d5bff"]!.set);
+  it("hex inválido cae al default (el morado Jombe)", () => {
+    expect(resolveAccentSet("rojo")).toEqual(
+      resolveAccentSet(DEFAULT_BRANDING.accent)
+    );
   });
 
-  it("el azul Vocero es el default y trae los valores exactos de la landing", () => {
-    expect(DEFAULT_BRANDING.accent).toBe("#0d5bff");
-    expect(resolveAccentSet(DEFAULT_BRANDING.accent)).toEqual({
-      accent: "#0d5bff",
-      hover: "#0a4de6",
-      soft: "#d3e2ff",
-      tint: "#ebf1ff",
-      text: "#0038d8",
-      fg: "#ffffff",
-    });
+  it("el morado Jombe es el default y se deriva con contraste AA", () => {
+    expect(DEFAULT_BRANDING.accent).toBe("#5B5CE2");
+    const set = resolveAccentSet(DEFAULT_BRANDING.accent);
+    expect(set.accent).toBe("#5b5ce2");
+    expect(isValidHex(set.hover)).toBe(true);
+    expect(isValidHex(set.soft)).toBe(true);
+    expect(isValidHex(set.tint)).toBe(true);
+    expect(isValidHex(set.text)).toBe(true);
+    expect(contrast(set.fg, set.accent)).toBeGreaterThanOrEqual(4.5);
   });
 });
 
@@ -95,7 +96,7 @@ describe("white-label: acento en tema oscuro", () => {
     }
   });
 
-  it("el azul Vocero conserva la tinta blanca en oscuro", () => {
+  it("el morado Jombe conserva la tinta blanca en oscuro", () => {
     expect(resolveAccentSet(DEFAULT_BRANDING.accent, "dark").fg).toBe("#ffffff");
   });
 
@@ -109,7 +110,7 @@ describe("white-label: acento en tema oscuro", () => {
 
   it("hex inválido en oscuro también cae al acento por defecto", () => {
     expect(resolveAccentSet("rojo", "dark")).toEqual(
-      resolveAccentSet("#0d5bff", "dark")
+      resolveAccentSet(DEFAULT_BRANDING.accent, "dark")
     );
   });
 
@@ -146,17 +147,12 @@ describe("white-label: barra lateral bicolor (.nav-dark)", () => {
     expect(nav).not.toContain(resolveAccentSet("#3f5972", "light").accent);
   });
 
-  it("con el azul Vocero, la barra se ve como siempre", () => {
-    // La receta de la barra es la de antes: el ítem activo del tema claro no
-    // cambia aunque el tema oscuro de la página sí.
-    expect(resolveNavAccentSet(DEFAULT_BRANDING.accent)).toEqual({
-      accent: "#256bff",
-      hover: "#4883ff",
-      soft: "#122c63",
-      tint: "#0e1e41",
-      text: "#6295ff",
-      fg: "#ffffff",
-    });
+  it("con el morado Jombe, la barra se calcula contra su propio fondo", () => {
+    // La barra es azul marino siempre: el acento se aclara hasta despegarse de
+    // ese fondo y la tinta encima pasa AA, sea cual sea el acento del dueño.
+    const nav = resolveNavAccentSet(DEFAULT_BRANDING.accent);
+    expect(contrast(nav.accent, NAV_BG)).toBeGreaterThanOrEqual(3.5);
+    expect(contrast(nav.fg, nav.accent)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("sus neutros son SUYOS: no copian al tema oscuro de la página", () => {
@@ -209,14 +205,14 @@ describe("tema oscuro: las superficies se distinguen", () => {
 });
 
 describe("white-label: normalización", () => {
-  it("nombre vacío o nulo → default 'Vocero'; se recorta a 30", () => {
-    expect(normalizeBranding(null).name).toBe("Vocero");
-    expect(normalizeBranding({ name: "   " }).name).toBe("Vocero");
+  it("nombre vacío o nulo → default 'Jombe'; se recorta a 30", () => {
+    expect(normalizeBranding(null).name).toBe("Jombe");
+    expect(normalizeBranding({ name: "   " }).name).toBe("Jombe");
     expect(normalizeBranding({ name: "x".repeat(50) }).name).toHaveLength(30);
   });
 
   it("acento inválido → default", () => {
-    expect(normalizeBranding({ accent: "azul" }).accent).toBe("#0d5bff");
+    expect(normalizeBranding({ accent: "azul" }).accent).toBe("#5B5CE2");
     expect(normalizeBranding({ accent: "#3F6B66" }).accent).toBe("#3f6b66");
   });
 });

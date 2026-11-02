@@ -16,13 +16,13 @@ export default async function BrandingSettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      {/* El logo viaja como prop: al subirlo o quitarlo, FaviconCard refresca
-          la página y la vista previa de la marca lo sigue sin recargar. */}
+      {/* El logo de Jombe es una imagen estática oficial: no se sube ni se
+          genera, así que FaviconCard ya no recibe ni necesita la marca. */}
       <BrandingClient
         favicon={branding.favicon}
         kicker={navKicker([...enabledChannels()])}
       />
-      <FaviconCard branding={branding} />
+      <FaviconCard />
     </div>
   );
 }

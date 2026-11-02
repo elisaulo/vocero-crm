@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: elisaulo/vocero-crm:local
+    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.4}
     container_name: vocero-crm-app-1
     restart: unless-stopped
     ports:
@@ -91,7 +91,7 @@ services:
     volumes:
       - vocero_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vocero"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d vocero" ]
       interval: 5s
       timeout: 5s
       retries: 10

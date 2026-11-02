@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { ImageResponse } from "next/og";
 import { DEFAULT_BRANDING, resolveAccentSet, type Branding } from "@/lib/branding";
 import {
@@ -6,6 +8,8 @@ import {
   BRAND_MARK_STROKE,
   BRAND_MARK_TAIL,
   isVoceroName,
+  isJombeName,
+  JOMBE_ICON_512,
 } from "@/lib/brand";
 import { FAVICON_ASSET, faviconInitial } from "@/lib/favicon";
 import type { AppIconPurpose, AppIconSize } from "@/lib/pwa";
@@ -28,13 +32,33 @@ import { readMediaFile } from "@/server/whatsapp/media";
 /** Los formatos que `ImageResponse` dibuja dentro de un `<img>`. */
 const DIBUJABLES = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
 
+/**
+ * El isotipo oficial de Jombe, leído de `public/` una sola vez por proceso.
+ * Es una imagen estática e inmutable: no depende del acento ni del nombre que
+ * el dueño escriba en Ajustes → Marca.
+ */
+let isotipoJombe: string | null = null;
+async function isotipoJombeDataUri(): Promise<string | null> {
+  if (isotipoJombe) return isotipoJombe;
+  try {
+    const ruta = path.join(process.cwd(), "public", JOMBE_ICON_512.replace(/^\//, ""));
+    const buf = await readFile(ruta);
+    isotipoJombe = `data:image/png;base64,${buf.toString("base64")}`;
+    return isotipoJombe;
+  } catch {
+    return null;
+  }
+}
+
 export async function appIconResponse(
   size: AppIconSize,
   purpose: AppIconPurpose
 ): Promise<ImageResponse> {
   const ctx = await getBrandingContext().catch(() => null);
   const branding = ctx?.branding ?? DEFAULT_BRANDING;
-  const logo = await logoSubido(ctx?.organizationId ?? null, branding);
+  const logo =
+    (await logoSubido(ctx?.organizationId ?? null, branding)) ??
+    (isJombeName(branding.name) ? await isotipoJombeDataUri() : null);
   return new ImageResponse(dibujo(branding, logo, size, purpose), {
     width: size,
     height: size,

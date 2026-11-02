@@ -218,7 +218,7 @@ export function resolveAccentSet(
 
   const preset = ACCENT_PRESETS[accentHex.toLowerCase()];
   if (preset) return preset.set;
-  if (!isValidHex(accentHex)) return ACCENT_PRESETS[DEFAULT_BRANDING.accent]!.set;
+  if (!isValidHex(accentHex)) return resolveAccentSet(DEFAULT_BRANDING.accent);
 
   let base = hexToRgb(accentHex.toLowerCase());
   // contraste con blanco = (1.05) / (L + 0.05); exigir ≥ 3

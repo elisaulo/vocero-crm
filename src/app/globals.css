@@ -184,13 +184,13 @@
     --bubble-in: #e6eee9;
     --bubble-in-border: #e6eee9;
 
-    /* Acento: respaldo con el azul Vocero calculado para este fondo; el
+    /* Acento: respaldo con el morado Jombe calculado para este fondo; el
        white-label lo recalcula (ver resolveAccentSet en lib/branding). */
-    --accent: #0d5bff;
-    --accent-hover: #3475ff;
-    --accent-soft: #143c82;
-    --accent-tint: #16335e;
-    --accent-text: #6f9eff;
+    --accent: #5b5ce2;
+    --accent-hover: #7576e7;
+    --accent-soft: #373c75;
+    --accent-tint: #2c3356;
+    --accent-text: #9e9eee;
     --accent-fg: #ffffff;
     --accent-ink: var(--accent-text);
     --ring: var(--accent-text);
@@ -290,29 +290,35 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     letter-spacing: -0.01em;
     text-rendering: optimizeLegibility;
   }
+
   ::selection {
     background: var(--accent);
     color: var(--accent-fg);
   }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
+
   ::-webkit-scrollbar-thumb {
     border-radius: 999px;
     background: var(--border-strong);
   }
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
 }
 
 @layer components {
+
   /* Mosaico de marca: degradado del acento, como el favicon */
   .brand-tile {
     background: linear-gradient(135deg, var(--accent), var(--accent-hover));
@@ -325,11 +331,9 @@
       linear-gradient(to bottom, var(--accent-soft) 1px, transparent 1px);
     background-size: 52px 52px;
     opacity: 0.3;
-    -webkit-mask-image: radial-gradient(
-      ellipse 90% 80% at 50% 20%,
-      #000 30%,
-      transparent 75%
-    );
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 20%,
+        #000 30%,
+        transparent 75%);
     mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, #000 30%, transparent 75%);
   }
 
@@ -340,18 +344,18 @@
     filter: blur(90px);
     pointer-events: none;
   }
+
   .brand-glow-a {
     width: 640px;
     height: 640px;
     right: -160px;
     top: -120px;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--accent) 16%, transparent),
-      transparent 65%
-    );
+    background: radial-gradient(circle,
+        color-mix(in srgb, var(--accent) 16%, transparent),
+        transparent 65%);
     animation: brand-drift 14s ease-in-out infinite alternate;
   }
+
   .brand-glow-b {
     width: 460px;
     height: 460px;
@@ -360,10 +364,12 @@
     background: radial-gradient(circle, rgba(0, 198, 245, 0.14), transparent 65%);
     animation: brand-drift 18s ease-in-out infinite alternate-reverse;
   }
+
   @keyframes brand-drift {
     from {
       transform: translate(0, 0) scale(1);
     }
+
     to {
       transform: translate(-40px, 30px) scale(1.08);
     }
@@ -380,11 +386,9 @@
   .thread-bg {
     background-color: var(--chat-bg);
     background-image: var(--chat-dibujos, none),
-      radial-gradient(
-        circle at 82% 0%,
+      radial-gradient(circle at 82% 0%,
         color-mix(in srgb, var(--marco-2) 55%, transparent),
-        transparent 60%
-      );
+        transparent 60%);
     background-size: 440px 440px, auto;
     background-repeat: repeat, no-repeat;
   }
@@ -405,11 +409,9 @@
   /* 215 — Un bloqueo no es una cita: rayado neutro, legible en ambos temas. */
   .booking-hatch {
     background-color: var(--bg-panel);
-    background-image: repeating-linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--text-3) 22%, transparent) 0 1px,
-      transparent 1px 7px
-    );
+    background-image: repeating-linear-gradient(135deg,
+        color-mix(in srgb, var(--text-3) 22%, transparent) 0 1px,
+        transparent 1px 7px);
   }
 
   /* Etiqueta editorial en mono: "01 · BANDEJA", "ETAPA", "NOTAS" */
@@ -427,6 +429,7 @@
   de Tailwind (`text-sm`, `text-xs`) que ganan por especificidad de clase.
 */
 @media (max-width: 767px) {
+
   input:not([type="checkbox"]):not([type="radio"]),
   textarea {
     font-size: 16px !important;
@@ -434,6 +437,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -443,11 +447,13 @@
 }
 
 @layer components {
+
   /* 061 — El fondo de marco: se ve entre las tarjetas (y es toda la página en
      el teléfono, donde la tarjeta ocupa la pantalla). */
   .app-marco {
     background: linear-gradient(150deg, var(--marco-1) 0%, var(--marco-2) 100%);
   }
+
   .tarjeta {
     /* Solo el color: el atajo `background` borraba la imagen de fondo de lo
        que también es tarjeta (los dibujos del chat, .thread-bg). */
@@ -456,6 +462,7 @@
     box-shadow: var(--sombra-tarjeta);
     position: relative;
   }
+
   /* El contorno va en una capa ENCIMA del contenido: un outline quedaba
      debajo de lo posicionado adentro (la cabecera sticky del panel) y una
      sombra por fuera se recortaba en el borde de la pantalla. */
@@ -487,6 +494,7 @@
     --quote-bg-hover: rgba(127, 127, 127, 0.28);
     color: var(--text);
   }
+
   .burbuja-out {
     --text: var(--bubble-out-text);
     --text-3: var(--bubble-out-muted);
@@ -495,14 +503,38 @@
 }
 
 /* 062 — Ajustes → Apariencia: letra, tamaño y densidad. */
-:root[data-letra="archivo"] { --font-sans: var(--font-archivo), var(--font-urbanist); }
-:root[data-letra="inter"] { --font-sans: var(--font-inter), var(--font-urbanist); }
-:root[data-letra="plex"] { --font-sans: var(--font-plex-sans), var(--font-urbanist); }
-:root[data-tamano="chico"] { --escala: 0.93; }
-:root[data-tamano="grande"] { --escala: 1.1; }
-:root[data-densidad="compacta"] { --row-py: 7px; --hueco: 8px; }
-:root[data-densidad="espaciosa"] { --row-py: 15px; --hueco: 16px; }
+:root[data-letra="archivo"] {
+  --font-sans: var(--font-archivo), var(--font-urbanist);
+}
+
+:root[data-letra="inter"] {
+  --font-sans: var(--font-inter), var(--font-urbanist);
+}
+
+:root[data-letra="plex"] {
+  --font-sans: var(--font-plex-sans), var(--font-urbanist);
+}
+
+:root[data-tamano="chico"] {
+  --escala: 0.93;
+}
+
+:root[data-tamano="grande"] {
+  --escala: 1.1;
+}
+
+:root[data-densidad="compacta"] {
+  --row-py: 7px;
+  --hueco: 8px;
+}
+
+:root[data-densidad="espaciosa"] {
+  --row-py: 15px;
+  --hueco: 16px;
+}
+
 @layer components {
+
   /* El zoom va en la app y no en <body>: la altura de la app se corrige por
      la escala para que siga midiendo la pantalla exacta. */
   .app-escala {

@@ -63,13 +63,39 @@ El modulo `src/lib/channels/evolution-patches.ts` es la UNICA fuente de verdad p
 
 Cualquier otro archivo que necesite estas funciones DEBE importar desde ese modulo.
 
-### Logo Jombe (v2.7.3)
-- `src/lib/brand.ts` — `isJombeName()`, `JOMBE_PURPLE`, `JOMBE_GREEN`
-- `src/components/brand-mark.tsx` — `JombeMark` SVG inline, BrandLogo y BrandTile actualizados
-- `src/lib/branding.ts` — `DEFAULT_BRANDING` cambiado a nombre "Jombe" y acento `#5B5CE2`
-- `public/jombe-logo.jpg` — Logo horizontal original de Jombe
+### Logo Jombe (v2.7.4) — imagen estática e inmutable
+
+**Regla inviolable:** el logo de Jombe es una IMAGEN ESTÁTICA e INMUTABLE,
+recortada píxel a píxel del logo oficial. Está PROHIBIDO:
+
+- Renderizar el nombre del CRM como texto HTML en `BrandLogo` (nada de `<span>Jombe</span>`).
+- Dibujar el logo con SVG a mano (nada de globos, iniciales ni formas aproximadas).
+- Dejar que el color de acento (`accent`) tiña el logo o su fondo.
+
+**Activos oficiales** (generados por `scripts/gen-jombe-assets.mjs`):
+
+| Archivo | Uso |
+|---|---|
+| `public/jombe-logo-full.png` / `.webp` | Logo horizontal completo (sidebar expandido, login, header móvil) |
+| `public/jombe-icon-512.png` | Icono PWA / app instalable |
+| `public/jombe-icon-192.png` | `BrandTile` (sidebar colapsado) y manifest |
+| `public/jombe-icon-32.png` | Favicon del navegador |
+| `public/favicon.ico` | Favicon legacy (PNG embebido) |
+
+**Puntos de enganche:**
+
+- `src/lib/brand.ts` — constantes `JOMBE_LOGO_FULL`, `JOMBE_ICON`, `JOMBE_ICON_512`, `JOMBE_ICON_32`, `isJombeName()`. Ya NO existen `JOMBE_PURPLE`, `JOMBE_GREEN` ni `JombeMark`.
+- `src/components/brand-mark.tsx` — `BrandLogo` y `BrandTile` ramifican por `isJombeName()` y pintan solo `<img>`. Sin texto HTML y sin `.brand-tile` (acento).
+- `src/lib/favicon.ts` — `faviconHref()` devuelve `JOMBE_ICON_32` para Jombe, nunca el SVG generado.
+- `src/server/app-icon.tsx` — el icono PWA usa `jombe-icon-512.png` como data-URI.
+- `src/app/api/branding/favicon/route.ts` — sirve `jombe-icon-32.png` como respaldo público.
+- `src/app/api/settings/branding/route.ts` — el PUT ignora `name` y fuerza `DEFAULT_BRANDING.name`.
+- `src/app/api/settings/branding/favicon/route.ts` — PUT y DELETE responden 404 `logo_bloqueado`.
+- `src/components/settings/favicon-card.tsx` — tarjeta bloqueada, solo visual.
+- `src/lib/branding.ts` — `DEFAULT_BRANDING` con nombre "Jombe" y acento `#5B5CE2`.
+- `public/jombe-logo.jpg` — Logo horizontal original de Jombe (fuente).
 
 ---
 
-**Ultima actualizacion:** v2.7.3 (2026-11-02)
+**Ultima actualizacion:** v2.7.4 (2026-11-02)
 **Mantenido por:** Elisaul / Jombe

@@ -1,6 +1,9 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { readMediaFile } from "@/server/whatsapp/media";
 import { getBrandingContext } from "@/server/branding";
 import { DEFAULT_BRANDING } from "@/lib/branding";
+import { isJombeName, JOMBE_ICON_32 } from "@/lib/brand";
 import { FAVICON_ASSET, generatedFaviconSvg } from "@/lib/favicon";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +51,20 @@ export async function GET(req: Request) {
       // El archivo se perdió (volumen sin montar, restauración a medias). Se
       // cae al generado en vez de dejar la pestaña sin icono: un 404 aquí se
       // ve como si la instancia estuviera rota.
+    }
+  }
+
+  // Jombe: el favicon es la imagen estática oficial (PNG 32×32), no un SVG
+  // generado con la inicial sobre el acento. Es inmutable por diseño.
+  if (isJombeName(branding.name)) {
+    try {
+      const ruta = path.join(process.cwd(), "public", JOMBE_ICON_32.replace(/^\//, ""));
+      const buf = await readFile(ruta);
+      return new Response(new Uint8Array(buf), {
+        headers: cabeceras("image/png", cacheable),
+      });
+    } catch {
+      // Sin el archivo se cae al generado, para no dejar la pestaña vacía.
     }
   }
 

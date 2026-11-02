@@ -7,8 +7,8 @@ import {
   BRAND_MARK_TAIL,
   isVoceroName,
   isJombeName,
-  JOMBE_PURPLE,
-  JOMBE_GREEN,
+  JOMBE_LOGO_FULL,
+  JOMBE_ICON,
 } from "@/lib/brand";
 import { faviconHref, faviconInitial } from "@/lib/favicon";
 import { cn } from "@/lib/utils";
@@ -61,36 +61,6 @@ export function BrandMark({
 }
 
 /**
- * El ícono SVG del logo Jombe: la J morada + burbuja de chat verde.
- * Fiel al logo oficial: J superior en morado (#5B5CE2), J inferior
- * (burbuja) en verde (#1DB980), punto verde y fondo transparente.
- */
-export function JombeMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      className={className}
-      fill="none"
-    >
-      {/* J superior — morado */}
-      <rect x="20" y="3" width="8" height="18" rx="4" fill={JOMBE_PURPLE} />
-      {/* Burbuja de chat inferior — verde */}
-      <path
-        d="M8 22 C8 16 14 12 22 12 L26 12 C34 12 40 16 40 22 L40 30 C40 36 34 40 26 40 L18 40 L12 46 L12 40 C10 40 8 38 8 36 Z"
-        fill={JOMBE_GREEN}
-      />
-      {/* J interior — blanco sobre verde */}
-      <rect x="22" y="18" width="5" height="12" rx="2.5" fill="white" opacity="0.9" />
-      <rect x="17" y="27" width="8" height="4" rx="2" fill="white" opacity="0.9" />
-      {/* Punto verde */}
-      <circle cx="9" cy="42" r="3" fill={JOMBE_GREEN} />
-    </svg>
-  );
-}
-
-
-/**
  * Mosaico cuadrado con degradado del acento: es el favicon en grande. Con un
  * logo subido lleva el logo (el MISMO archivo y la MISMA URL versionada que
  * la pestaña, así lo que se sube en Ajustes → Marca se ve en los dos sitios);
@@ -103,6 +73,26 @@ export function BrandTile({
   branding: BrandingMark;
   className?: string;
 }) {
+  // Jombe: el isotipo oficial estático, SIN el fondo degradado del acento
+  // (el acento no debe contaminar el logo).
+  if (!branding.favicon && isJombeName(branding.name)) {
+    return (
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center overflow-hidden",
+          className
+        )}
+        aria-hidden
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={JOMBE_ICON}
+          alt=""
+          className="h-full w-full object-contain"
+        />
+      </span>
+    );
+  }
   return (
     <span
       className={cn(
@@ -120,8 +110,6 @@ export function BrandTile({
           alt=""
           className="h-full w-full object-contain"
         />
-      ) : isJombeName(branding.name) ? (
-        <JombeMark className="h-[80%] w-[80%]" />
       ) : isVoceroName(branding.name) ? (
         <BrandMark className="h-[64%] w-[64%]" cyan={BRAND_CYAN_ON_TILE} />
       ) : (
@@ -148,7 +136,7 @@ const TILE_SIZE = {
 
 /**
  * La marca completa, como en la cabecera de la landing: trazo + wordmark.
- * Jombe: ícono Jombe + "Jombe" en negrita.
+ * Jombe: SOLO la imagen estática del logo completo (jamás texto HTML).
  * Vocero: trazo V + "vocero" en minúsculas y bien apretado.
  * White-label: mosaico con la inicial y el nombre propio.
  * Con logo subido gana el logo, se llame como se llame.
@@ -162,7 +150,21 @@ export function BrandLogo({
   size?: keyof typeof WORDMARK_SIZE;
   className?: string;
 }) {
-  // Jombe con logo propio: imagen subida por el usuario.
+  // Jombe: la imagen estática oficial del logo horizontal completo, tal cual.
+  // PROHIBIDO renderizar el nombre como texto HTML al lado.
+  if (isJombeName(branding.name) && !branding.favicon) {
+    return (
+      <span className={cn("flex items-center", className)} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={JOMBE_LOGO_FULL}
+          alt="Jombe"
+          className={cn("w-auto object-contain", size === "lg" ? "h-[34px]" : "h-[24px]")}
+        />
+      </span>
+    );
+  }
+  // Con logo subido: mosaico + nombre (white-label o cualquier marca).
   if (branding.favicon) {
     return (
       <span className={cn("flex min-w-0 items-center gap-2.5", className)}>
@@ -174,22 +176,6 @@ export function BrandLogo({
           )}
         >
           {branding.name}
-        </span>
-      </span>
-    );
-  }
-  // Jombe sin logo subido: ícono SVG + wordmark "Jombe".
-  if (isJombeName(branding.name)) {
-    return (
-      <span className={cn("flex items-center gap-2 text-foreground", className)}>
-        <JombeMark className={cn("shrink-0", MARK_SIZE[size])} />
-        <span
-          className={cn(
-            "font-[800] leading-none tracking-[-0.04em]",
-            WORDMARK_SIZE[size]
-          )}
-        >
-          Jombe
         </span>
       </span>
     );

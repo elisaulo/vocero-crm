@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Inbox } from "lucide-react";
 import {
   ACCENT_PRESETS,
@@ -19,12 +18,10 @@ import {
   type Currency,
 } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { useResolvedTheme } from "@/components/use-theme";
 import { BrandLogo } from "@/components/brand-mark";
 import { navItemClass } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /** Los tokens del acento, para sobreescribirlos SOLO dentro de una caja. */
@@ -40,23 +37,13 @@ function accentVars(s: AccentSet): React.CSSProperties {
 }
 
 export function BrandingClient({
-  favicon = null,
   kicker = "CRM · WhatsApp",
 }: {
   /** 028 — La etiqueta bajo el logo, la misma que enseña el menú. */
   kicker?: string;
-  /**
-   * Logo subido, solo para la vista previa: se sube y se quita en su propia
-   * tarjeta. Llega del servidor y no del fetch de abajo a propósito: esa
-   * tarjeta hace `router.refresh()` al subir o quitar, la página vuelve a
-   * pasar la prop y la vista previa cambia sin recargar. Leído una sola vez
-   * al montar, se quedaría con el logo de antes.
-   */
   favicon?: Branding["favicon"];
 }) {
-  const router = useRouter();
-  const mode = useResolvedTheme();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(DEFAULT_BRANDING.name);
   const [accent, setAccent] = useState<string>(DEFAULT_BRANDING.accent);
   const [currency, setCurrency] = useState<Currency>(DEFAULT_CURRENCY);
   const [loaded, setLoaded] = useState(false);
@@ -79,20 +66,19 @@ export function BrandingClient({
   }, []);
 
   const isPreset = accent.toLowerCase() in ACCENT_PRESETS;
-  // La vista previa muestra el acento tal como se verá en el tema activo: los
-  // presets están pensados para fondo claro y en oscuro se aclaran. La barra
-  // lateral es azul marino en los dos temas y lleva su propio cálculo.
-  const previewSet = resolveAccentSet(accent, mode);
+  const previewSet = resolveAccentSet(accent);
   const navSet = resolveNavAccentSet(accent);
 
   async function save() {
     setSaving(true);
     setError(null);
     setSaved(false);
+    // El nombre NO se manda: el logo del CRM es la imagen oficial estática y
+    // su texto no es editable. Solo viajan el acento y la moneda.
     const res = await fetch("/api/settings/branding", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), accent, currency }),
+      body: JSON.stringify({ accent, currency }),
     }).catch(() => null);
     setSaving(false);
     if (!res?.ok) {
@@ -103,8 +89,7 @@ export function BrandingClient({
       return;
     }
     setSaved(true);
-    // Re-renderiza el árbol server (layout raíz inyecta el acento y el título)
-    router.refresh();
+    window.location.reload();
   }
 
   if (!loaded) return <p className="text-sm text-text-3">Cargando…</p>;
@@ -115,23 +100,12 @@ export function BrandingClient({
         <CardHeader>
           <CardTitle>Marca del CRM</CardTitle>
           <CardDescription>
-            Este CRM es tuyo: ponle el nombre de tu negocio y tu color. Se
-            reflejan en toda la interfaz y en la pantalla de inicio de sesión.
+            El logo es la imagen oficial de Jombe: se muestra tal cual, sin
+            texto editable ni colores que lo deformen. Aquí cambias el acento
+            de la interfaz y la moneda del negocio.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="space-y-1.5">
-            <Label htmlFor="brand-name">Nombre</Label>
-            <Input
-              id="brand-name"
-              maxLength={30}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Vocero"
-              className="max-w-xs"
-            />
-          </div>
-
           <div className="space-y-1.5">
             <Label htmlFor="brand-currency">Moneda del negocio</Label>
             <select
@@ -174,7 +148,7 @@ export function BrandingClient({
                 >
                   <span
                     className="h-4 w-4 rounded-full"
-                    style={{ background: resolveAccentSet(hex, mode).accent }}
+                    style={{ background: resolveAccentSet(hex).accent }}
                   />
                   {preset.label}
                 </button>
@@ -195,15 +169,13 @@ export function BrandingClient({
               </label>
             </div>
             <p className="text-xs text-text-3">
-              Con un color personalizado, los tonos derivados (hover, fondos
-              suaves) se calculan solos y se ajusta el contraste.
+              Cambia el color de la interfaz (botones, enlaces, Barra lateral).
+              El logo de Jombe es una imagen fija y no cambia con este color.
             </p>
           </div>
 
-          {/* Vista previa: el bicolor real en miniatura, con el color que se
-              está eligiendo (aún sin guardar). A la izquierda la barra, con la
-              misma clase (`nav-dark`) y el mismo renglón activo que la de
-              verdad; a la derecha la página en el tema activo, con su botón. */}
+          {/* Vista previa: a la izquierda la barra lateral con el mismo renglón
+              activo que la de verdad; a la derecha la página en el tema activo. */}
           <div
             aria-label="Vista previa de la marca"
             className="flex flex-col overflow-hidden rounded-md border border-border-strong sm:flex-row"
@@ -214,7 +186,7 @@ export function BrandingClient({
             >
               <div className="px-2 pt-0.5">
                 <BrandLogo
-                  branding={{ name: name.trim() || DEFAULT_BRANDING.name, accent, favicon }}
+                  branding={{ name, accent, favicon: null }}
                 />
                 <span className="kicker mt-2 block">{kicker}</span>
               </div>
@@ -235,7 +207,7 @@ export function BrandingClient({
 
           {error && <p className="text-sm text-destructive">{error}</p>}
           {saved && <p className="text-sm" style={{ color: previewSet.text }}>Marca guardada ✓</p>}
-          <Button disabled={saving || !name.trim()} onClick={() => void save()}>
+          <Button disabled={saving} onClick={() => void save()}>
             {saving ? "Guardando…" : "Guardar marca"}
           </Button>
         </CardContent>

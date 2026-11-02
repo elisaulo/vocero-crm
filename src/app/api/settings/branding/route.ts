@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { getSessionOrNull } from "@/lib/auth/session";
-import { isValidHex, resolveAccentSet } from "@/lib/branding";
+import { DEFAULT_BRANDING, isValidHex, resolveAccentSet } from "@/lib/branding";
 import { CURRENCIES } from "@/lib/money";
 import { getBranding, saveBranding } from "@/server/branding";
 
@@ -14,8 +14,10 @@ export async function GET() {
   return Response.json({ branding, accentSet: resolveAccentSet(branding.accent) });
 }
 
+// El nombre NO es editable: el logo del CRM es la imagen oficial estática de
+// Jombe (`src/components/brand-mark.tsx`), no texto HTML. Aceptar un `name`
+// distinto rompería esa regla, así que el schema público ya no lo pide.
 const putSchema = z.object({
-  name: z.string().trim().min(1).max(30),
   accent: z.string().refine(isValidHex, "Color hex inválido (#rrggbb)"),
   /** La moneda del negocio: la única que el tablero suma. */
   currency: z.enum(CURRENCIES),
@@ -27,12 +29,12 @@ export const PUT = withAuth(async (session, req: Request) => {
   }
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
-  // El icono se conserva: este formulario es de nombre, color y moneda, y se
-  // sube y se quita por su propia ruta. Sin esto, guardar el nombre borraría
-  // el logo sin que nadie lo pidiera.
+  // El icono se conserva: este formulario es de color y moneda, y el icono se
+  // sube y se quita por su propia ruta (bloqueada para Jombe).
   const actual = await getBranding(session.organizationId);
   await saveBranding(session.organizationId, {
     ...body.data,
+    name: DEFAULT_BRANDING.name,
     favicon: actual.favicon,
   });
   return Response.json({ ok: true });
