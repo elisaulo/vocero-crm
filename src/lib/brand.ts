@@ -37,3 +37,18 @@ export const BRAND_CYAN_ON_TILE = "#3fdcff";
 export function isVoceroName(name: string): boolean {
   return name.trim().toLowerCase() === "vocero";
 }
+
+/**
+ * ¿Esta instancia se llama Jombe? Si es así, se muestra el logo de Jombe
+ * (ícono SVG con la J + burbuja de chat) en lugar del trazo de Vocero.
+ * Jombe es el white-label oficial construido sobre Vocero CRM.
+ */
+export function isJombeName(name: string): boolean {
+  return name.trim().toLowerCase() === "jombe";
+}
+
+/** Color morado de la J superior en el logo Jombe. */
+export const JOMBE_PURPLE = "#5B5CE2";
+
+/** Color verde de la burbuja inferior en el logo Jombe. */
+export const JOMBE_GREEN = "#1DB980";

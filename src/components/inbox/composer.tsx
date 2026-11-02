@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { atajoBandeja } from "@/lib/atajos";
 import { hayDialogoAbierto } from "@/components/atajos-globales";
@@ -43,6 +43,7 @@ import {
   tokenRapido,
   type RespuestaRapida,
 } from "@/lib/respuestas-rapidas";
+import { isEvolutionUnlimitedWindow } from "@/lib/channels/evolution-patches";
 
 export function Composer({
   conversation,
@@ -119,8 +120,14 @@ export function Composer({
   }, [hayNotas]);
   const [nota, setNota] = useState(() => leerBorrador("nota", conversation.id));
   const [guardandoNota, setGuardandoNota] = useState(false);
-  // Hay caja de texto libre (ventana normal, o la humana de Instagram/Messenger).
-  const textoLibre = conversation.windowOpen || Boolean(conversation.humanWindow?.open);
+  // Evolution API: ventana siempre abierta (Baileys/QR no tiene restriccion Meta).
+  const evolutionWindow = isEvolutionUnlimitedWindow(
+    conversation.whatsappProvider,
+    conversation.evolutionInstance
+  );
+  // Hay caja de texto libre (ventana normal, la humana de Instagram/Messenger,
+  // o Evolution API que no tiene restriccion de tiempo).
+  const textoLibre = conversation.windowOpen || Boolean(conversation.humanWindow?.open) || evolutionWindow;
 
   useEffect(() => {
     let cancelled = false;
@@ -596,7 +603,9 @@ export function Composer({
     );
   }
 
-  if (!conversation.windowOpen && !human) {
+  // PARCHE EVOLUTION: si la conversacion es de Evolution API, la ventana
+  // siempre esta abierta — no se muestra el bloqueo de 24h ni el TemplateSender.
+  if (!conversation.windowOpen && !human && !evolutionWindow) {
     return withDropZone(
       <div className="px-[18px] py-3.5">
         {pestanas}

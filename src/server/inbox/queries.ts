@@ -4,6 +4,7 @@ import { scoped } from "@/lib/db/tenant";
 import { isWindowOpen, replyWindow, windowRemainingMs } from "@/server/inbox/window";
 import { capabilitiesFor, windowMsFor } from "@/server/channels/capabilities";
 import type { ConversationDto } from "@/lib/types";
+import { isEvolutionUnlimitedWindow } from "@/lib/channels/evolution-patches";
 
 /**
  * 018 — El anuncio de origen viaja con la conversación. La llave única
@@ -169,11 +170,22 @@ export function serializeConversation(
   whatsappProvider: "meta" | "evolution" = "meta"
 ): ConversationDto {
   const caps = capabilitiesFor(c.channel);
-  // 024: la extensión humana solo existe en los canales que la declaran.
+  // 024: la extension humana solo existe en los canales que la declaran.
   const reply =
     caps.humanAgentWindowMs !== null
       ? replyWindow(c.channel, c.lastInboundAt)
       : null;
+  // PARCHE EVOLUTION: Evolution API (Baileys/QR) no tiene restriccion de
+  // ventana de 24h. La ventana siempre esta abierta para estos proveedores.
+  const evolutionWindow = isEvolutionUnlimitedWindow(
+    whatsappProvider,
+    c.evolutionInstance
+  );
+  const standardWindowOpen = isWindowOpen(c.lastInboundAt, new Date(), windowMsFor(c.channel));
+  const effectiveWindowOpen = evolutionWindow ? true : standardWindowOpen;
+  const effectiveWindowRemainingMs = evolutionWindow
+    ? Number.MAX_SAFE_INTEGER
+    : windowRemainingMs(c.lastInboundAt, new Date(), windowMsFor(c.channel));
   return {
     id: c.id,
     channel: c.channel,
@@ -185,13 +197,10 @@ export function serializeConversation(
     lastInboundAt: c.lastInboundAt?.toISOString() ?? null,
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
     unreadCount: c.unreadCount,
-    // 022: la ventana es la del canal (48 h en TikTok, 24 en los demás).
-    windowOpen: isWindowOpen(c.lastInboundAt, new Date(), windowMsFor(c.channel)),
-    windowRemainingMs: windowRemainingMs(
-      c.lastInboundAt,
-      new Date(),
-      windowMsFor(c.channel)
-    ),
+    // 022: la ventana es la del canal (48 h en TikTok, 24 en los demas).
+    // PARCHE: Evolution API siempre abierta.
+    windowOpen: effectiveWindowOpen,
+    windowRemainingMs: effectiveWindowRemainingMs,
     humanWindow: reply
       ? { open: reply.humanAgentTag, remainingMs: reply.humanAgentTag ? reply.operatorRemainingMs : 0 }
       : null,
@@ -205,7 +214,7 @@ export function serializeConversation(
     anuncio,
     // 0024: instancia de Evolution API (null en otros canales/proveedores).
     evolutionInstance: c.evolutionInstance ?? null,
-    // Proveedor activo: determina si aplica la restricción de ventana de 24 h.
+    // Proveedor activo: determina si aplica la restriccion de ventana de 24 h.
     whatsappProvider,
   };
 }

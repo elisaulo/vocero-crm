@@ -4,6 +4,8 @@ import { getDb, schema } from "@/lib/db";
 import { normalizeMx } from "@/lib/meta/client";
 import { ingestInboundMessage } from "@/server/inbox/ingest";
 import type { ResolvedIdentity } from "@/server/inbox/identity";
+// PARCHE @lid: la logica de preservacion de JIDs @lid esta implementada
+// directamente en processEvolutionPayload (ver comentario PARCHE @lid abajo).
 
 export const dynamic = "force-dynamic";
 
@@ -226,15 +228,22 @@ async function processEvolutionPayload(
       continue;
     }
 
+    // PARCHE @lid: preservar el JID completo cuando es @lid (Linked-ID).
+    // Si se extraen solo los digitos y se envian como @s.whatsapp.net,
+    // Evolution API falla con HTTP 400 { "exists": false }.
+    const isLidJid = remoteJid.endsWith("@lid");
     const rawNumber = remoteJid.split("@")[0]?.split(":")[0];
     if (!rawNumber) continue;
 
-    const phone = normalizeMx(rawNumber);
+    // Para contactos @lid: guardamos el JID completo como identidad.
+    // Para contactos normales: normalizacion E.164 habitual.
+    const phone = isLidJid ? remoteJid : normalizeMx(rawNumber);
+    const identity_value = isLidJid ? remoteJid : phone;
     const pushName = item.pushName || item.verifiedBizName || null;
 
     const identity: ResolvedIdentity = {
-      identity: phone,
-      phone: phone,
+      identity: identity_value,
+      phone: isLidJid ? null : phone,
       waUserId: null,
       profileName: pushName,
     };

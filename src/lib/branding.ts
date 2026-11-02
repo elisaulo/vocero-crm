@@ -45,10 +45,10 @@ export type Branding = {
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  name: "Vocero",
-  // El azul eléctrico de vocerocrm.com: la instancia recién instalada se ve
-  // igual que la landing. Una agencia lo cambia en Configuración → Marca.
-  accent: "#0d5bff",
+  name: "Jombe",
+  // Morado de Jombe: la instancia recién instalada muestra el logo Jombe.
+  // Cambiable en Configuración → Marca.
+  accent: "#5B5CE2",
   currency: DEFAULT_CURRENCY,
   favicon: null,
 };
