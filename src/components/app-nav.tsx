@@ -259,123 +259,123 @@ export function AppNav({
 
   return (
     <>
-    <Riel
-      branding={branding}
-      groups={groups}
-      pathname={pathname}
-      unread={unread}
-      userName={userName}
-      role={role}
-      apariencia={apariencia}
-      campana={campana}
-      version={versionTexto}
-      versionTitulo={versionTitulo}
-      onSalir={() => void salir()}
-    />
-    <aside
-      // Móvil: cajón que se desliza desde la izquierda (siempre montado, así
-      // la transición corre en ambos sentidos). Escritorio: columna fija.
-      // `visibility` va en la transición a propósito: al cerrar mantiene el
-      // cajón visible mientras se desliza y recién entonces lo oculta, que es
-      // lo que lo saca del orden de tabulación en móvil.
-      className={cn(
-        // `text-foreground` explícito: sin él, el texto sin color propio (el
-        // nombre del usuario, el nombre white-label en BrandLogo) hereda el
-        // color YA CALCULADO en <body> con el tema de la página, no el de
-        // `.nav-dark` — y un texto oscuro sobre este fondo oscuro se pierde.
-        // 061 — Solo el teléfono: en escritorio el menú es el riel de iconos
-        // (abajo). Ya no lleva la barra azul marino: los neutros del tema.
-        "fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto rounded-r-[var(--radio-tarjeta)] bg-background px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200 lg:hidden",
-        open ? "visible translate-x-0 shadow-pop" : "invisible -translate-x-full"
-      )}
-    >
-      {/* Marca: el logo de Vocero o, white-label, la inicial y el nombre */}
-      <div className="mb-5 flex items-start gap-1.5 px-2 pt-0.5">
-        {/* En móvil el cajón necesita su propio cierre: el velo no siempre es
+      <Riel
+        branding={branding}
+        groups={groups}
+        pathname={pathname}
+        unread={unread}
+        userName={userName}
+        role={role}
+        apariencia={apariencia}
+        campana={campana}
+        version={versionTexto}
+        versionTitulo={versionTitulo}
+        onSalir={() => void salir()}
+      />
+      <aside
+        // Móvil: cajón que se desliza desde la izquierda (siempre montado, así
+        // la transición corre en ambos sentidos). Escritorio: columna fija.
+        // `visibility` va en la transición a propósito: al cerrar mantiene el
+        // cajón visible mientras se desliza y recién entonces lo oculta, que es
+        // lo que lo saca del orden de tabulación en móvil.
+        className={cn(
+          // `text-foreground` explícito: sin él, el texto sin color propio (el
+          // nombre del usuario, el nombre white-label en BrandLogo) hereda el
+          // color YA CALCULADO en <body> con el tema de la página, no el de
+          // `.nav-dark` — y un texto oscuro sobre este fondo oscuro se pierde.
+          // 061 — Solo el teléfono: en escritorio el menú es el riel de iconos
+          // (abajo). Ya no lleva la barra azul marino: los neutros del tema.
+          "fixed inset-y-0 left-0 z-50 flex w-[17rem] shrink-0 flex-col overflow-y-auto rounded-r-[var(--radio-tarjeta)] bg-background px-3 pb-3.5 pt-4 text-foreground transition-[transform,visibility] duration-200 lg:hidden",
+          open ? "visible translate-x-0 shadow-pop" : "invisible -translate-x-full"
+        )}
+      >
+        {/* Marca: el logo de Vocero o, white-label, la inicial y el nombre */}
+        <div className="mb-5 flex items-start gap-1.5 px-2 pt-0.5">
+          {/* En móvil el cajón necesita su propio cierre: el velo no siempre es
             alcanzable con el pulgar. */}
-        <button
-          onClick={onClose}
-          aria-label="Cerrar el menú"
-          className="-ml-1 mt-0.5 rounded-md p-1.5 text-text-3 hover:bg-accent hover:text-foreground lg:hidden"
-        >
-          <X className="h-[18px] w-[18px]" strokeWidth={1.8} />
-        </button>
-        <div className="min-w-0">
-          <BrandLogo branding={branding} />
-          <span className="kicker mt-2 block">{kicker}</span>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar el menú"
+            className="-ml-1 mt-0.5 rounded-md p-1.5 text-text-3 hover:bg-accent hover:text-foreground lg:hidden"
+          >
+            <X className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </button>
+          <div className="min-w-0">
+            <BrandLogo branding={branding} />
+            <span className="kicker mt-2 block">{kicker}</span>
+          </div>
         </div>
-      </div>
 
-      {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
+        {/* Grupos con encabezado pequeño, sin letras ni colapsables: se leen
           de arriba abajo como una lista de lo que hay. Un grupo sin título
           (Resultados) es una entrada suelta separada por el espacio. */}
-      <nav className="flex flex-col gap-4" aria-label="Secciones">
-        {groups.map((group, i) => (
-          <div key={group.title ?? i} className="flex flex-col gap-0.5">
-            {group.title && (
-              <span className="kicker mb-1 block px-2.5" aria-hidden>
-                {group.title}
-              </span>
-            )}
-            {group.items.map(renderItem)}
-          </div>
-        ))}
-      </nav>
+        <nav className="flex flex-col gap-4" aria-label="Secciones">
+          {groups.map((group, i) => (
+            <div key={group.title ?? i} className="flex flex-col gap-0.5">
+              {group.title && (
+                <span className="kicker mb-1 block px-2.5" aria-hidden>
+                  {group.title}
+                </span>
+              )}
+              {group.items.map(renderItem)}
+            </div>
+          ))}
+        </nav>
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      {/* 048 — Solo cuando el navegador ofrece instalar la app: una fila
+        {/* 048 — Solo cuando el navegador ofrece instalar la app: una fila
           propia y no un icono más en el pie, que ya va lleno. */}
-      <BotonActivarAvisos className={navItemClass(false)} />
-      <BotonInstalar className={navItemClass(false)} />
+        <BotonActivarAvisos className={navItemClass(false)} />
+        <BotonInstalar className={navItemClass(false)} />
 
-      {/* Ajustes va abajo, solo: no es trabajo del día. */}
-      {renderItem(SETTINGS_ITEM)}
+        {/* Ajustes va abajo, solo: no es trabajo del día. */}
+        {renderItem(SETTINGS_ITEM)}
 
-      <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
-          {initials(userName)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold">{userName}</span>
-          <span className="block truncate text-[11px] text-text-3">
-            {role === "owner" ? "Propietario" : "Equipo"} · En línea
+        <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
+            {initials(userName)}
           </span>
-        </span>
-        <span className="flex shrink-0 items-center">
-          {campana}
-          <ThemeToggle initial={apariencia} />
-          <button
-            aria-label="Cerrar sesión"
-            title="Cerrar sesión"
-            className="rounded p-1 text-text-3 hover:text-foreground"
-            onClick={() => void salir()}
-          >
-            <LogOut className="h-4 w-4" strokeWidth={1.7} />
-          </button>
-        </span>
-      </div>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold">{userName}</span>
+            <span className="block truncate text-[11px] text-text-3">
+              {role === "owner" ? "Propietario" : "Equipo"} · En línea
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center">
+            {campana}
+            <ThemeToggle initial={apariencia} />
+            <button
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+              className="rounded p-1 text-text-3 hover:text-foreground"
+              onClick={() => void salir()}
+            >
+              <LogOut className="h-4 w-4" strokeWidth={1.7} />
+            </button>
+          </span>
+        </div>
 
-      {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
+        {/* Qué versión está corriendo. Discreta pero siempre visible: la duda
           "¿ya se desplegó?" aparece justo cuando algo no funciona, y mandar a
           alguien a comparar commits en el servidor significa que no lo hará. */}
-      {/* `text-2` y no `text-3`: a 10.5px, el gris más claro no pasa AA contra
+        {/* `text-2` y no `text-3`: a 10.5px, el gris más claro no pasa AA contra
           el fondo de la barra. Discreta sí, ilegible no. */}
-      {/* El nombre sale de la marca, no de una constante: esto es white-label,
+        {/* El nombre sale de la marca, no de una constante: esto es white-label,
           y una instancia rebautizada que dice "Vocero" en el tooltip delata el
           producto de debajo justo donde el operador la mira todos los días. */}
-      {/* Un commit que no salió del build lo dice (#50): presentarlo igual
+        {/* Un commit que no salió del build lo dice (#50): presentarlo igual
           que uno verificado es la insignia mintiendo justo cuando alguien la
           consulta para saber qué código corre. El aviso es el ícono (color de
           advertencia: basta 3:1 para un gráfico) y el texto va en `text-2`,
           que pasa AA sobre la barra en cualquier tema. */}
-      <p
-        className="mt-2 px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
-        title={versionTitle(branding.name, version)}
-      >
-        {versionTexto}
-      </p>
-    </aside>
+        <p
+          className="mt-2 px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-text-2"
+          title={versionTitle(branding.name, version)}
+        >
+          {versionTexto}
+        </p>
+      </aside>
     </>
   );
 }
@@ -505,9 +505,18 @@ function Riel({
         href="/inbox"
         aria-label={branding.name}
         title={branding.name}
-        className={cn("mb-5 rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", expanded && "self-start")}
+        className={cn(
+          "mb-5 rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          expanded ? "self-start px-1" : "self-center"
+        )}
       >
-        <BrandTile branding={branding} className="h-11 w-11 rounded-[14px] text-[18px]" />
+        {/* Expandido: el logo completo, igual que en el drawer móvil y el login.
+            Colapsado: solo el isotipo cuadrado. */}
+        {expanded ? (
+          <BrandLogo branding={branding} className="h-9" />
+        ) : (
+          <BrandTile branding={branding} className="h-11 w-11 rounded-[14px] text-[18px]" />
+        )}
       </Link>
 
       <div className={cn(

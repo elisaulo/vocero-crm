@@ -10,7 +10,7 @@
 > ningún otro archivo**: Coolify descarga la imagen publicada y los secretos
 > viven como variables de la plataforma.
 
-**Imagen**: `ghcr.io/elisaulo/vocero-crm:2.0.0` (GitHub Container Registry,
+**Imagen**: `ghcr.io/elisaulo/vocero-crm:2.7.5` (GitHub Container Registry,
 una etiqueta por versión, `linux/amd64`, escucha en el puerto `3000`).
 
 **Repositorio**: `https://github.com/elisaulo/vocero-crm` (público, rama `main`,

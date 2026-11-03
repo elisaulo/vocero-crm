@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { accentCssVariables, DEFAULT_BRANDING } from "@/lib/branding";
 import { faviconHref } from "@/lib/favicon";
-import { appIconHref, NAV_INK, shortAppName } from "@/lib/pwa";
+import { appDisplayName, appIconHref, NAV_INK, shortAppName } from "@/lib/pwa";
 import { RegistrarServiceWorker } from "@/components/pwa";
 import { atributosHtml, cssDePropio, cssDeTemas } from "@/lib/temas";
 import { aparienciaActual } from "@/server/apariencia";
@@ -68,8 +68,15 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding().catch(() => DEFAULT_BRANDING);
   const producto = productName([...enabledChannels()]);
+  // La app se presenta como «Jombe CRM» (marca + producto), no como «Vocero
+  // CRM»: el nombre sale de la marca de la organización, nunca cableado.
+  const app = appDisplayName(branding.name);
   return {
-    title: `${branding.name} — ${producto}`,
+    title: {
+      default: `${app} — ${producto}`,
+      template: `%s · ${app}`,
+    },
+    applicationName: app,
     description: `${producto} con agente de IA y Laboratorio de auto-evaluación`,
     // El `?v=` cambia con la marca: los navegadores guardan el favicon con una
     // insistencia notable y, sin eso, el logo nuevo tarda días en aparecer.
@@ -80,7 +87,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     // 048 — Instalada desde Safari, abre sin la barra del navegador. Barra de
     // estado negra y no translúcida: la página no tiene margen para el notch.
-    appleWebApp: { capable: true, title: shortAppName(branding.name), statusBarStyle: "black" },
+    appleWebApp: { capable: true, title: shortAppName(app), statusBarStyle: "black" },
   };
 }
 

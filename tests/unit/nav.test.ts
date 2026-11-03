@@ -70,41 +70,42 @@ describe("ajustes en tres secciones", () => {
   const links = (s: { title: string; links: { label: string }[] }[]) =>
     Object.fromEntries(s.map((x) => [x.title, x.links.map((l) => l.label)]));
 
+  // Los canales, Preferencias, Anuncios y Agenda son siempre visibles: sus
+  // pantallas existen aunque la bandera no esté activa, y el operador debe
+  // poder entrar a ver qué falta.
+  const TODO_VISIBLE = {
+    Canales: ["Estado", "WhatsApp", "Instagram", "Messenger", "TikTok"],
+    Agente: ["IA", "Agenda"],
+    Negocio: [
+      "Marca",
+      "Apariencia",
+      "Plantillas",
+      "Respuestas rápidas",
+      "Equipo",
+      "Preferencias",
+      "Anuncios",
+    ],
+  };
+
   it("con todo apagado: Canales, Agente y Negocio con lo mínimo", () => {
     const sections = settingsSections({});
     expect(sections.map((s) => s.title)).toEqual(["Canales", "Agente", "Negocio"]);
-    expect(links(sections)).toEqual({
-      Canales: ["WhatsApp"],
-      Agente: ["IA"],
-      Negocio: ["Marca", "Apariencia", "Plantillas", "Respuestas rápidas", "Equipo"],
-    });
+    expect(links(sections)).toEqual(TODO_VISIBLE);
   });
 
-  it("cada bandera añade su enlace en su sección y en ninguna otra", () => {
-    // 023: con un canal social, "Estado" abre la sección.
-    expect(links(settingsSections({ messenger: true }))).toEqual({
-      Canales: ["Estado", "WhatsApp", "Messenger"],
-      Agente: ["IA"],
-      Negocio: ["Marca", "Apariencia", "Plantillas", "Respuestas rápidas", "Equipo"],
-    });
-    expect(links(settingsSections({ instagram: true })).Canales).toEqual([
-      "Estado",
-      "WhatsApp",
-      "Instagram",
-    ]);
+  it("las banderas de canal NO filtran el menú: las rutas existen igual", () => {
+    expect(links(settingsSections({ messenger: true }))).toEqual(TODO_VISIBLE);
+    expect(links(settingsSections({ instagram: true })).Canales).toEqual(
+      TODO_VISIBLE.Canales
+    );
     expect(
       links(settingsSections({ instagram: true, messenger: true, tiktok: true })).Canales
-    ).toEqual(["Estado", "WhatsApp", "Instagram", "Messenger", "TikTok"]);
-    expect(links(settingsSections({ agenda: true }))).toEqual({
-      Canales: ["WhatsApp"],
-      Agente: ["IA", "Agenda"],
-      Negocio: ["Marca", "Apariencia", "Plantillas", "Respuestas rápidas", "Equipo"],
-    });
-    expect(links(settingsSections({ atribucion: true }))).toEqual({
-      Canales: ["WhatsApp"],
-      Agente: ["IA"],
-      Negocio: ["Marca", "Apariencia", "Plantillas", "Respuestas rápidas", "Equipo", "Anuncios"],
-    });
+    ).toEqual(TODO_VISIBLE.Canales);
+  });
+
+  it("las banderas de agenda y atribución también muestran sus pantallas siempre", () => {
+    expect(links(settingsSections({ agenda: true }))).toEqual(TODO_VISIBLE);
+    expect(links(settingsSections({ atribucion: true }))).toEqual(TODO_VISIBLE);
   });
 
   it("con todo encendido, cada pantalla de Ajustes tiene exactamente un enlace", () => {
@@ -132,6 +133,7 @@ describe("ajustes en tres secciones", () => {
         "/settings/templates",
         "/settings/quick-replies",
         "/settings/team",
+        "/settings/preferencias",
         "/settings/ads",
       ].sort()
     );

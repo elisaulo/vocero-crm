@@ -52,15 +52,27 @@ export function shortAppName(name: string): string {
   return primera.length <= 12 ? primera : primera.slice(0, 12);
 }
 
+/**
+ * El nombre con el que se presenta la app: la marca de la organización más el
+ * producto. La instancia por defecto se llama «Jombe», así que su app es
+ * «Jombe CRM»; una instancia rebautizada ve SU nombre («Ferretería El Martillo
+ * CRM»), nunca «Vocero CRM» cableado.
+ */
+export function appDisplayName(name: string): string {
+  const limpio = name.trim() || "Jombe";
+  return /\bcrm$/i.test(limpio) ? limpio : `${limpio} CRM`;
+}
+
 /** Pura: el manifest de la instancia. Nada de «Vocero» cableado: sale de la marca. */
 export function buildManifest(
   branding: Pick<Branding, "name" | "accent" | "favicon">,
   description: string
 ): MetadataRoute.Manifest {
+  const nombre = appDisplayName(branding.name);
   return {
     id: "/",
-    name: branding.name,
-    short_name: shortAppName(branding.name),
+    name: nombre,
+    short_name: shortAppName(nombre),
     description,
     lang: "es",
     dir: "ltr",

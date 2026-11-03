@@ -84,8 +84,8 @@ describe("022 · TikTok en el catálogo de canales", () => {
     const hrefs = (o: Parameters<typeof settingsSections>[0]) =>
       settingsSections(o).flatMap((s) => s.links.map((l) => l.href));
     expect(hrefs({ tiktok: true })).toContain("/settings/tiktok");
-    expect(hrefs({ messenger: true })).not.toContain("/settings/tiktok");
-    expect(hrefs({})).not.toContain("/settings/tiktok");
+    expect(hrefs({ messenger: true })).toContain("/settings/tiktok");
+    expect(hrefs({})).toContain("/settings/tiktok");
   });
 
   it("la identidad lleva su propio prefijo y no se confunde con un teléfono", () => {

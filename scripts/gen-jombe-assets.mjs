@@ -10,10 +10,14 @@
  *  - jombe-logo-full.png / .webp  → logo horizontal completo (isotipo + wordmark)
  *  - jombe-icon-512.png / -192.png / -32.png → solo el isotipo
  *  - favicon.ico → PNG de 32 dentro de un contenedor ICO
+ *  - icons/icon-192.png, icons/icon-512.png, icons/apple-touch-icon.png,
+ *    favicon-16.png, favicon-32.png → el isotipo sobre el mosaico #0B111E
+ *    (los nombres heredados: ningún archivo del repo puede seguir mostrando
+ *    la «V» de Vocero)
  *
  * Ejecutar: node scripts/gen-jombe-assets.mjs
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -29,6 +33,8 @@ const MARGEN = 8;
 
 // Fondo medido: rgb(14,21,31). Umbrales de distancia (0–441).
 const FONDO = { r: 14, g: 21, b: 31 };
+// Mosaico de la app instalable: el azul marino de la marca.
+const MOSAICO = { r: 0x0b, g: 0x11, b: 0x1e };
 const T0 = 22; // por debajo: transparente total
 const T1 = 64; // por encima: opaco total
 
@@ -105,6 +111,29 @@ async function main() {
     png32.copy(ico, 22);
     writeFileSync(join(raiz, "public", "favicon.ico"), ico);
     console.log("✅ public/favicon.ico (PNG 32×32 en ICO)");
+
+    // 4) Los nombres heredados de la PWA y del favicon: el isotipo sobre el
+    //    mosaico de la marca. Se sobrescriben para que ninguna ruta antigua
+    //    siga sirviendo la «V» de Vocero.
+    const conMosaico = async (size) =>
+        sharp(isoBase)
+            .resize(size, size, { fit: "contain", background: { ...MOSAICO, alpha: 1 } })
+            .flatten({ background: MOSAICO })
+            .png()
+            .toBuffer();
+
+    mkdirSync(join(raiz, "public", "icons"), { recursive: true });
+    const heredados = [
+        ["icons/icon-192.png", 192],
+        ["icons/icon-512.png", 512],
+        ["icons/apple-touch-icon.png", 180],
+        ["favicon-16.png", 16],
+        ["favicon-32.png", 32],
+    ];
+    for (const [ruta, size] of heredados) {
+        writeFileSync(join(raiz, "public", ruta), await conMosaico(size));
+        console.log(`✅ public/${ruta} (${size}×${size}, mosaico #0B111E)`);
+    }
 }
 
 main().catch((e) => {

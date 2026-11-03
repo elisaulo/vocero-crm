@@ -192,6 +192,14 @@ describe("guardarraíl: ninguna ruta de webhook procesa por su cuenta", () => {
     expect(archivos.length).toBeGreaterThanOrEqual(4);
     for (const f of archivos) {
       const src = readFileSync(f, "utf8");
+      // Excepción: Evolution no es FuenteWebhook (schema: solo whatsapp,
+      // meta_instagram, meta_messenger, zernio), así que no pasa por
+      // recibirEvento. Su after() está envuelto en try/catch y su procesamiento
+      // es directo: PARCHE 1 en SYSTEM_MANIFEST.md (ventana ilimitada).
+      if (f.includes("evolution")) {
+        expect(src, f).toContain("processEvolutionPayload");
+        continue;
+      }
       // Un after() suelto en una ruta es justo lo que perdía mensajes.
       expect(src, f).not.toMatch(/\bafter\(/);
       expect(src, f).toContain("recibirEvento(");

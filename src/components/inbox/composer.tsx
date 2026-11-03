@@ -137,7 +137,7 @@ export function Composer({
         if (!cancelled)
           setTemplates((d.templates ?? []).filter((t) => t.status === "approved"));
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };
@@ -197,7 +197,7 @@ export function Composer({
         setRespuestas(d.respuestas ?? []);
         setPuedeEditarRespuestas(Boolean(d.puedeEditar));
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       vivo = false;
     };
@@ -733,133 +733,133 @@ export function Composer({
           }}
         />
       ) : (
-      /* 061 · D5 — La caja en cápsula y, aparte, el botón redondo de enviar
-         (o grabar), como en la referencia del diseño de tarjetas. */
-      <div className="flex items-end gap-2.5">
-      <div className="flex min-w-0 flex-1 items-end gap-2 rounded-[23px] border border-border bg-background py-1.5 pl-2 pr-3 shadow-sm transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand-soft">
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          disabled={sending}
-          onChange={(e) => {
-            if (!sending) pickFile(e.target.files?.[0] ?? null);
-            // Elegir el mismo archivo otra vez también avisa.
-            e.target.value = "";
-          }}
-        />
-        {menuRapido && (
-          <QuickReplyMenu
-            opciones={opcionesRapidas}
-            activa={activa}
-            vacio={(respuestas ?? []).length === 0}
-            puedeEditar={puedeEditarRespuestas}
-            onElegir={elegirRespuesta}
-            onActiva={setActiva}
-          />
-        )}
-        <EmojiPicker disabled={sending} onSelect={insertEmoji} />
-        {/* 028: solo lo que el canal puede mandar; en las redes, la caja sola.
+        /* 061 · D5 — La caja en cápsula y, aparte, el botón redondo de enviar
+           (o grabar), como en la referencia del diseño de tarjetas. */
+        <div className="flex items-end gap-2.5">
+          <div className="flex min-w-0 flex-1 items-end gap-2 rounded-[23px] border border-border bg-background py-1.5 pl-2 pr-3 shadow-sm transition-[border-color,box-shadow] focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand-soft">
+            <input
+              ref={fileRef}
+              type="file"
+              className="hidden"
+              disabled={sending}
+              onChange={(e) => {
+                if (!sending) pickFile(e.target.files?.[0] ?? null);
+                // Elegir el mismo archivo otra vez también avisa.
+                e.target.value = "";
+              }}
+            />
+            {menuRapido && (
+              <QuickReplyMenu
+                opciones={opcionesRapidas}
+                activa={activa}
+                vacio={(respuestas ?? []).length === 0}
+                puedeEditar={puedeEditarRespuestas}
+                onElegir={elegirRespuesta}
+                onActiva={setActiva}
+              />
+            )}
+            <EmojiPicker disabled={sending} onSelect={insertEmoji} />
+            {/* 028: solo lo que el canal puede mandar; en las redes, la caja sola.
             045: ubicación y contacto ya no se ofrecen (el servidor los sigue
             sabiendo enviar, para un cerebro conectado). */}
-        {conversation.composer.media && (
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={sending}
-            aria-label="Adjuntar archivo"
-            title="Adjuntar imagen, video, audio o documento"
-            className="shrink-0 rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.7} />
-          </button>
-        )}
-        <textarea
-          ref={taRef}
-          placeholder={file ? "Pie del adjunto (opcional)…" : "Escribe una respuesta…"}
-          value={text}
-          rows={1}
-          onPaste={(e) => {
-            const images = Array.from(e.clipboardData.items).filter(
-              (item) => item.kind === "file" && item.type.startsWith("image/")
-            );
-            if (images.length === 0) return; // texto: el pegado de siempre
-            e.preventDefault();
-            const files = images.map((item) => item.getAsFile());
-            if (files.some((f) => !f)) {
-              setError("No se pudo leer la imagen del portapapeles. Cópiala de nuevo.");
-              return;
-            }
-            attachImage(files as File[], "paste");
-          }}
-          onChange={(e) => {
-            setText(e.target.value);
-            autogrow();
-            releerToken();
-          }}
-          onSelect={releerToken}
-          onBlur={() => setToken(null)}
-          onKeyDown={(e) => {
-            // 049 — Con el menú abierto, el teclado es suyo.
-            if (menuRapido) {
-              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                e.preventDefault();
-                const n = opcionesRapidas.length;
-                if (n) setActiva((i) => (i + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
-                return;
-              }
-              if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") {
-                e.preventDefault();
-                const elegida = opcionesRapidas[activa];
-                if (elegida) elegirRespuesta(elegida);
-                else setCerradoEn(token!.inicio);
-                return;
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                setCerradoEn(token!.inicio);
-                return;
-              }
-            }
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void submit();
-            } else if (e.key === "Escape" && replyTo) {
-              onReplyChange?.(null);
-            }
-          }}
-          className="max-h-[120px] w-full resize-none self-center bg-transparent py-1 text-sm leading-relaxed outline-none placeholder:text-text-3"
-        />
-      </div>
-        {puedeGrabar ? (
-          <button
-            onClick={() => {
-              setError(null);
-              setGrabando(true);
-            }}
-            disabled={sending}
-            aria-label="Grabar nota de voz"
-            title="Grabar nota de voz"
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              sending && "opacity-40"
+            {conversation.composer.media && (
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={sending}
+                aria-label="Adjuntar archivo"
+                title="Adjuntar imagen, video, audio o documento"
+                className="shrink-0 rounded p-1.5 text-text-3 transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.7} />
+              </button>
             )}
-          >
-            <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} />
-          </button>
-        ) : (
-          <button
-            onClick={() => void submit()}
-            disabled={sending || !canSubmit}
-            aria-label="Enviar"
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              (sending || !canSubmit) && "opacity-40"
-            )}
-          >
-            <Send className="h-[18px] w-[18px]" strokeWidth={1.8} />
-          </button>
-        )}
-      </div>
+            <textarea
+              ref={taRef}
+              placeholder={file ? "Pie del adjunto (opcional)…" : "Escribe una respuesta…"}
+              value={text}
+              rows={1}
+              onPaste={(e) => {
+                const images = Array.from(e.clipboardData.items).filter(
+                  (item) => item.kind === "file" && item.type.startsWith("image/")
+                );
+                if (images.length === 0) return; // texto: el pegado de siempre
+                e.preventDefault();
+                const files = images.map((item) => item.getAsFile());
+                if (files.some((f) => !f)) {
+                  setError("No se pudo leer la imagen del portapapeles. Cópiala de nuevo.");
+                  return;
+                }
+                attachImage(files as File[], "paste");
+              }}
+              onChange={(e) => {
+                setText(e.target.value);
+                autogrow();
+                releerToken();
+              }}
+              onSelect={releerToken}
+              onBlur={() => setToken(null)}
+              onKeyDown={(e) => {
+                // 049 — Con el menú abierto, el teclado es suyo.
+                if (menuRapido) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const n = opcionesRapidas.length;
+                    if (n) setActiva((i) => (i + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
+                    return;
+                  }
+                  if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") {
+                    e.preventDefault();
+                    const elegida = opcionesRapidas[activa];
+                    if (elegida) elegirRespuesta(elegida);
+                    else setCerradoEn(token!.inicio);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setCerradoEn(token!.inicio);
+                    return;
+                  }
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void submit();
+                } else if (e.key === "Escape" && replyTo) {
+                  onReplyChange?.(null);
+                }
+              }}
+              className="max-h-[120px] w-full resize-none self-center bg-transparent py-1 text-sm leading-relaxed outline-none placeholder:text-text-3"
+            />
+          </div>
+          {puedeGrabar ? (
+            <button
+              onClick={() => {
+                setError(null);
+                setGrabando(true);
+              }}
+              disabled={sending}
+              aria-label="Grabar nota de voz"
+              title="Grabar nota de voz"
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                sending && "opacity-40"
+              )}
+            >
+              <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            </button>
+          ) : (
+            <button
+              onClick={() => void submit()}
+              disabled={sending || !canSubmit}
+              aria-label="Enviar"
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-enviar text-enviar-texto shadow-sm transition-[opacity,transform] hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                (sending || !canSubmit) && "opacity-40"
+              )}
+            >
+              <Send className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
       )}
       <div className="mt-1.5 flex items-center justify-between">
         {error ? (
@@ -872,7 +872,11 @@ export function Composer({
         <p className="font-mono text-[10.5px] tracking-[0.04em] text-text-3">
           {soloPersona
             ? `Ventana humana · quedan ${formatRemainingLong(human!.remainingMs)}`
-            : `Ventana abierta · quedan ${formatRemaining(conversation.windowRemainingMs)}`}
+            : evolutionWindow
+              ? // Evolution API no tiene la ventana de Meta: el contador no
+              // significa nada (mostraba millones de horas). Solo el estado.
+              "Ventana abierta"
+              : `Ventana abierta · quedan ${formatRemaining(conversation.windowRemainingMs)}`}
         </p>
       </div>
     </div>

@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.4}
+    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.5}
     container_name: vocero-crm-app-1
     restart: unless-stopped
     ports:

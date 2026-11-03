@@ -14,11 +14,6 @@ export const BRAND_MARK_BODY = "M2.5 4C4.5 9.5 7.5 16.5 11 19.2C12.5 20.3 12 20 
 export const BRAND_MARK_TAIL = "M12 20C12 20 13.5 17.5 16 13.5C18 10 19.5 7 20 5.5M17.5 8.5C18 7.2 18.8 6.5 19.5 7.1C20.2 7.7 20.8 6.5 21.5 5.8";
 export const BRAND_MARK_STROKE = 2.8;
 export const BRAND_CYAN = "#00c6f5";
-export const BRAND_CYAN_ON_TILE = "#3fdcff";
-
-export function isVoceroName(name: string): boolean {
-  return name.trim().toLowerCase() === "vocero";
-}
 
 export function isJombeName(name: string): boolean {
   return name.trim().toLowerCase() === "jombe";

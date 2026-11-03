@@ -30,7 +30,7 @@ const marca = { name: "Ferretería El Martillo", accent: "#0d5bff", favicon: nul
 describe("el manifest", () => {
   it("sale de la marca, sin «Vocero» cableado", () => {
     const m = buildManifest(marca, "CRM de WhatsApp de Ferretería El Martillo");
-    expect(m.name).toBe("Ferretería El Martillo");
+    expect(m.name).toBe("Ferretería El Martillo CRM");
     expect(m.short_name).toBe("Ferretería");
     expect(JSON.stringify(m)).not.toMatch(/vocero/i);
     expect(m).toMatchObject({

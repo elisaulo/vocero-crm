@@ -28,7 +28,7 @@ vi.mock("@/server/whatsapp/media", async (importOriginal) => {
     ...original,
     uploadGraphMedia: h.uploadGraphMedia,
     saveMediaFile: h.saveMediaFile,
-    ensureAssetAvailable: vi.fn(async () => {}),
+    ensureAssetAvailable: vi.fn(async () => { }),
   };
 });
 
@@ -57,11 +57,11 @@ vi.mock("@/server/inbox/identity", async (importOriginal) => {
 });
 
 vi.mock("@/server/inbox/lead-activity", () => ({
-  onLeadActivity: vi.fn(async () => {}),
+  onLeadActivity: vi.fn(async () => { }),
 }));
 vi.mock("@/server/brains/config", () => ({ despachoActivo: () => false }));
 vi.mock("@/server/dispatch/encolar", () => ({
-  despacharAlCerebro: vi.fn(async () => {}),
+  despacharAlCerebro: vi.fn(async () => { }),
 }));
 
 /**
@@ -223,7 +223,9 @@ function webhookValue(msg: Record<string, unknown>) {
 
 describe("ingesta de WhatsApp con context", () => {
   it("guarda el wamid citado en reply_to_wa_message_id y lo publica resuelto", async () => {
-    // select de resolverCita: el original existe en el CRM.
+    // select #1: conversación (ingesta)
+    h.selectRows.push([]);
+    // select #2: resolverCita: el original existe en el CRM.
     h.selectRows.push([
       {
         message: {
@@ -348,7 +350,7 @@ function conectado() {
 describe("envío con context", () => {
   it("sendText citando → Graph recibe context.message_id y el saliente guarda la cita", async () => {
     conectado();
-    h.selectRows.push([CONVERSACION_WA], [CITADO]);
+    h.selectRows.push([CONVERSACION_WA], [{ whatsappProvider: "meta" }], [CITADO]);
     const { sendText } = await import("@/server/inbox/send");
 
     await sendText({
@@ -390,7 +392,7 @@ describe("envío con context", () => {
     conectado();
     h.saveMediaFile.mockResolvedValue("org_1/asset.jpg");
     h.uploadGraphMedia.mockResolvedValue("media_1");
-    h.selectRows.push([CONVERSACION_WA], [CITADO]);
+    h.selectRows.push([CONVERSACION_WA], [{ whatsappProvider: "meta" }], [CITADO]);
     const { sendMediaMessage } = await import("@/server/inbox/send");
 
     await sendMediaMessage({
@@ -410,7 +412,7 @@ describe("envío con context", () => {
 
   it("ubicación citando → context en el payload", async () => {
     conectado();
-    h.selectRows.push([CONVERSACION_WA], [CITADO]);
+    h.selectRows.push([CONVERSACION_WA], [{ whatsappProvider: "meta" }], [CITADO]);
     const { sendStructured } = await import("@/server/inbox/send");
 
     await sendStructured({

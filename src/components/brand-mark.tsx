@@ -1,11 +1,9 @@
 import type { Branding } from "@/lib/branding";
 import {
   BRAND_CYAN,
-  BRAND_CYAN_ON_TILE,
   BRAND_MARK_BODY,
   BRAND_MARK_STROKE,
   BRAND_MARK_TAIL,
-  isVoceroName,
   isJombeName,
   JOMBE_LOGO_FULL,
   JOMBE_ICON,
@@ -64,7 +62,7 @@ export function BrandMark({
  * Mosaico cuadrado con degradado del acento: es el favicon en grande. Con un
  * logo subido lleva el logo (el MISMO archivo y la MISMA URL versionada que
  * la pestaña, así lo que se sube en Ajustes → Marca se ve en los dos sitios);
- * sin él, la "v" de Vocero, el ícono de Jombe, o la inicial del nombre white-label.
+ * sin él, el isotipo de Jombe o la inicial del nombre white-label.
  */
 export function BrandTile({
   branding,
@@ -110,24 +108,12 @@ export function BrandTile({
           alt=""
           className="h-full w-full object-contain"
         />
-      ) : isVoceroName(branding.name) ? (
-        <BrandMark className="h-[64%] w-[64%]" cyan={BRAND_CYAN_ON_TILE} />
       ) : (
         <span className="font-bold leading-none">{faviconInitial(branding.name)}</span>
       )}
     </span>
   );
 }
-
-const WORDMARK_SIZE = {
-  md: "text-[21px]",
-  lg: "text-[30px]",
-} as const;
-
-const MARK_SIZE = {
-  md: "h-[24px] w-[24px]",
-  lg: "h-[34px] w-[34px]",
-} as const;
 
 const TILE_SIZE = {
   md: "h-[30px] w-[30px] rounded-[9px] text-[15px]",
@@ -137,7 +123,6 @@ const TILE_SIZE = {
 /**
  * La marca completa, como en la cabecera de la landing: trazo + wordmark.
  * Jombe: SOLO la imagen estática del logo completo (jamás texto HTML).
- * Vocero: trazo V + "vocero" en minúsculas y bien apretado.
  * White-label: mosaico con la inicial y el nombre propio.
  * Con logo subido gana el logo, se llame como se llame.
  */
@@ -147,7 +132,7 @@ export function BrandLogo({
   className,
 }: {
   branding: BrandingMark;
-  size?: keyof typeof WORDMARK_SIZE;
+  size?: keyof typeof TILE_SIZE;
   className?: string;
 }) {
   // Jombe: la imagen estática oficial del logo horizontal completo, tal cual.
@@ -176,22 +161,6 @@ export function BrandLogo({
           )}
         >
           {branding.name}
-        </span>
-      </span>
-    );
-  }
-  // Vocero sin logo subido: trazo V + wordmark "vocero".
-  if (isVoceroName(branding.name)) {
-    return (
-      <span className={cn("flex items-center gap-2 text-foreground", className)}>
-        <BrandMark className={cn("shrink-0 text-brand", MARK_SIZE[size])} />
-        <span
-          className={cn(
-            "font-[800] leading-none tracking-[-0.045em]",
-            WORDMARK_SIZE[size]
-          )}
-        >
-          vocero
         </span>
       </span>
     );

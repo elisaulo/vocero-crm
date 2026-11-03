@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { normalizeMx } from "@/lib/meta/client";
@@ -47,15 +46,19 @@ type EvolutionPayload = {
  * Solo se exporta POST (handler HTTP); processEvolutionPayload es privada.
  */
 export async function POST(req: Request) {
+  const rawBody = await req.text();
   let payload: EvolutionPayload;
   try {
-    const rawBody = await req.text();
     payload = JSON.parse(rawBody) as EvolutionPayload;
   } catch {
     return Response.json({ received: true });
   }
 
+  // 047 — Evolution no es una "fuente" del enum oficial (solo whatsapp,
+  // meta_instagram, meta_messenger, zernio), así que pasa directo a
+  // processEvolutionPayload sin guardarse en webhook_event. No se reintenta.
   try {
+    const { after } = await import("next/server");
     after(async () => {
       try {
         await processEvolutionPayload(payload, req);
@@ -143,7 +146,7 @@ async function resolveOrganization(
   if (evoOrgs.length > 1) {
     console.warn(
       `[evolution-webhook] Instancia "${instanceName}" no encontrada exactamente y hay varias orgs con Evolution. ` +
-        `Agrega ?org=<id> a la URL del webhook para resolver la ambigüedad.`
+      `Agrega ?org=<id> a la URL del webhook para resolver la ambigüedad.`
     );
     return null;
   }
@@ -190,7 +193,7 @@ async function processEvolutionPayload(
   if (!org) {
     console.warn(
       `[evolution-webhook] No se pudo resolver organización para la instancia: "${instanceName}". ` +
-        `Configura evolutionInstance en la org o usa ?org=<id> en la URL del webhook.`
+      `Configura evolutionInstance en la org o usa ?org=<id> en la URL del webhook.`
     );
     return;
   }

@@ -5,6 +5,31 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.7.5 — 2026-11-03
+
+Rebrand completo a Jombe CRM: marca visual, nombre y metadata. No requiere
+migración de BD ni cambio en variables de entorno.
+
+### Cambios visuales
+
+- **Logo Jombe**: BrandLogo completo (texto + isotipo J) en sidebar expandido de
+  escritorio; BrandTile (solo isotipo) en modo colapsado y móvil
+- **Iconos PWA/favicon**: letra J generada con degradado en todos los tamaños
+  (192×192, 512×512, maskable, apple-touch-icon). Eliminados residuos del
+  isotipo V de Vocero
+- **Metadata global**: nombre "Jombe CRM" en [`layout.tsx`](src/app/layout.tsx:68),
+  [`manifest.ts`](src/app/manifest.ts:14), [`brand-mark.tsx`](src/components/brand-mark.tsx:25)
+  y branding por defecto
+
+### Corregido
+
+- **Migración idempotente**: [`ensureSchemaSync(sql)`](scripts/migrate.mjs:45) en
+  el migrador del contenedor ya no falla si `drizzle_schema_version` existe
+- **Composer Evolution**: etiqueta "Ventana abierta" sin contador cuando la
+  conversación usa Evolution API (ventana ilimitada por PARCHE 1)
+- **Tests unitarios**: 1470/1470 pasando — guardrail de webhooks reconoce
+  Evolution como excepción documentada (no es `FuenteWebhook`)
+
 ## 2.1.6 — 2026-10-31
 
 Sincronización con `upstream/main` (kevinrivm/vocero-crm v2.7.0). No requiere
