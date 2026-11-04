@@ -510,10 +510,16 @@ function Riel({
           expanded ? "self-start px-1" : "self-center"
         )}
       >
-        {/* Expandido: el logo completo, igual que en el drawer móvil y el login.
+        {/* Expandido: el logo completo, igual que en el drawer móvil y el login,
+            con el subtítulo «CRM · MULTICANAL» debajo (v2.7.6).
             Colapsado: solo el isotipo cuadrado. */}
         {expanded ? (
-          <BrandLogo branding={branding} className="h-9" />
+          <span className="flex flex-col gap-1">
+            <BrandLogo branding={branding} className="h-9" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-3">
+              CRM · MULTICANAL
+            </span>
+          </span>
         ) : (
           <BrandTile branding={branding} className="h-11 w-11 rounded-[14px] text-[18px]" />
         )}
@@ -533,18 +539,10 @@ function Riel({
         ))}
       </div>
 
+      {/* v2.7.6 — La campana vive en la fila del perfil, junto al tema y salir,
+          igual que en el drawer móvil; ya no flota sobre «Ajustes». */}
       <div className={cn("mt-3 flex flex-col", expanded ? "gap-0.5" : "items-center gap-2.5")}>
-        {expanded ? (
-          <>
-            <span className="flex items-center gap-3 rounded-xl px-3 py-2 text-text-2">{campana}</span>
-            {boton(SETTINGS_ITEM)}
-          </>
-        ) : (
-          <>
-            <span className="flex h-11 w-11 items-center justify-center">{campana}</span>
-            {boton(SETTINGS_ITEM)}
-          </>
-        )}
+        {boton(SETTINGS_ITEM)}
 
         <div ref={cuentaRef} className={cn("relative", expanded && "w-full")}>
           {expanded ? (
@@ -558,6 +556,7 @@ function Riel({
                   {role === "owner" ? "Propietario" : "Equipo"}
                 </span>
               </span>
+              <span className="flex items-center text-text-2">{campana}</span>
               <ThemeToggle initial={apariencia} />
               <button type="button" onClick={onSalir} aria-label="Cerrar sesión" title="Cerrar sesión"
                 className="rounded p-1 text-text-3 hover:text-foreground">

@@ -30,7 +30,8 @@ const marca = { name: "Ferretería El Martillo", accent: "#0d5bff", favicon: nul
 describe("el manifest", () => {
   it("sale de la marca, sin «Vocero» cableado", () => {
     const m = buildManifest(marca, "CRM de WhatsApp de Ferretería El Martillo");
-    expect(m.name).toBe("Ferretería El Martillo CRM");
+    // v2.7.6 — el separador es " - " (guion con espacios)
+    expect(m.name).toBe("Ferretería El Martillo - CRM");
     expect(m.short_name).toBe("Ferretería");
     expect(JSON.stringify(m)).not.toMatch(/vocero/i);
     expect(m).toMatchObject({
@@ -42,6 +43,16 @@ describe("el manifest", () => {
       theme_color: NAV_INK,
       background_color: NAV_INK,
     });
+  });
+
+  it("v2.7.6 — el título de la app es exactamente la marca con el separador", () => {
+    const jombe = buildManifest({ name: "Jombe", accent: "#0d5bff", favicon: null }, "CRM");
+    expect(jombe.name).toBe("Jombe - CRM");
+    expect(jombe.short_name).toBe("Jombe - CRM");
+
+    const personalizado = buildManifest(marca, "x");
+    expect(personalizado.name).toBe("Ferretería El Martillo - CRM");
+    expect(personalizado.short_name).toBe("Ferretería");
   });
 
   it("trae los iconos que pide Chrome para instalar: 192 y 512, y un maskable", () => {

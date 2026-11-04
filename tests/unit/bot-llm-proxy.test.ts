@@ -22,6 +22,7 @@ vi.mock("@/server/bot/auth", async (importOriginal) => ({
 }));
 
 import { POST } from "@/app/api/bot/llm/[...ruta]/route";
+import { cuerpoConMaxTokens } from "@/server/bot/llm-proxy";
 import { resetRateLimit } from "@/lib/rate-limit";
 
 const PROVEEDOR = (source: "org" | "env" = "org"): AiResolution => ({
@@ -81,12 +82,20 @@ describe("/api/bot/llm — quién entra", () => {
 });
 
 describe("/api/bot/llm — el reenvío", () => {
-  it("reenvía el cuerpo TAL CUAL a {base}/v1/{ruta} con la llave del negocio, y devuelve la respuesta tal cual", async () => {
+  it("reenvía el cuerpo a {base}/v1/{ruta} con la llave del negocio, y devuelve la respuesta tal cual", async () => {
     const res = await peticion({ authorization: `Bearer ${LLAVE_BOT}` });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://proveedor.test/api/v1/chat/completions");
-    expect(init.body).toBe(CUERPO);
+    // v2.7.6 — el cuerpo viaja tal cual SALVO que a chat/completions le falte
+    // max_tokens: entonces se agrega 4096 (MiraiAPI/Claude lo exige). Todo lo
+    // demás del cuerpo se conserva.
+    expect(JSON.parse(String(init.body))).toEqual({
+      model: "m/uno",
+      messages: [{ role: "user", content: "hola" }],
+      extra: { x: 1 },
+      max_tokens: 4096,
+    });
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${LLAVE_IA}`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ choices: [{ message: { content: "hola!" } }] });
@@ -145,5 +154,55 @@ describe("/api/bot/llm — el reenvío", () => {
     fetchMock.mockRejectedValue(new Error(`boom ${LLAVE_IA}`));
     vistas.push(await (await peticion({ authorization: `Bearer ${LLAVE_BOT}` })).text());
     for (const v of vistas) expect(v).not.toContain(LLAVE_IA);
+  });
+});
+
+describe("v2.7.6 — cuerpoConMaxTokens: inyecta max_tokens para el cerebro en chat/completions", () => {
+  it("sin max_tokens → lo agrega con 4096", () => {
+    const entrada = JSON.stringify({ model: "m/uno", messages: [{ role: "user", content: "hola" }] });
+    const salida = JSON.parse(cuerpoConMaxTokens("chat/completions", entrada));
+    expect(salida).toEqual({
+      model: "m/uno",
+      messages: [{ role: "user", content: "hola" }],
+      max_tokens: 4096,
+    });
+  });
+
+  it("con max_tokens → sale intacto", () => {
+    const entrada = JSON.stringify({ model: "m/uno", messages: [], max_tokens: 512 });
+    expect(cuerpoConMaxTokens("chat/completions", entrada)).toBe(entrada);
+  });
+
+  it("otra ruta (embeddings, models, etc.) → sale intacto", () => {
+    const entrada = JSON.stringify({ model: "m/embed", input: "texto" });
+    expect(cuerpoConMaxTokens("embeddings", entrada)).toBe(entrada);
+    expect(cuerpoConMaxTokens("models", "")).toBe("");
+  });
+
+  it("JSON inválido → sale intacto: no revienta el proxy", () => {
+    const basura = "{ esto no es JSON }";
+    expect(cuerpoConMaxTokens("chat/completions", basura)).toBe(basura);
+  });
+
+  it("cuerpo que no es un objeto (array, null, string) → intacto", () => {
+    expect(cuerpoConMaxTokens("chat/completions", "[]")).toBe("[]");
+    expect(cuerpoConMaxTokens("chat/completions", "null")).toBe("null");
+    expect(cuerpoConMaxTokens("chat/completions", '"string"')).toBe('"string"');
+  });
+
+  it("el cerebro llama al proxy y recibe la respuesta con max_tokens inyectado", async () => {
+    const sinMaxTokens = JSON.stringify({ model: "m/uno", messages: [{ role: "user", content: "test" }] });
+    const res = await POST(
+      new Request("http://crm.test/api/bot/llm/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${LLAVE_BOT}` },
+        body: sinMaxTokens,
+      }),
+      { params: Promise.resolve({ ruta: ["chat", "completions"] }) }
+    );
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const cuerpoEnviado = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(cuerpoEnviado.max_tokens).toBe(4096);
   });
 });

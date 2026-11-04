@@ -1,6 +1,6 @@
 {
-  "name": "Jombe CRM",
-  "short_name": "Jombe CRM",
+  "name": "Jombe - CRM",
+  "short_name": "Jombe - CRM",
   "description": "CRM multicanal con agente de IA y Laboratorio de auto-evaluacion",
   "start_url": "/inbox",
   "display": "standalone",

@@ -68,12 +68,14 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding().catch(() => DEFAULT_BRANDING);
   const producto = productName([...enabledChannels()]);
-  // La app se presenta como «Jombe CRM» (marca + producto), no como «Vocero
+  // La app se presenta como «Jombe - CRM» (marca + producto), no como «Vocero
   // CRM»: el nombre sale de la marca de la organización, nunca cableado.
+  // v2.7.6 — el título de la ventana es exactamente el nombre de la app
+  // («Jombe - CRM»), sin el sufijo «— CRM multicanal».
   const app = appDisplayName(branding.name);
   return {
     title: {
-      default: `${app} — ${producto}`,
+      default: app,
       template: `%s · ${app}`,
     },
     applicationName: app,

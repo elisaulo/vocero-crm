@@ -222,3 +222,105 @@ describe("chatJson (reintentos y errores tipados)", () => {
     expect(marcas).toEqual([]);
   });
 });
+
+describe("v2.7.6 — proveedores OpenAI-compatible (MiraiAPI/Claude)", () => {
+  const schema = z.object({ action: z.literal("reply"), text: z.string() });
+
+  beforeEach(() => {
+    vi.stubEnv("APP_BASE_URL", "http://localhost:3000");
+    vi.stubEnv("DATABASE_URL", "postgresql://t:t@localhost:5432/t");
+    vi.stubEnv("BETTER_AUTH_SECRET", "secret-de-test-suficiente");
+    vi.stubEnv("ENCRYPTION_KEY", Buffer.alloc(32, 3).toString("base64"));
+    vi.stubEnv("META_WEBHOOK_VERIFY_TOKEN", "verify-test");
+    vi.stubEnv("OPENROUTER_API_TOKEN", "token-test");
+    vi.stubEnv("OPENROUTER_MODEL", "modelo-test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    fila.current = null;
+  });
+
+  function providerResponse(content: string) {
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content } }] }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  }
+
+  it("api.miraiapi.com/v1 → /chat/completions sin duplicar /v1, con max_tokens y sin response_format ni tools", async () => {
+    fila.current = {
+      ...FILA_ORG,
+      baseUrl: "https://api.miraiapi.com/v1",
+      model: "claude-opus-4.6",
+      token: "sk-mirai-9999",
+      tokenLast4: "9999",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(providerResponse('{"action":"reply","text":"ok"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await chatJson(schema, [{ role: "user", content: "hola" }], {
+      organizationId: "org_1",
+    });
+    expect(result.ok).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    // URL correcta: /v1/chat/completions, sin /v1/v1
+    expect(url).toBe("https://api.miraiapi.com/v1/chat/completions");
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.model).toBe("claude-opus-4.6");
+    // max_tokens explícito: los proxys de Claude lo exigen o truncar a 16
+    expect(body.max_tokens).toBe(4096);
+    // Nada de response_format, tools, parallel_tool_calls ni strict:
+    // combos que los proxys de Claude rechazan
+    expect(body).not.toHaveProperty("response_format");
+    expect(body).not.toHaveProperty("tools");
+    expect(body).not.toHaveProperty("parallel_tool_calls");
+  });
+
+  it("baseUrl sin /v1 también normaliza a /chat/completions", async () => {
+    fila.current = {
+      ...FILA_ORG,
+      baseUrl: "https://api.miraiapi.com",
+      model: "claude-opus-4.6",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(providerResponse('{"action":"reply","text":"ok"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await chatJson(schema, [{ role: "user", content: "hola" }], {
+      organizationId: "org_1",
+    });
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("https://api.miraiapi.com/v1/chat/completions");
+  });
+
+  it("los system intercalados (reintento STRICT) se consolidan al frente", async () => {
+    fila.current = FILA_ORG;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(providerResponse("no soy json"))
+      .mockResolvedValueOnce(providerResponse('{"action":"reply","text":"ok"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await chatJson(
+      schema,
+      [
+        { role: "system", content: "Eres un agente." },
+        { role: "user", content: "hola" },
+      ],
+      { organizationId: "org_1" }
+    );
+    expect(result.ok).toBe(true);
+    // Segundo intento: el STRICT añadido al final debe quedar consolidado
+    // al frente junto al system original, nunca después del user.
+    const body = JSON.parse(fetchMock.mock.calls[1]![1]!.body as string);
+    const roles = body.messages.map((m: { role: string }) => m.role);
+    expect(roles).toEqual(["system", "user"]);
+    expect(body.messages[0].content).toContain("Eres un agente.");
+    expect(body.messages[0].content).toContain("STRICT");
+  });
+});

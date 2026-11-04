@@ -55,12 +55,13 @@ export function shortAppName(name: string): string {
 /**
  * El nombre con el que se presenta la app: la marca de la organización más el
  * producto. La instancia por defecto se llama «Jombe», así que su app es
- * «Jombe CRM»; una instancia rebautizada ve SU nombre («Ferretería El Martillo
- * CRM»), nunca «Vocero CRM» cableado.
+ * «Jombe - CRM» (v2.7.6: con guion, no «Jombe CRM»); una instancia rebautizada
+ * ve SU nombre («Ferretería El Martillo - CRM»), nunca «Vocero» cableado.
  */
 export function appDisplayName(name: string): string {
   const limpio = name.trim() || "Jombe";
-  return /\bcrm$/i.test(limpio) ? limpio : `${limpio} CRM`;
+  // v2.7.6 — el separador es " - " (guion con espacios), no solo espacio.
+  return /\bcrm$/i.test(limpio) ? limpio : `${limpio} - CRM`;
 }
 
 /** Pura: el manifest de la instancia. Nada de «Vocero» cableado: sale de la marca. */

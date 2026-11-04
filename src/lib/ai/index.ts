@@ -79,13 +79,13 @@ export async function chatJson<T>(
       attempt === 1
         ? messages
         : [
-            ...messages,
-            {
-              role: "system",
-              content:
-                "STRICT: tu respuesta anterior no fue JSON válido según el esquema. Responde ÚNICAMENTE el objeto JSON, sin explicaciones ni markdown.",
-            },
-          ];
+          ...messages,
+          {
+            role: "system",
+            content:
+              "STRICT: tu respuesta anterior no fue JSON válido según el esquema. Responde ÚNICAMENTE el objeto JSON, sin explicaciones ni markdown.",
+          },
+        ];
     try {
       const raw = await callProvider(
         provider,
@@ -172,11 +172,25 @@ async function callProvider(
         Authorization: `Bearer ${provider.token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model, messages }),
+      body: JSON.stringify({
+        model,
+        messages: consolidarSystem(messages),
+        /**
+         * v2.7.6 — `max_tokens` es obligatorio para proveedores OpenAI-compatible
+         * que proxean Claude (MiraiAPI, etc.): sin él rechazan la petición o
+         * aplican un límite demasiado bajo (16 tokens) que trunca la respuesta.
+         * 4096 es un valor seguro para la mayoría de los modelos.
+         */
+        max_tokens: 4096,
+      }),
       signal: controller.signal,
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
+      // v2.7.6 — Log del error HTTP REAL para debugging (sin exponer el token).
+      console.error(
+        `[ai] proveedor respondió ${res.status} en ${chatCompletionsUrl(provider.baseUrl)}: ${truncate(text)}`
+      );
       throw new ProviderHttpError(res.status, text);
     }
     const json = (await res.json()) as {
@@ -190,6 +204,27 @@ async function callProvider(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * v2.7.6 — Consolida TODOS los mensajes `system` en UNO solo al inicio.
+ *
+ * Proxys que ponen Claude detrás de la API de OpenAI (p. ej. MiraiAPI) rechazan
+ * o ignoran `system` intercalado después de un `user`: los reintentos de
+ * `chatJson` añaden su instrucción STRICT al FINAL de la lista, lo que deja un
+ * `system` después del `user`. Aquí se unen al principio, en orden, separados
+ * por dos saltos de línea (convención de Claude para system compuesto).
+ *
+ * Sin system, o con uno solo ya al frente, no cambia nada.
+ */
+export function consolidarSystem(messages: ChatMessage[]): ChatMessage[] {
+  const system = messages.filter((m) => m.role === "system");
+  if (system.length <= 1 && messages[0]?.role === "system") return messages;
+  const texto = system.map((m) => m.content).join("\n\n");
+  const resto = messages.filter((m) => m.role !== "system");
+  return texto
+    ? [{ role: "system", content: texto }, ...resto]
+    : resto;
 }
 
 /**
