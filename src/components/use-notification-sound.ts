@@ -6,6 +6,8 @@ import {
   saveSoundId,
   NOTIFICATION_SOUNDS,
   DEFAULT_SOUND_ID,
+  esSonidoPersonalizado,
+  getCustomSoundDataUrl,
   type NotificationSoundId,
 } from "@/lib/notification-sound";
 
@@ -55,13 +57,25 @@ export function useNotificationSound() {
   const preview = useCallback(
     (id?: NotificationSoundId) => {
       const target = id ?? soundId;
+
+      // v2.7.6 — Si es el sonido personalizado, reproduce el Data URL
+      // guardado en localStorage en vez de una ruta pública.
+      if (esSonidoPersonalizado(target)) {
+        const dataUrl = getCustomSoundDataUrl();
+        if (!dataUrl) return;
+        const audio = new Audio(dataUrl);
+        audio.volume = 0.7;
+        audio.play().catch(() => { });
+        return;
+      }
+
       const sound = NOTIFICATION_SOUNDS.find((s) => s.id === target);
       if (!sound?.src) return;
       // Para la previsualización forzamos aunque no haya interacción previa
       // porque el usuario acaba de hacer click en «Previsualizar».
       const audio = new Audio(sound.src);
       audio.volume = 0.7;
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     },
     [soundId]
   );
@@ -73,6 +87,17 @@ export function useNotificationSound() {
    */
   const playNotification = useCallback(() => {
     if (!unlockedRef.current) return;
+
+    // v2.7.6 — Si es el sonido personalizado, reproduce el Data URL guardado.
+    if (esSonidoPersonalizado(soundId)) {
+      const dataUrl = getCustomSoundDataUrl();
+      if (!dataUrl) return;
+      const audio = new Audio(dataUrl);
+      audio.volume = 0.6;
+      audio.play().catch(() => { });
+      return;
+    }
+
     const sound = NOTIFICATION_SOUNDS.find((s) => s.id === soundId);
     if (!sound?.src) return;
 
@@ -83,7 +108,7 @@ export function useNotificationSound() {
       audioRef.current.volume = 0.6;
     }
     audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
+    audioRef.current.play().catch(() => { });
   }, [soundId]);
 
   return { soundId, setSoundId, preview, playNotification };
