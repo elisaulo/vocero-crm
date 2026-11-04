@@ -5,7 +5,7 @@ import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { getContactById } from "@/server/contacts";
 import { getOrCreateConversation } from "@/server/inbox/ingest";
-import { SendError } from "@/server/inbox/send";
+import { sendText, SendError } from "@/server/inbox/send";
 import { isWindowOpen } from "@/server/inbox/window";
 import {
   sendTemplate,
@@ -17,10 +17,17 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-const bodySchema = z.object({
-  templateId: z.string().min(1),
-  variables: z.array(z.string().trim().max(500)).max(10).optional(),
-});
+// 2.7.7 — Evolution API (QR) no tiene la restricción de plantilla de Meta:
+// a quien nunca ha escrito se le puede mandar texto libre directo.
+const bodySchema = z.union([
+  z.object({
+    templateId: z.string().min(1),
+    variables: z.array(z.string().trim().max(500)).max(10).optional(),
+  }),
+  z.object({
+    message: z.string().trim().min(1).max(4096),
+  }),
+]);
 
 /**
  * Abre la conversación con un contacto que NUNCA ha escrito (capturado
@@ -54,6 +61,28 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
       )
     )
     .limit(1);
+
+  // 2.7.7 — Evolution API: texto libre, sin plantilla y sin ventana.
+  if ("message" in body.data) {
+    const conversation =
+      existing[0] ?? (await getOrCreateConversation(session.organizationId, id));
+    try {
+      const result = await sendText({
+        organizationId: session.organizationId,
+        conversationId: conversation.id,
+        text: body.data.message,
+      });
+      return Response.json({
+        messageId: result.messageId,
+        conversationId: conversation.id,
+      });
+    } catch (err) {
+      if (err instanceof SendError) {
+        return apiError(409, err.code, err.message);
+      }
+      throw err;
+    }
+  }
 
   // Gastar una plantilla teniendo la ventana abierta es tirar dinero y
   // reputación de plantilla: se avisa en vez de enviarla.

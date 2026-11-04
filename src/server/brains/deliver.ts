@@ -25,8 +25,16 @@ import { windowMsFor } from "@/server/channels/capabilities";
  * Cloud sin tipos de cerebro: aquí hay uno, el de `BRAIN_DISPATCH_URL`.
  */
 
-/** Lo que el CRM espera por el 2xx. Significa «recibido», no «ya contesté». */
-export const TIMEOUT_ENTREGA_MS = 20_000;
+/**
+ * Lo que el CRM espera por el 2xx. Significa «recibido», no «ya contesté».
+ *
+ * 2.7.7 — 60 s (antes 20 s): un cerebro con un modelo lento (MiraiAPI,
+ * claude-opus-4.6) puede tardar más en acusar recibo bajo carga. Sigue sin
+ * violar 036: esto no espera una respuesta, solo el recibido del POST; si el
+ * cerebro no contesta a tiempo el worker reintenta (3 veces) y cae a humano
+ * con `handoff_reason = error`.
+ */
+export const TIMEOUT_ENTREGA_MS = 60_000;
 
 /** Cuántos mensajes hacia atrás se mira para delimitar la ráfaga. */
 const VENTANA_DE_MENSAJES = 20;
@@ -70,12 +78,12 @@ function paraEvento(m: {
     text: m.text,
     media: m.assetId
       ? {
-          waMediaId: m.waMediaId,
-          mimeType: m.mimeType,
-          caption: m.caption,
-          fileName: m.fileName,
-          payload: m.payload,
-        }
+        waMediaId: m.waMediaId,
+        mimeType: m.mimeType,
+        caption: m.caption,
+        fileName: m.fileName,
+        payload: m.payload,
+      }
       : null,
   };
 }
@@ -306,7 +314,7 @@ export async function entregar(
       body: cuerpo,
       signal: controller.signal,
     });
-    await res.body?.cancel().catch(() => {});
+    await res.body?.cancel().catch(() => { });
     return clasificarRespuesta(res.status);
   } catch {
     // Sin respuesta a tiempo, nombre que no resuelve, conexión rechazada:
@@ -378,7 +386,7 @@ export async function avisarOlvido(
       body: cuerpo,
       signal: controller.signal,
     });
-    await res.body?.cancel().catch(() => {});
+    await res.body?.cancel().catch(() => { });
     return res.status >= 200 && res.status < 300 ? "avisado" : "sin_confirmar";
   } catch {
     return "sin_confirmar";

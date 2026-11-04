@@ -38,7 +38,7 @@ import {
 export type ChannelStatus = {
   channel: Channel;
   connected: boolean;
-  source: "meta" | "zernio" | null;
+  source: "meta" | "zernio" | "evolution" | null;
   /** La cuenta, el número o la página, como lo reconoce una persona. */
   account: string | null;
   status: "connected" | "reconnect_required" | null;
@@ -109,13 +109,30 @@ function saludDe(conn: ZernioConnection, lectura: Lectura): ChannelStatus["healt
 
 export async function channelsStatus(organizationId: string): Promise<ChannelStatus[]> {
   const encendidos = enabledChannels();
-  const [ultimos, wa, ig, fb, zernio] = await Promise.all([
+  const [ultimos, wa, ig, fb, zernio, [org]] = await Promise.all([
     lastInboundByChannel(organizationId),
     getCredentialsByOrg(organizationId),
     encendidos.has("instagram") ? getInstagramCredentialsByOrg(organizationId) : null,
     encendidos.has("messenger") ? getMessengerCredentialsByOrg(organizationId) : null,
     zernioConnectionsOfOrg(organizationId),
+    // 2.7.7 — Evolution API (Baileys/QR) no guarda credenciales en
+    // meta_credentials: su configuración vive en la organización.
+    getDb()
+      .select({
+        whatsappProvider: schema.organization.whatsappProvider,
+        evolutionApiUrl: schema.organization.evolutionApiUrl,
+        evolutionApiKey: schema.organization.evolutionApiKey,
+        evolutionInstance: schema.organization.evolutionInstance,
+      })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, organizationId))
+      .limit(1),
   ]);
+  const evolutionReady =
+    org?.whatsappProvider === "evolution" &&
+    Boolean(org.evolutionApiUrl) &&
+    Boolean(org.evolutionApiKey) &&
+    Boolean(org.evolutionInstance);
 
   // Una lectura por llave, no por canal: lo normal es que los tres compartan una.
   const llaves = [...new Set(zernio.map((c) => c.token))];
@@ -129,6 +146,19 @@ export async function channelsStatus(organizationId: string): Promise<ChannelSta
     const base = { channel, lastInboundAt: ultimos[channel] ?? null };
 
     if (channel === "whatsapp") {
+      // 2.7.7 — Evolution API manda sobre Meta cuando está configurada: es el
+      // proveedor activo de la organización y no tiene fila en meta_credentials.
+      if (evolutionReady) {
+        filas.push({
+          ...base,
+          connected: true,
+          source: "evolution",
+          account: org?.evolutionInstance ?? null,
+          status: "connected",
+          health: null,
+        });
+        continue;
+      }
       filas.push({
         ...base,
         connected: Boolean(wa),

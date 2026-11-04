@@ -44,9 +44,14 @@ export function appIconHref(
 /**
  * El nombre corto que se lee bajo el icono. Android corta a ~12 caracteres:
  * mejor la primera palabra entera que «Ferretería E…».
+ *
+ * v2.7.7 — Se quita el sufijo « - CRM» antes de medir: en la app instalada el
+ * sistema ya muestra el nombre corto bajo el icono y la página su `<title>`;
+ * si ambos dicen «Jombe - CRM» el nombre aparece dos veces. El corto es la
+ * marca sola («Jombe»), y el largo (`name`) sigue siendo «Jombe - CRM».
  */
 export function shortAppName(name: string): string {
-  const limpio = name.trim() || "CRM";
+  const limpio = (name.trim() || "CRM").replace(/\s*[-–—]\s*crm$/i, "").trim() || "CRM";
   if (limpio.length <= 12) return limpio;
   const primera = limpio.split(/\s+/)[0] ?? limpio;
   return primera.length <= 12 ? primera : primera.slice(0, 12);

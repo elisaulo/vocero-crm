@@ -10,7 +10,10 @@
 
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 
-export const AI_PROVIDERS = ["openrouter", "openai_compatible"] as const;
+/** 2.7.7 — MiraiAPI: pasarela compatible con OpenAI con modelos Claude. */
+export const MIRAIAPI_BASE_URL = "https://api.miraiapi.com";
+
+export const AI_PROVIDERS = ["openrouter", "miraiapi", "openai_compatible"] as const;
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export const AI_STATUSES = [
@@ -37,6 +40,13 @@ export const AI_PROVIDER_PRESETS: Record<AiProviderId, AiProviderPreset> = {
     modelPlaceholder: "anthropic/claude-sonnet-4.5",
     tokenPlaceholder: "sk-or-…",
   },
+  miraiapi: {
+    id: "miraiapi",
+    label: "MiraiAPI",
+    baseUrl: MIRAIAPI_BASE_URL,
+    modelPlaceholder: "claude-opus-4.6",
+    tokenPlaceholder: "sk-mirai-…",
+  },
   openai_compatible: {
     id: "openai_compatible",
     label: "Otro compatible con OpenAI",
@@ -54,9 +64,10 @@ export const AI_STATUS_LABEL: Record<AiStatus, string> = {
 
 /** A qué preset corresponde una base URL (la del entorno o una guardada). */
 export function presetDeBaseUrl(baseUrl: string): AiProviderId {
-  return apiRoot(baseUrl) === apiRoot(OPENROUTER_BASE_URL)
-    ? "openrouter"
-    : "openai_compatible";
+  const raiz = apiRoot(baseUrl).toLowerCase();
+  if (raiz === apiRoot(OPENROUTER_BASE_URL).toLowerCase()) return "openrouter";
+  if (raiz === apiRoot(MIRAIAPI_BASE_URL).toLowerCase()) return "miraiapi";
+  return "openai_compatible";
 }
 
 /**

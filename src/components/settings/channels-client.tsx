@@ -32,7 +32,7 @@ type Health = { level: Level; message: string };
 type Row = {
   channel: Channel;
   connected: boolean;
-  source: "meta" | "zernio" | null;
+  source: "meta" | "zernio" | "evolution" | null;
   account: string | null;
   status: "connected" | "reconnect_required" | null;
   lastInboundAt: string | null;
@@ -199,11 +199,16 @@ export function ChannelsClient() {
                   <dt className="text-text-2">Cuenta</dt>
                   <dd>
                     {r.account ?? "Sin nombre"}
-                    {r.channel !== "whatsapp" && (
-                      <span className="text-text-2">
-                        {" "}
-                        · {r.source === "zernio" ? "por Zernio" : "app propia de Meta"}
-                      </span>
+                    {r.source === "evolution" ? (
+                      // 2.7.7 — Evolution API (QR, sin app de Meta): se dice tal cual.
+                      <span className="text-text-2"> · Evolution API</span>
+                    ) : (
+                      r.channel !== "whatsapp" && (
+                        <span className="text-text-2">
+                          {" "}
+                          · {r.source === "zernio" ? "por Zernio" : "app propia de Meta"}
+                        </span>
+                      )
                     )}
                   </dd>
 

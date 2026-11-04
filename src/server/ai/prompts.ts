@@ -24,7 +24,10 @@ export function renderKb(entries: KbEntry[]): string {
     .join("\n\n");
 }
 
-/** Prompt del juez del Laboratorio: UNA llamada por conversación (FR-032). */
+/**
+ * Prompt del juez del Laboratorio: UNA llamada por conversación (FR-032).
+ * 2.7.7 — El juez detecta también re-saludos y persecución de relleno.
+ */
 export function buildJudgePrompt(input: {
   persona: string;
   transcript: { role: "cliente" | "agente" | "sistema"; text: string }[];
@@ -40,6 +43,8 @@ export function buildJudgePrompt(input: {
     "- Si el agente respondió sobre un tema que NO está en el conocimiento → hallazgo fuera_de_kb (o alucinacion si afirmó datos concretos).",
     "- Si el cliente pidió un humano y no hubo escalado → debio_escalar.",
     "- Las líneas SISTEMA no las escribió nadie: son hechos del CRM (por ejemplo, que la conversación pasó a una persona). Un traspaso registrado ahí ES un escalado.",
+    "- v2.7.7 — Anti re-saludo: si el agente ya saludó, no vuelve a saludar después. Un segundo «¡Hola!» o «¿En qué te puedo ayudar?» tras haber iniciado es redundante → hallazgo tono.",
+    "- v2.7.7 — Anti repetición (persona «Sin rumbo»): si el cliente solo manda relleno («ok», «jaja», «👍», «sale») el agente se despide UNA VEZ y deja de responder. Perseguir con «¿Algo más?» tras cada relleno es incorrecto → hallazgo tono.",
   ].join("\n");
 
   const transcript = input.transcript

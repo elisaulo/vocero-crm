@@ -29,7 +29,11 @@ import { ImportContactsDialog } from "./import-contacts-dialog";
 import { NewContactDialog } from "./new-contact-dialog";
 import { StartConversation } from "./start-conversation";
 
-export function ContactsClient() {
+export function ContactsClient({
+  whatsappProvider = "meta",
+}: {
+  whatsappProvider?: "meta" | "evolution";
+} = {}) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactDto[]>([]);
   const [query, setQuery] = useState("");
@@ -284,6 +288,7 @@ export function ContactsClient() {
             </div>
             <StartConversation
               contactId={escribiendo.id}
+              whatsappProvider={whatsappProvider}
               onStarted={() => {
                 const contactId = escribiendo.id;
                 setEscribiendo(null);

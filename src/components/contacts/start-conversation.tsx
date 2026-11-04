@@ -6,6 +6,7 @@ import { Send } from "lucide-react";
 import type { TemplateDto } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 /** Cuenta {{1}}..{{n}} igual que el servidor, para pedir sus valores. */
 function countVariables(body: string): number {
@@ -15,14 +16,94 @@ function countVariables(body: string): number {
   return found.size;
 }
 
+type Props = {
+  contactId: string;
+  onStarted: (conversationId: string) => void;
+  /** 2.7.7 — Evolution API (QR) no tiene la restricción de plantilla de
+   * Meta: a quien nunca ha escrito se le puede mandar texto libre. */
+  whatsappProvider?: "meta" | "evolution";
+};
+
 /**
  * Abrir conversación con quien nunca ha escrito.
  *
- * WhatsApp obliga a usar una plantilla aprobada para escribir primero; no es
- * una decisión del CRM. Si la ventana de 24 h está abierta, este panel ni se
- * muestra: gastar una plantilla ahí sería tirar dinero.
+ * Con Meta, WhatsApp obliga a usar una plantilla aprobada para escribir
+ * primero; no es una decisión del CRM. Si la ventana de 24 h está abierta,
+ * este panel ni se muestra: gastar una plantilla ahí sería tirar dinero.
+ *
+ * Con Evolution API (Baileys/QR) no existe esa restricción: se manda texto
+ * libre directo, igual que si la conversación ya estuviera abierta.
  */
 export function StartConversation({
+  contactId,
+  onStarted,
+  whatsappProvider = "meta",
+}: Props) {
+  if (whatsappProvider === "evolution") {
+    return <StartConversationEvolution contactId={contactId} onStarted={onStarted} />;
+  }
+  return <StartConversationMeta contactId={contactId} onStarted={onStarted} />;
+}
+
+/** 2.7.7 — Evolution API: sin plantilla, solo texto libre. */
+function StartConversationEvolution({
+  contactId,
+  onStarted,
+}: {
+  contactId: string;
+  onStarted: (conversationId: string) => void;
+}) {
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function enviar() {
+    setEnviando(true);
+    setError(null);
+    const res = await fetch(`/api/contacts/${contactId}/start-conversation`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: texto.trim() }),
+    }).catch(() => null);
+    setEnviando(false);
+    const data = (await res?.json().catch(() => null)) as
+      | { error?: { message?: string }; conversationId?: string }
+      | null;
+    if (!res?.ok) {
+      setError(data?.error?.message ?? "No se pudo iniciar la conversación");
+      return;
+    }
+    onStarted(data?.conversationId ?? "");
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-text-3">
+        Nunca te ha escrito, pero con Evolution API puedes mandarle texto libre
+        directo: no hace falta plantilla.
+      </p>
+      <Textarea
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="Escribe tu primer mensaje…"
+        rows={3}
+        aria-label="Primer mensaje"
+      />
+      <Button
+        size="sm"
+        disabled={enviando || !texto.trim()}
+        onClick={() => void enviar()}
+      >
+        <Send className="mr-1.5 h-3.5 w-3.5" strokeWidth={1.7} />
+        {enviando ? "Enviando…" : "Iniciar conversación"}
+      </Button>
+      {error && <p className="text-xs text-danger-text">{error}</p>}
+    </div>
+  );
+}
+
+/** Meta Cloud API: exige plantilla aprobada para escribir primero. */
+function StartConversationMeta({
   contactId,
   onStarted,
 }: {

@@ -5,6 +5,58 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.7.7 — 2026-11-04
+
+Robustez del despacho, Evolution API en Ajustes → Estado, MiraiAPI como
+proveedor nativo de IA y el nombre de la app instalada sin repetirse. No
+requiere migración de BD ni variables de entorno nuevas: actualizar es
+redesplegar (`docker compose pull && docker compose up -d`).
+
+### Corregido
+
+- **El cerebro lento ya no pierde el turno** (036): el acuse de recibo del
+  despacho espera 60 s en vez de 20
+  ([`TIMEOUT_ENTREGA_MS`](src/server/brains/deliver.ts:37)) — un modelo lento
+  (MiraiAPI, `claude-opus-4.6`) puede tardar más en contestar bajo carga. El
+  Laboratorio espera en proporción
+  ([`TURNO_TIMEOUT_MS`](src/server/lab/runner.ts:1),
+  `SILENCIO_MS`). Sigue sin violar 036: el CRM no genera texto, solo espera el
+  «recibido»; si no llega, el worker reintenta y cae a humano.
+- **`nea` se reinicia solo**: `restart: unless-stopped` en
+  [`docker-compose.yml`](docker-compose.yml:1), como el CRM. Antes un corte en
+  la máquina host dejaba el cerebro abajo y la bandeja muda.
+- **El agente no vuelve a saludar ni se repite**: regla explícita en
+  [`guia-agente.md`](docs/guia-agente.md:1) §4.1, y el juez del Laboratorio la
+  marca como defecto ([`prompts.ts`](src/server/ai/prompts.ts:1)). Antes, un
+  turno tras una pausa (o una ráfaga partida) arrancaba con «¡Hola! ¿En qué
+  puedo ayudarte?» otra vez.
+- **Evolution API se ve «Conectado» en Ajustes → Estado**: el canal de WhatsApp
+  reconoce el proveedor configurado en la organización —no hay fila en
+  `meta_credentials`— y muestra la instancia
+  ([`status.ts`](src/server/channels/status.ts:151),
+  [`channels-client.tsx`](src/components/settings/channels-client.tsx:202)).
+- **Contactos ya no exige plantilla con Evolution**: el diálogo «Iniciar
+  conversación» escribe texto libre (ventana ilimitada, PARCHE 1) en vez de
+  bloquear por falta de plantilla aprobada
+  ([`start-conversation.tsx`](src/components/contacts/start-conversation.tsx:49),
+  [`route.ts`](src/app/api/contacts/[id]/start-conversation/route.ts:40)).
+- **El nombre de la app instalada no se repite**: `short_name` quita el sufijo
+  « - CRM» antes de medir, así que bajo el icono se lee «Jombe» y no dos veces
+  «Jombe - CRM» ([`pwa.ts`](src/lib/pwa.ts:53),
+  [`pwa.test.ts`](tests/unit/pwa.test.ts:97)). Se eliminó el
+  `public/manifest.json` estático (hardcodeaba «Jombe - CRM» y nadie lo
+  enlazaba): el manifest es el dinámico de
+  [`manifest.ts`](src/app/manifest.ts:14).
+
+### Añadido
+
+- **MiraiAPI como proveedor nativo en Configuración → IA**: base
+  `https://api.miraiapi.com/v1` y modelo `claude-opus-4.6` sugeridos; el
+  adaptador ya lo trata como OpenAI-compatible (sin `/v1` duplicado, con
+  `max_tokens`) ([`presets.ts`](src/lib/ai/presets.ts:26),
+  [`ai-client.tsx`](src/components/settings/ai-client.tsx:491),
+  [`ai-adapter.test.ts`](tests/unit/ai-adapter.test.ts:252)).
+
 ## 2.7.5 — 2026-11-03
 
 Rebrand completo a Jombe CRM: marca visual, nombre y metadata. No requiere

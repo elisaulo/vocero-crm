@@ -88,16 +88,16 @@ export function AiClient() {
       // del entorno (para que «Guardar» lo deje escrito tal cual se usa hoy).
       const base = data.credencial
         ? {
-            provider: data.credencial.proveedor,
-            baseUrl: data.credencial.baseUrl,
-            modelo: data.credencial.modelo,
-          }
+          provider: data.credencial.proveedor,
+          baseUrl: data.credencial.baseUrl,
+          modelo: data.credencial.modelo,
+        }
         : data.respaldoEntorno
           ? {
-              provider: presetDeBaseUrl(data.respaldoEntorno.baseUrl),
-              baseUrl: data.respaldoEntorno.baseUrl,
-              modelo: data.respaldoEntorno.modelo,
-            }
+            provider: presetDeBaseUrl(data.respaldoEntorno.baseUrl),
+            baseUrl: data.respaldoEntorno.baseUrl,
+            modelo: data.respaldoEntorno.modelo,
+          }
           : null;
       if (base) {
         setProvider(base.provider);
@@ -485,6 +485,24 @@ function AyudaLlave({ provider }: { provider: AiProviderId }) {
               Keys
             </a>{" "}
             → Create key y copia la llave.
+          </li>
+          <li>Pégala aquí, pulsa «Probar conexión» y luego «Guardar».</li>
+        </ol>
+      ) : provider === "miraiapi" ? (
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-muted-foreground">
+          <li>
+            Crea una cuenta del negocio en{" "}
+            <a className="underline" href="https://api.miraiapi.com" target="_blank" rel="noopener noreferrer">
+              api.miraiapi.com
+            </a>
+            .
+          </li>
+          <li>
+            En el panel de MiraiAPI, crea una API key con permiso para chat completions.
+          </li>
+          <li>
+            El modelo por defecto es <code className="font-mono">claude-opus-4.6</code>;
+            puedes cambiarlo por cualquier modelo que tu cuenta tenga habilitado.
           </li>
           <li>Pégala aquí, pulsa «Probar conexión» y luego «Guardar».</li>
         </ol>

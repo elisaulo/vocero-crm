@@ -1,7 +1,7 @@
 # ============================================================
 # Vocero CRM — Despliegue en VPS con Coolify + Traefik
 #
-# Servicios: app (CRM) + postgres
+# Servicios: app (CRM) + postgres + nea (cerebro, opcional)
 # Dominio:   crm.vocero.bid  (Traefik + Let's Encrypt)
 # Imagen:    elisaulo/vocero-crm:local  (construida desde el repo)
 #
@@ -17,13 +17,20 @@
 #
 # La red `coolify` la crea Coolify automáticamente. Traefik vive en
 # esa red y enruta crm.vocero.bid → vocero-crm-app-1:3000.
+#
+# 2.7.7 — El servicio `nea` (cerebro externo, `BRAIN_DISPATCH_URL`/
+# `BRAIN_HEALTH_URL` apuntan a él por defecto) lleva `restart:
+# unless-stopped`: si se reinicia o se cae, Docker lo levanta solo. El CRM
+# sigue sin contestar por su cuenta (036): si nea tarda en volver, el worker
+# del despacho reintenta y, agotados los intentos, cae a humano
+# (`handoff_reason = error`) en vez de quedarse esperando para siempre.
 # ============================================================
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.6}
+    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.7}
     container_name: vocero-crm-app-1
     restart: unless-stopped
     ports:
@@ -95,6 +102,23 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - default
+
+  # 2.7.7 — El cerebro (Nea u otro) que contesta por el despacho. Opcional:
+  # sin BRAIN_DISPATCH_URL/BOT_API_KEY el CRM queda en bandeja manual (036).
+  # Se activa con `docker compose --profile nea up -d` o quitando el profile
+  # si el VPS corre siempre con cerebro. `restart: unless-stopped` para que
+  # un reinicio o caída del proceso no deje el despacho sin a quién avisar.
+  nea:
+    image: ghcr.io/elisaulo/nea-agent:${NEA_VERSION:-latest}
+    container_name: vocero-nea-1
+    profiles: [ "nea" ]
+    restart: unless-stopped
+    environment:
+      BOT_BASE_URL: ${APP_BASE_URL:-https://crm.vocero.bid}
+      BOT_API_KEY: ${BOT_API_KEY:-bot_key_segura_1234567890}
+      LLM_API_KEY: ${LLM_API_KEY:-}
     networks:
       - default
 

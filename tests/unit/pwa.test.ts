@@ -45,14 +45,23 @@ describe("el manifest", () => {
     });
   });
 
-  it("v2.7.6 — el título de la app es exactamente la marca con el separador", () => {
+  it("v2.7.6 — el nombre largo lleva el separador", () => {
     const jombe = buildManifest({ name: "Jombe", accent: "#0d5bff", favicon: null }, "CRM");
     expect(jombe.name).toBe("Jombe - CRM");
-    expect(jombe.short_name).toBe("Jombe - CRM");
 
     const personalizado = buildManifest(marca, "x");
     expect(personalizado.name).toBe("Ferretería El Martillo - CRM");
     expect(personalizado.short_name).toBe("Ferretería");
+  });
+
+  it("v2.7.7 — el corto nunca repite «CRM»: antes se veía el nombre dos veces en standalone", () => {
+    // Con un nombre corto («Jombe - CRM», 11 caracteres) el recorte a 12
+    // caracteres no actuaba y el corto quedaba IGUAL al largo: el sistema
+    // mostraba «Jombe - CRM» bajo el icono y la ventana/pestaña repetía
+    // «Jombe - CRM» otra vez. El corto debe ser solo la marca.
+    const jombe = buildManifest({ name: "Jombe", accent: "#0d5bff", favicon: null }, "CRM");
+    expect(jombe.name).toBe("Jombe - CRM");
+    expect(jombe.short_name).toBe("Jombe");
   });
 
   it("trae los iconos que pide Chrome para instalar: 192 y 512, y un maskable", () => {
@@ -83,6 +92,13 @@ describe("el nombre corto bajo el icono", () => {
     expect(shortAppName("Ferretería El Martillo")).toBe("Ferretería");
     expect(shortAppName("Supercalifragilístico SA")).toBe("Supercalifra");
     expect(shortAppName("   ")).toBe("CRM");
+  });
+
+  it("v2.7.7 — quita el « - CRM» del final antes de medir, para no duplicar el nombre", () => {
+    expect(shortAppName("Jombe - CRM")).toBe("Jombe");
+    expect(shortAppName("Jombe – CRM")).toBe("Jombe");
+    expect(shortAppName("Taller Ruiz - CRM")).toBe("Taller Ruiz");
+    expect(shortAppName("Ferretería El Martillo - CRM")).toBe("Ferretería");
   });
 });
 

@@ -30,18 +30,24 @@ import { rolDe } from "@/lib/agent-roles";
 
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 
-/** 033 — Cuánto se le espera al cerebro en cada línea del guion. */
-export const TURNO_TIMEOUT_MS = 90_000;
+/**
+ * 033 — Cuánto se le espera al cerebro en cada línea del guion.
+ *
+ * 2.7.7 — 120 s (antes 90 s): con un modelo más lento (MiraiAPI,
+ * claude-opus-4.6) el margen de 90 s podía agotarse antes de la respuesta.
+ */
+export const TURNO_TIMEOUT_MS = 120_000;
 const SONDEO_MS = 500;
 /** Tras la primera respuesta, lo que se espera por más mensajes o un traspaso. */
 const QUIETUD_MS = 1_500;
 /**
  * Entregado el despacho, cuánto se espera la respuesta antes de leer el
- * silencio como respuesta. Un turno de Nea con el modelo tarda de 3 a 20 s.
+ * silencio como respuesta. Un turno de Nea con el modelo tarda de 3 a 20 s;
+ * con un modelo más lento puede llegar a 60 s (2.7.7, antes 45 s).
  */
-export const SILENCIO_MS = 45_000;
+export const SILENCIO_MS = 60_000;
 
-export class RunConflictError extends Error {}
+export class RunConflictError extends Error { }
 
 export async function startRun(organizationId: string): Promise<string> {
   const db = getDb();
@@ -136,13 +142,13 @@ async function runAllCases(
   const profile = profileRows[0];
   const behaviorText = profile
     ? [
-        `Nombre: ${profile.name}`,
-        profile.tone ? `Tono: ${profile.tone}` : null,
-        profile.instructions ? `Instrucciones: ${profile.instructions}` : null,
-        profile.escalationRules ? `Escalado: ${profile.escalationRules}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n")
+      `Nombre: ${profile.name}`,
+      profile.tone ? `Tono: ${profile.tone}` : null,
+      profile.instructions ? `Instrucciones: ${profile.instructions}` : null,
+      profile.escalationRules ? `Escalado: ${profile.escalationRules}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n")
     : "";
 
   let done = 0;
@@ -303,11 +309,11 @@ async function runConversation(
     .limit(1);
   const traspaso = final?.handoffAt
     ? [
-        {
-          role: "sistema" as const,
-          text: `La conversación pasó a una persona (motivo: ${final.handoffReason ?? "sin motivo"}).`,
-        },
-      ]
+      {
+        role: "sistema" as const,
+        text: `La conversación pasó a una persona (motivo: ${final.handoffReason ?? "sin motivo"}).`,
+      },
+    ]
     : [];
 
   return {
@@ -315,11 +321,11 @@ async function runConversation(
     falla,
     transcript: [
       ...messages
-      .filter((m) => m.text)
-      .map((m) => ({
-        role: m.direction === "in" ? ("cliente" as const) : ("agente" as const),
-        text: m.text!,
-      })),
+        .filter((m) => m.text)
+        .map((m) => ({
+          role: m.direction === "in" ? ("cliente" as const) : ("agente" as const),
+          text: m.text!,
+        })),
       ...traspaso,
     ],
   };
