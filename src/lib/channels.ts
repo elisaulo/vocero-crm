@@ -9,7 +9,7 @@
  * mintiendo.
  */
 
-export type Channel = "whatsapp" | "instagram" | "messenger" | "tiktok";
+export type Channel = "whatsapp" | "instagram" | "messenger" | "tiktok" | "mercadolibre";
 
 /**
  * Orden en que los canales se presentan al operador. WhatsApp primero: es el
@@ -20,6 +20,10 @@ export const CHANNEL_ORDER: readonly Channel[] = [
   "instagram",
   "messenger",
   "tiktok",
+  // 067 — Mercado Libre no es un canal de mensajería social: es el hilo de
+  // posventa entre el comprador y el vendedor de una orden. Va último porque
+  // solo existe en las instancias que conectaron la cuenta vendedora.
+  "mercadolibre",
 ];
 
 /** Nombre visible del canal, para la interfaz y para los errores del operador. */
@@ -31,6 +35,8 @@ export const CHANNEL_LABEL: Record<Channel, string> = {
   messenger: "Messenger",
   // 022: los mensajes directos de una cuenta TikTok Business, por Zernio.
   tiktok: "TikTok",
+  // 067: el hilo de posventa de una orden de Mercado Libre.
+  mercadolibre: "Mercado Libre",
 };
 
 /**

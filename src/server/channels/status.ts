@@ -6,6 +6,7 @@ import { enabledChannels } from "@/server/channels/enabled";
 import { getInstagramCredentialsByOrg } from "@/server/instagram/credentials";
 import { getMessengerCredentialsByOrg } from "@/server/messenger/credentials";
 import { getCredentialsByOrg } from "@/server/whatsapp/credentials";
+import { getMlCredentialsByOrg } from "@/server/mercadolibre/credentials";
 import { webhookVerifyToken } from "@/server/whatsapp/webhook-url";
 import {
   zernioConnectionsOfOrg,
@@ -38,7 +39,7 @@ import {
 export type ChannelStatus = {
   channel: Channel;
   connected: boolean;
-  source: "meta" | "zernio" | "evolution" | null;
+  source: "meta" | "zernio" | "evolution" | "mercadolibre" | null;
   /** La cuenta, el número o la página, como lo reconoce una persona. */
   account: string | null;
   status: "connected" | "reconnect_required" | null;
@@ -109,11 +110,12 @@ function saludDe(conn: ZernioConnection, lectura: Lectura): ChannelStatus["healt
 
 export async function channelsStatus(organizationId: string): Promise<ChannelStatus[]> {
   const encendidos = enabledChannels();
-  const [ultimos, wa, ig, fb, zernio, [org]] = await Promise.all([
+  const [ultimos, wa, ig, fb, ml, zernio, [org]] = await Promise.all([
     lastInboundByChannel(organizationId),
     getCredentialsByOrg(organizationId),
     encendidos.has("instagram") ? getInstagramCredentialsByOrg(organizationId) : null,
     encendidos.has("messenger") ? getMessengerCredentialsByOrg(organizationId) : null,
+    encendidos.has("mercadolibre") ? getMlCredentialsByOrg(organizationId) : null,
     zernioConnectionsOfOrg(organizationId),
     // 2.7.7 — Evolution API (Baileys/QR) no guarda credenciales en
     // meta_credentials: su configuración vive en la organización.
@@ -165,6 +167,18 @@ export async function channelsStatus(organizationId: string): Promise<ChannelSta
         source: wa ? "meta" : null,
         account: wa?.displayPhoneNumber ?? null,
         status: wa?.status ?? null,
+        health: null,
+      });
+      continue;
+    }
+
+    if (channel === "mercadolibre") {
+      filas.push({
+        ...base,
+        connected: Boolean(ml),
+        source: ml ? "mercadolibre" : null,
+        account: ml?.nickname ?? ml?.mlUserId ?? null,
+        status: ml?.status ?? null,
         health: null,
       });
       continue;

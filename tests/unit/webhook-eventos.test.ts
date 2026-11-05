@@ -85,6 +85,7 @@ describe("a qué organización va cada evento", () => {
     porIgUserId: org("IG1"),
     porPageId: org("PAGE1"),
     porCuentaZernio: async () => ({ organizationId: "org_z" }),
+    porVendedorMl: nadie,
   };
 
   it("WhatsApp por phone_number_id, y por WABA para los estados de plantillas", async () => {

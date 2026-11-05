@@ -135,7 +135,9 @@ export const contact = pgTable(
      * 014: canal por el que vive este contacto. Aditivo y con default: toda
      * fila existente sigue significando exactamente lo mismo.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger", "tiktok"] })
+    channel: text("channel", {
+      enum: ["whatsapp", "instagram", "messenger", "tiktok", "mercadolibre"],
+    })
       .notNull()
       .default("whatsapp"),
     /**
@@ -370,7 +372,9 @@ export const conversation = pgTable(
      * 014: canal de la conversacion. Denormalizado del contacto a proposito:
      * el ruteo de salida y el filtro de la bandeja lo leen en cada mensaje.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger", "tiktok"] })
+    channel: text("channel", {
+      enum: ["whatsapp", "instagram", "messenger", "tiktok", "mercadolibre"],
+    })
       .notNull()
       .default("whatsapp"),
     /**
@@ -710,6 +714,60 @@ export const tiktokCredentials = pgTable(
   (t) => [
     uniqueIndex("tiktok_credentials_org_uq").on(t.organizationId),
     uniqueIndex("tiktok_credentials_account_ref_uq").on(t.accountRef),
+  ]
+);
+
+/**
+ * Mercado Libre — credenciales OAuth de la cuenta vendedora conectada.
+ *
+ * A diferencia de los canales (que llegan por webhook), Mercado Libre se
+ * conecta con el flujo OAuth 2.0 estándar de la plataforma: el dueño autoriza
+ * y aquí quedan el access token (corta vida, se refresca solo) y el refresh
+ * token (larga vida), ambos cifrados con el mismo AES-256-GCM del resto.
+ *
+ * `mlUserId` es la clave de enrutado del webhook: cada notificación de ML trae
+ * `user_id`, y por él se resuelve la organización. `nickname` es solo para
+ * enseñarlo en Ajustes.
+ */
+export const mlCredentials = pgTable(
+  "ml_credentials",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** ID del usuario vendedor en Mercado Libre: enruta el webhook. */
+    mlUserId: text("ml_user_id").notNull(),
+    /** Apodo de la cuenta en ML, solo para la UI. */
+    nickname: text("nickname"),
+    /**
+     * 069 — El sitio del vendedor (`MLM`, `MLB`, `MLA`…). Las tendencias y las
+     * visitas se piden por sitio, no por usuario. Se guarda al conectar; si una
+     * cuenta vieja no lo tiene, se resuelve con `mlMe` y se rellena.
+     */
+    siteId: text("site_id"),
+    accessTokenCipher: text("access_token_cipher").notNull(),
+    accessTokenIv: text("access_token_iv").notNull(),
+    accessTokenTag: text("access_token_tag").notNull(),
+    refreshTokenCipher: text("refresh_token_cipher").notNull(),
+    refreshTokenIv: text("refresh_token_iv").notNull(),
+    refreshTokenTag: text("refresh_token_tag").notNull(),
+    /** Cuándo vence el access token guardado (UTC, invariante del proyecto). */
+    tokenExpiresAt: timestamp("token_expires_at").notNull(),
+    scope: text("scope"),
+    status: text("status", { enum: ["connected", "reconnect_required"] })
+      .notNull()
+      .default("connected"),
+    /** 067 — cómo contesta la IA las preguntas de las publicaciones. */
+    qaMode: text("qa_mode", { enum: ["off", "copiloto", "automatico"] })
+      .notNull()
+      .default("copiloto"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ml_credentials_org_uq").on(t.organizationId),
+    uniqueIndex("ml_credentials_user_uq").on(t.mlUserId),
   ]
 );
 
@@ -1341,7 +1399,10 @@ export const webhookEvent = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     /** Quién lo procesa: el adaptador del canal y la fuente. */
     fuente: text("fuente", {
-      enum: ["whatsapp", "meta_instagram", "meta_messenger", "zernio"],
+      // 067 — `mercadolibre` es el topic de notificaciones de la cuenta
+      // vendedora: no trae mensajes, trae órdenes, preguntas y mensajes de
+      // posventa que hay que ir a buscar a la API con `mlFetch`.
+      enum: ["whatsapp", "meta_instagram", "meta_messenger", "zernio", "mercadolibre"],
     }).notNull(),
     payload: jsonb("payload").notNull(),
     /** SHA-256 del cuerpo crudo: la misma entrega dos veces es una fila. */
@@ -1431,5 +1492,126 @@ export const conversationNote = pgTable(
   },
   (t) => [
     index("conversation_note_conv_idx").on(t.organizationId, t.conversationId, t.createdAt),
+  ]
+);
+
+/* ============================================================
+ * 067 — Preguntas de Mercado Libre (Q&A de publicaciones)
+ * ============================================================ */
+
+/**
+ * Una pregunta que un comprador dejó en una publicación.
+ *
+ * No es tráfico de bandeja: no hay conversación, no hay ventana y no hay
+ * `message`. Mercado Libre la entrega por el topic `questions` y hay que ir a
+ * buscarla con `mlFetch`. Vive en su propia tabla A PROPÓSITO: así el envío, el
+ * despacho y la ventana —que leen `message` y `conversation`— no pueden
+ * tocarla por descuido, igual que las notas internas (050).
+ *
+ * `answer` es lo que el vendedor publicó en ML. `draft` es lo que propuso la
+ * IA y todavía nadie aprobó: en modo Copiloto se guarda aquí y espera; en modo
+ * Automático se publica y `answer` queda escrito. `source` dice quién escribió
+ * la respuesta que está publicada.
+ */
+export const mlQuestion = pgTable(
+  "ml_question",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** Id de la pregunta en ML: la clave de idempotencia del topic. */
+    mlQuestionId: text("ml_question_id").notNull(),
+    /** Publicación sobre la que preguntan. */
+    itemId: text("item_id"),
+    itemTitle: text("item_title"),
+    /** Comprador que preguntó (`ml:<id>`), si ML lo dio. */
+    buyerIdentity: text("buyer_identity"),
+    question: text("question").notNull(),
+    /** La respuesta publicada en ML; `null` mientras no haya. */
+    answer: text("answer"),
+    /** Borrador de la IA sin aprobar (modo Copiloto). */
+    draft: text("draft"),
+    status: text("status", {
+      enum: ["unanswered", "drafted", "answered", "ignored"],
+    })
+      .notNull()
+      .default("unanswered"),
+    /** Quién escribió la respuesta publicada. */
+    source: text("source", { enum: ["humano", "ia", "faq"] }),
+    /** Cuándo la preguntó el comprador (UTC, invariante del proyecto). */
+    askedAt: timestamp("asked_at").notNull(),
+    answeredAt: timestamp("answered_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ml_question_org_mlid_uq").on(t.organizationId, t.mlQuestionId),
+    index("ml_question_org_status_idx").on(t.organizationId, t.status, t.askedAt),
+  ]
+);
+
+/**
+ * Respuesta aprendida para una pregunta frecuente de ML.
+ *
+ * Cuando el vendedor contesta la misma duda una y otra vez, la respuesta se
+ * guarda aquí con las palabras clave que la disparan. La IA la usa como
+ * conocimiento y el modo Automático puede contestar sin inventar: la FAQ es lo
+ * que el negocio YA dijo, no lo que el modelo cree.
+ *
+ * `hits` cuenta cuántas veces se usó, para que la pantalla enseñe qué sirve.
+ */
+export const mlFaq = pgTable(
+  "ml_faq",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** La duda, en las palabras del negocio. */
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    /** Palabras que la disparan, separadas por coma. */
+    keywords: text("keywords"),
+    hits: integer("hits").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("ml_faq_org_idx").on(t.organizationId)]
+);
+
+/**
+ * 069 — Caché de las tendencias de Mercado Libre por sitio.
+ *
+ * Las tendencias (`/trends/{site}`) cambian despacio y ML las limita: se piden
+ * una vez por sitio y se guardan aquí con su análisis de IA. La pantalla lee
+ * esta tabla; solo cuando el caché venció (`expires_at`) se vuelve a pedir a ML
+ * y se rehace el análisis. Una fila por organización y sitio.
+ *
+ * `payload` es el JSON crudo de ML (tal cual) y `analysis` el JSON del análisis
+ * de la IA; ambos se guardan como texto para no atar la forma a una migración.
+ */
+export const mlTrendCache = pgTable(
+  "ml_trend_cache",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** El sitio de ML (`MLM`, `MLB`, `MLA`…): las tendencias son por sitio. */
+    siteId: text("site_id").notNull(),
+    /** El JSON crudo de `/trends/{site}`, tal como lo devolvió ML. */
+    payload: text("payload").notNull(),
+    /** El análisis de la IA sobre esas tendencias, o `null` si no hay IA. */
+    analysis: text("analysis"),
+    /** Cuándo se pidió a ML por última vez. */
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    /** Cuándo vence: pasado este instante, la pantalla vuelve a pedir. */
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ml_trend_cache_org_site_uq").on(t.organizationId, t.siteId),
   ]
 );

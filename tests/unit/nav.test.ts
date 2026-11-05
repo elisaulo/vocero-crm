@@ -37,6 +37,24 @@ describe("barra lateral agrupada", () => {
     expect(trabajo!.items.at(-1)!.href).toBe("/bookings");
   });
 
+  it("067/068/069 — mercadolibre añade Preguntas, Publicaciones y Tendencias al final de Trabajo, y sin la bandera no están", () => {
+    const [sin] = appNavGroups({ role: "member" });
+    expect(sin!.items.map((i) => i.href)).not.toContain("/preguntas");
+    expect(sin!.items.map((i) => i.href)).not.toContain("/publicaciones");
+    expect(sin!.items.map((i) => i.href)).not.toContain("/tendencias");
+
+    const [trabajo] = appNavGroups({ mercadolibre: true, role: "member" });
+    expect(trabajo!.items.map((i) => i.label)).toEqual([
+      "Bandeja",
+      "Pipeline",
+      "Contactos",
+      "Preguntas",
+      "Publicaciones",
+      "Tendencias",
+    ]);
+    expect(trabajo!.items.at(-1)!.href).toBe("/tendencias");
+  });
+
   it("la guía de inicio abre el grupo Agente solo para quien configura", () => {
     for (const role of ["owner", "admin"]) {
       const agente = appNavGroups({ role })[1]!;
@@ -78,6 +96,8 @@ describe("ajustes en tres secciones", () => {
     Agente: ["IA", "Agenda"],
     Negocio: [
       "Marca",
+      // 067 — Mercado Libre vive en "Negocio": no es un canal de mensajería.
+      "Mercado Libre",
       "Apariencia",
       "Plantillas",
       "Respuestas rápidas",
@@ -130,6 +150,7 @@ describe("ajustes en tres secciones", () => {
         "/settings/calendar",
         "/settings/branding",
         "/settings/appearance",
+        "/settings/mercadolibre",
         "/settings/templates",
         "/settings/quick-replies",
         "/settings/team",

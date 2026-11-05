@@ -9,6 +9,7 @@ import { normalizeMetaPagePayload } from "@/server/messenger/ingest";
 import { zernioTargetChannel } from "@/server/zernio/dispatch";
 import { findZernioConnection } from "@/server/zernio/conexiones";
 import type { ZernioEvent } from "@/server/zernio";
+import { organizacionDeNotificacionMl } from "@/server/mercadolibre/ingest";
 import type { FuenteWebhook } from "./eventos";
 
 /**
@@ -27,6 +28,8 @@ export type Buscadores = {
   porIgUserId: (id: string) => Promise<{ organizationId: string } | null>;
   porPageId: (id: string) => Promise<{ organizationId: string } | null>;
   porCuentaZernio: (evt: ZernioEvent) => Promise<{ organizationId: string } | null>;
+  /** 067 — ML identifica al vendedor con `user_id`, no con una cuenta Zernio. */
+  porVendedorMl: (payload: unknown) => Promise<{ organizationId: string } | null>;
 };
 
 const buscadoresReales: Buscadores = {
@@ -40,6 +43,7 @@ const buscadoresReales: Buscadores = {
     const found = await findZernioConnection(canal, evt.account);
     return found ? { organizationId: found.connection.organizationId } : null;
   },
+  porVendedorMl: organizacionDeNotificacionMl,
 };
 
 /** La primera organización que se resuelva: una entrega trae una sola cuenta. */
@@ -80,6 +84,12 @@ export async function resolverOrganizacion(
       );
     case "zernio": {
       const found = await b.porCuentaZernio(payload as ZernioEvent);
+      return found?.organizationId ?? null;
+    }
+    case "mercadolibre": {
+      // ML no firma la notificación: la cuenta del vendedor (`user_id`) es la
+      // que dice a qué organización le toca.
+      const found = await b.porVendedorMl(payload);
       return found?.organizationId ?? null;
     }
   }

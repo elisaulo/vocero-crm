@@ -16,7 +16,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * ediciones. La única diferencia está en `mediaId`, y se explica abajo.
  */
 
-export type CanalDelEvento = "whatsapp" | "instagram" | "messenger" | "tiktok";
+// 067 — Mercado Libre entra al evento del despacho: su hilo de posventa
+// también puede tener cerebro. Agregar un canal a esta unión cabe (contrato
+// público: solo se añade, nunca se quita ni renombra).
+export type CanalDelEvento =
+  | "whatsapp"
+  | "instagram"
+  | "messenger"
+  | "tiktok"
+  | "mercadolibre";
 
 export type MensajeDelEvento = {
   id: string;

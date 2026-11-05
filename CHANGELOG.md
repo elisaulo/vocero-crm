@@ -5,6 +5,62 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
 
+## 2.7.8 — 2026-11-05
+
+Integración completa con Mercado Libre (mensajería de posventa, preguntas con IA,
+publicaciones, tendencias) y corrección del icono maskable de la app instalable.
+No requiere migración de BD manual: las migraciones nuevas (067–069, `0026–0029`)
+se aplican al arrancar. Actualizar es redesplegar con la etiqueta `2.7.8`.
+
+### Añadido
+
+- **067 — Canal de Mercado Libre**: bandeja de mensajería de posventa (un hilo
+  por orden), webhook unificado que recibe órdenes, mensajes y preguntas,
+  contexto de la orden guardado en `conversation.ml_order_context`, y
+  sincronización automática del pipeline desde el estado de la orden
+  ([`ingest.ts`](src/server/mercadolibre/ingest.ts:1),
+  [`pipeline.ts`](src/server/mercadolibre/pipeline.ts:1),
+  [`orden.ts`](src/server/mercadolibre/orden.ts:1), migración `0026`). OAuth en
+  Ajustes → Mercado Libre con `ML_CLIENT_ID` y `ML_CLIENT_SECRET`
+  ([`client.ts`](src/lib/mercadolibre/client.ts:1),
+  [`credentials.ts`](src/server/mercadolibre/credentials.ts:1), migración
+  `0027`).
+- **067 — Preguntas de Mercado Libre con IA**: pantalla Preguntas, módulo Q&A
+  con palabras clave y similitud, modo Automático (publica directo) o Copiloto
+  (genera borrador), FAQ aprendidas que el vendedor corrige
+  ([`qa.ts`](src/lib/mercadolibre/qa.ts:1),
+  [`questions.ts`](src/server/mercadolibre/questions.ts:1), migración `0028`), y
+  21 tests (`mercadolibre-qa.test.ts`).
+- **068 — Publicaciones y stock**: pantalla Publicaciones que lista las
+  publicaciones activas, permite editar precio y stock, y pausar/reactivar
+  ([`items.ts`](src/server/mercadolibre/items.ts:1),
+  [`publicaciones-client.tsx`](src/components/mercadolibre/publicaciones-client.tsx:1)),
+  con 20 tests (`mercadolibre-items.test.ts`).
+- **069 — Tendencias de Mercado Libre Venezuela con análisis IA**: pantalla
+  Tendencias que trae las palabras más buscadas del sitio y, con IA, genera
+  resumen, oportunidades, productos sugeridos e ideas de contenido; el análisis
+  se cachea 6 horas
+  ([`trends.ts`](src/lib/mercadolibre/trends.ts:1),
+  [`trends.ts`](src/server/mercadolibre/trends.ts:1),
+  [`tendencias-client.tsx`](src/components/mercadolibre/tendencias-client.tsx:1),
+  migración `0029`), con 27 tests (`mercadolibre-trends.test.ts`).
+
+### Corregido
+
+- **El icono maskable de la app instalada ya no se ve diminuto**: la zona segura
+  pasó del 60 % al 78 % central (margen del 22 %, que es el garantizado por el
+  estándar de Android). El comentario del código dice el porqué para que nadie
+  lo revierta por error ([`app-icon.tsx`](src/server/app-icon.tsx:86),
+  [`pwa.test.ts`](tests/unit/pwa.test.ts:151)).
+
+### Actualizar desde 2.7.7
+
+Redesplegar con la etiqueta `2.7.8` (docker compose, Coolify, Render, Fly,
+Railway). Las migraciones `0026–0029` se aplican al arrancar. Variables nuevas
+opcionales: `ML_CLIENT_ID` y `ML_CLIENT_SECRET` (la app OAuth de Mercado Libre
+del negocio; sin ellas, las superficies de ML responden 404 y la UI no las
+menciona).
+
 ## 2.7.7 — 2026-11-04
 
 Robustez del despacho, Evolution API en Ajustes → Estado, MiraiAPI como

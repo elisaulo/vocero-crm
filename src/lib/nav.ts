@@ -5,8 +5,11 @@ import {
   Inbox,
   Kanban,
   ListChecks,
+  MessageCircleQuestion,
+  Package,
   Settings,
   Sparkles,
+  TrendingUp,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -49,10 +52,13 @@ export const SETTINGS_ITEM: NavItem = {
  */
 export function appNavGroups({
   agenda = false,
+  mercadolibre = false,
   role,
 }: {
   /** 015 — "Citas" solo existe si esta instancia encendió la agenda. */
   agenda?: boolean;
+  /** 067/068/069 — "Preguntas", "Publicaciones" y "Tendencias" solo existen con una cuenta de Mercado Libre conectada. */
+  mercadolibre?: boolean;
   /** #86 — La guía de inicio solo para quien puede configurar. */
   role?: string | null;
 }): NavGroup[] {
@@ -64,6 +70,17 @@ export function appNavGroups({
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.
   if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });
+  // 067 — Las preguntas de las publicaciones se atienden como la bandeja: es
+  // trabajo del día, no configuración.
+  if (mercadolibre) {
+    trabajo.push({ href: "/preguntas", label: "Preguntas", icon: MessageCircleQuestion });
+    // 068 — Las publicaciones y su stock se revisan desde aquí, junto a las
+    // preguntas: es el mismo trabajo de mercado, sin entrar a Ajustes.
+    trabajo.push({ href: "/publicaciones", label: "Publicaciones", icon: Package });
+    // 069 — Las tendencias del sitio, con su análisis de IA, también son
+    // trabajo de mercado: qué se busca y qué conviene publicar.
+    trabajo.push({ href: "/tendencias", label: "Tendencias", icon: TrendingUp });
+  }
 
   const agente: NavItem[] = [];
   // Un miembro del equipo no puede hacer ninguno de los pasos de la guía.
@@ -130,6 +147,9 @@ export function settingsSections({
 
   const negocio: SettingsLink[] = [
     { href: "/settings/branding", label: "Marca" },
+    // 067 — Mercado Libre no es un canal: es la cuenta vendedora. Va en
+    // "Negocio" porque de ella salen las ventas que hay que atender.
+    { href: "/settings/mercadolibre", label: "Mercado Libre" },
     { href: "/settings/appearance", label: "Apariencia" },
     { href: "/settings/templates", label: "Plantillas" },
     { href: "/settings/quick-replies", label: "Respuestas rápidas" },

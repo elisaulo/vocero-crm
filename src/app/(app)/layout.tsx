@@ -7,6 +7,7 @@ import { getBranding } from "@/server/branding";
 import { AppShell } from "@/components/app-shell";
 import { resolveCommit } from "@/lib/version";
 import { agendaEnabled } from "@/server/agenda/flag";
+import { getMlCredentialsByOrg } from "@/server/mercadolibre/credentials";
 import { enabledChannels } from "@/server/channels/enabled";
 import { navKicker } from "@/lib/channels";
 import { avisoIaDe } from "@/server/ai/aviso";
@@ -27,6 +28,10 @@ export default async function AppLayout({
   // bot roto. Se resuelve en el servidor y en el layout para que se vea desde
   // CUALQUIER pantalla, no solo desde el panel de un contacto (#85).
   const aviso = await avisoIaDe(session.organizationId);
+  // 067 — «Preguntas» solo tiene sentido con una cuenta de Mercado Libre
+  // conectada. Se pregunta en el servidor: el nav es cliente y no puede leer
+  // la base. Una consulta por render, igual que el branding.
+  const mercadolibre = (await getMlCredentialsByOrg(session.organizationId)) !== null;
 
   return (
     <AppShell
@@ -42,6 +47,7 @@ export default async function AppLayout({
       // prop, igual que los canales de la Bandeja. El nav es un componente de
       // cliente: no puede —ni debe— leer variables de entorno.
       agenda={agendaEnabled()}
+      mercadolibre={mercadolibre}
       kicker={navKicker([...enabledChannels()])}
       aviso={<AvisoIaBanner aviso={aviso} />}
     >

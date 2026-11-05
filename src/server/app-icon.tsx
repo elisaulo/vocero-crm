@@ -83,8 +83,8 @@ function dibujo(
   // su forma: los dos van a sangre. El `any` de 192/512 lleva su mosaico
   // redondeado, como el favicon.
   const aSangre = purpose === "maskable" || size === 180;
-  // Zona segura del maskable: lo importante dentro del 60 % central.
-  const contenido = Math.round(size * (purpose === "maskable" ? 0.6 : 0.72));
+  // Zona segura del maskable: 22 % de margen, lo importante dentro del 78 % central.
+  const contenido = Math.round(size * (purpose === "maskable" ? 0.78 : 0.72));
   const fondo = logo ? "#ffffff" : accent;
 
   return (

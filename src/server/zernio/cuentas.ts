@@ -15,8 +15,13 @@ import { zernioFetch } from "@/server/zernio";
  * no tiene que copiar ningún id.
  */
 
-/** Los canales que llegan por Zernio. */
-export type ZernioChannel = Exclude<Channel, "whatsapp">;
+/**
+ * Los canales que llegan por Zernio.
+ *
+ * 067 — Mercado Libre no viaja por Zernio: tiene su propio webhook y sus
+ * propias credenciales (`ml_credentials`).
+ */
+export type ZernioChannel = Exclude<Channel, "whatsapp" | "mercadolibre">;
 
 /** Cómo llama Zernio a la plataforma de cada canal. */
 export const ZERNIO_PLATFORMS: Record<ZernioChannel, readonly string[]> = {
@@ -54,11 +59,11 @@ export type ZernioCandidate = { id: string; name: string };
 export type PickResult =
   | { ok: true; account: ZernioAccount }
   | {
-      ok: false;
-      code: "choose_account" | "unknown_account";
-      message: string;
-      candidates: ZernioCandidate[];
-    };
+    ok: false;
+    code: "choose_account" | "unknown_account";
+    message: string;
+    candidates: ZernioCandidate[];
+  };
 
 function profileIdOf(a: ZernioAccount): string | null {
   const p = a.profileId;

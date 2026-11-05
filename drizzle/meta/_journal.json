@@ -183,6 +183,34 @@
       "when": 1761690000000,
       "tag": "0025_conversation_per_evolution_instance",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793828813222,
+      "tag": "0026_sharp_kat_farrell",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793835378358,
+      "tag": "0027_panoramic_nebula",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793836948258,
+      "tag": "0028_striped_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793847672448,
+      "tag": "0029_vengeful_black_knight",
+      "breakpoints": true
     }
   ]
 }

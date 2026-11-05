@@ -148,6 +148,34 @@ describe("la ruta del icono dibuja un PNG del tamaño pedido", () => {
   }, 30_000);
 });
 
+describe("v2.7.8 — la zona segura del maskable deja 22 % de margen", () => {
+  const fuente = readFileSync(join(process.cwd(), "src", "server", "app-icon.tsx"), "utf8");
+
+  it("el contenido del maskable ocupa el 78 % central, no el 60 %", () => {
+    // Android recorta el maskable con su forma: con el 60 % el logo quedaba
+    // diminuto dentro del círculo. La zona segura es un 22 % de margen.
+    expect(fuente).toMatch(/purpose === "maskable" \? 0\.78 : 0\.72/);
+    expect(fuente).not.toMatch(/purpose === "maskable" \? 0\.6 : 0\.72/);
+  });
+
+  it("el comentario dice el margen real, para que nadie lo revierta por error", () => {
+    expect(fuente).toMatch(/22 % de margen/);
+    expect(fuente).toMatch(/78 % central/);
+  });
+});
+
+describe("v2.7.8 — los colores del manifest y la barra de estado son el mismo", () => {
+  it("background_color, theme_color y el viewport salen de NAV_INK", () => {
+    const m = buildManifest(marca, "x");
+    expect(m.background_color).toBe(NAV_INK);
+    expect(m.theme_color).toBe(NAV_INK);
+    // El layout no cablea un hex suelto: importa la misma constante.
+    const layout = readFileSync(join(process.cwd(), "src", "app", "layout.tsx"), "utf8");
+    expect(layout).toMatch(/import \{[^}]*NAV_INK[^}]*\} from "@\/lib\/pwa"/);
+    expect(layout).toMatch(/themeColor: NAV_INK/);
+  });
+});
+
 describe("el service worker no guarda nada", () => {
   const sw = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
   const codigo = sw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");

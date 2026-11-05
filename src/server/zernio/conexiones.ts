@@ -40,7 +40,7 @@ import {
  */
 
 export const ZERNIO_CHANNELS = CHANNEL_ORDER.filter(
-  (c): c is ZernioChannel => c !== "whatsapp"
+  (c): c is ZernioChannel => c !== "whatsapp" && c !== "mercadolibre"
 );
 
 /** Segmento de la ruta del webhook de cada canal. */
@@ -319,14 +319,14 @@ export async function ensureWebhookForOrg(
     console.warn("[zernio] no se pudo dar de alta el webhook:", err instanceof Error ? err.message : err);
     return caido
       ? {
-          ok: false,
-          code: "zernio_unavailable",
-          message: "No se pudo contactar a Zernio para dar de alta el webhook. Reinténtalo desde Canales → Estado.",
-        }
+        ok: false,
+        code: "zernio_unavailable",
+        message: "No se pudo contactar a Zernio para dar de alta el webhook. Reinténtalo desde Canales → Estado.",
+      }
       : {
-          ok: false,
-          code: "zernio_rejected",
-          message: "Zernio no aceptó el webhook. Reinténtalo desde Canales → Estado o créalo a mano en Zernio.",
-        };
+        ok: false,
+        code: "zernio_rejected",
+        message: "Zernio no aceptó el webhook. Reinténtalo desde Canales → Estado o créalo a mano en Zernio.",
+      };
   }
 }

@@ -41,6 +41,13 @@ const prefixes = {
   quickReply: "qr",
   // 050 — notas internas del hilo
   conversationNote: "nota",
+  // Mercado Libre — credenciales OAuth de la cuenta vendedora
+  mlCredentials: "mlcred",
+  // 067 — preguntas de publicaciones y respuestas aprendidas
+  mlQuestion: "mlq",
+  mlFaq: "mlfaq",
+  // 069 — caché de tendencias por sitio
+  mlTrendCache: "mltrend",
 } as const;
 
 export type IdKind = keyof typeof prefixes;

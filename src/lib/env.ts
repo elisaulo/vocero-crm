@@ -86,6 +86,17 @@ export const envSchema = z.object({
   MEDIA_BUCKET_REGION: z.string().default("auto"),
   MEDIA_BUCKET_KEY_ID: z.string().optional(),
   MEDIA_BUCKET_SECRET: z.string().optional(),
+  // Mercado Libre: la app OAuth del negocio. Sin `ML_CLIENT_ID` y
+  // `ML_CLIENT_SECRET` no hay botón de conexión ni canje de código; las
+  // superficies de ML responden 404 y la UI no las menciona. No se validan
+  // con `.url()` a propósito, por lo mismo que BRAIN_HEALTH_URL: mal escritas,
+  // la conexión queda inactiva y la tarjeta lo dice.
+  ML_CLIENT_ID: z.string().optional(),
+  ML_CLIENT_SECRET: z.string().optional(),
+  // Bases de la API de ML. Solo se sobreescriben para apuntar a los mocks en
+  // el self-test; en producción se usan las reales.
+  ML_API_BASE_URL: z.string().url().default("https://api.mercadolibre.com"),
+  ML_OAUTH_BASE_URL: z.string().url().default("https://auth.mercadolibre.com"),
   NODE_ENV: z.string().default("development"),
 });
 
@@ -125,7 +136,7 @@ export function getEnv(): Env {
       .join("\n  ");
     throw new Error(
       `Variables de entorno inválidas o faltantes:\n  ${missing}\n` +
-        "Revisa .env.example para la guía de cada variable."
+      "Revisa .env.example para la guía de cada variable."
     );
   }
   cached = parsed.data;

@@ -33,6 +33,14 @@ import {
   type TiktokCredentials,
 } from "@/server/tiktok/credentials";
 import { sendTiktokText } from "@/server/tiktok/send";
+import { ML_PREFIX } from "@/server/inbox/identity";
+import {
+  getMlCredentialsByOrg,
+  markMlReconnectRequired,
+  type MlCredentials,
+} from "@/server/mercadolibre/credentials";
+import { sendMlText } from "@/server/mercadolibre/send";
+import { MlApiError, MlOAuthError } from "@/lib/mercadolibre/client";
 import { prepararAudioSaliente } from "@/server/whatsapp/nota-de-voz";
 import {
   cabeOtroMensaje,
@@ -108,6 +116,8 @@ type SendTarget = {
   };
   /** 022: presente solo en conversaciones de TikTok. */
   tiktok?: TiktokCredentials;
+  /** 067: presente solo en conversaciones de Mercado Libre. */
+  mercadolibre?: MlCredentials;
   /**
    * 024: el envío sale con la etiqueta de agente humano. Lo decide el
    * pre-vuelo (`assertReplyWindow`), no cada canal por su cuenta.
@@ -302,6 +312,42 @@ async function prepareSend(
       destinatario: { to: ttRecipient },
       recipient: ttRecipient,
       tiktok: ttCreds,
+    };
+  }
+
+  // 067: Mercado Libre. Transporte propio (mensajería post-venta) y sin
+  // ventana: el comprador escribe cuando quiere y el vendedor puede contestar
+  // siempre. Solo se comprueba el canal, la conexión y que exista el pack.
+  if (row.conversation.channel === "mercadolibre") {
+    if (!isChannelEnabled("mercadolibre")) {
+      throw new SendError(
+        "not_connected",
+        "El canal de Mercado Libre está desactivado en esta instancia"
+      );
+    }
+    const mlCreds = await getMlCredentialsByOrg(organizationId);
+    if (!mlCreds) {
+      throw new SendError(
+        "not_connected",
+        "No hay cuenta de Mercado Libre conectada"
+      );
+    }
+    if (mlCreds.status === "reconnect_required") {
+      throw new SendError(
+        "reconnect_required",
+        "La conexión con Mercado Libre venció: reconecta la cuenta en Configuración"
+      );
+    }
+    const mlRecipient = row.contact.waIdentity.startsWith(ML_PREFIX)
+      ? row.contact.waIdentity.slice(ML_PREFIX.length)
+      : row.contact.waIdentity;
+    return {
+      conversation: row.conversation,
+      credentials: null,
+      // Mercado Libre tampoco pasa por la Graph API de WhatsApp.
+      destinatario: { to: mlRecipient },
+      recipient: mlRecipient,
+      mercadolibre: mlCreds,
     };
   }
 
@@ -600,18 +646,20 @@ export async function sendText(input: {
       ? await callMessengerSend(target, text)
       : target.tiktok
         ? await callTiktokSend(target, text)
-        : await callGraphSend(
-          credentials!,
-          conCita(
-            {
-              messaging_product: "whatsapp",
-              ...target.destinatario,
-              type: "text",
-              text: { body: text },
-            },
-            cita?.message.waMessageId
-          )
-        );
+        : target.mercadolibre
+          ? await callMlSend(target, text)
+          : await callGraphSend(
+            credentials!,
+            conCita(
+              {
+                messaging_product: "whatsapp",
+                ...target.destinatario,
+                type: "text",
+                text: { body: text },
+              },
+              cita?.message.waMessageId
+            )
+          );
 
   const messageId = await persistOutbound({
     organizationId: input.organizationId,
@@ -780,9 +828,9 @@ export async function sendStructured(
     /** 039: id local del mensaje al que se responde citando. */
     replyToMessageId?: string;
   } & (
-    | { kind: "location"; location: LocationInput }
-    | { kind: "contacts"; contacts: ContactInput[] }
-  )
+      | { kind: "location"; location: LocationInput }
+      | { kind: "contacts"; contacts: ContactInput[] }
+    )
 ): Promise<SendResult> {
   const target = await prepareSend(
     input.conversationId,
@@ -802,12 +850,12 @@ export async function sendStructured(
     input.kind === "location"
       ? { type: "location", location: input.location }
       : {
-          type: "contacts",
-          contacts: input.contacts.map((c) => ({
-            name: { formatted_name: c.name, first_name: c.name },
-            phones: [{ phone: c.phone, type: "CELL" }],
-          })),
-        };
+        type: "contacts",
+        contacts: input.contacts.map((c) => ({
+          name: { formatted_name: c.name, first_name: c.name },
+          phones: [{ phone: c.phone, type: "CELL" }],
+        })),
+      };
 
   const waMessageId = await callGraphSend(
     target.credentials,
@@ -1019,6 +1067,52 @@ async function callTiktokSend(target: SendTarget, text: string): Promise<string>
         throw new SendError(
           "meta_unavailable",
           "TikTok no está disponible en este momento; intenta de nuevo"
+        );
+      }
+      throw new SendError("meta_error", err.message);
+    }
+    throw err;
+  }
+}
+
+/**
+ * 067 — Envío por el canal de Mercado Libre. Mismo vocabulario de SendError
+ * que los demás canales. No hay ventana ni tope que comprobar: la mensajería
+ * post-venta de ML no los declara.
+ */
+async function callMlSend(target: SendTarget, text: string): Promise<string> {
+  const creds = target.mercadolibre!;
+
+  try {
+    const res = await sendMlText({
+      credentials: creds,
+      recipient: target.recipient,
+      // El mensaje sale dentro del pack del pedido: sin esta referencia el
+      // envío no tiene a dónde ir.
+      threadRef: target.conversation.channelThreadRef,
+      text,
+    });
+    return res.platformMessageId;
+  } catch (err) {
+    if (err instanceof MlOAuthError) {
+      await markMlReconnectRequired(creds.organizationId);
+      throw new SendError(
+        "reconnect_required",
+        "La conexión con Mercado Libre venció: reconecta la cuenta"
+      );
+    }
+    if (err instanceof MlApiError) {
+      if (err.isAuthError) {
+        await markMlReconnectRequired(creds.organizationId);
+        throw new SendError(
+          "reconnect_required",
+          "El token de Mercado Libre fue revocado: reconecta la cuenta"
+        );
+      }
+      if (err.status === 0 || err.status >= 500) {
+        throw new SendError(
+          "meta_unavailable",
+          "Mercado Libre no está disponible en este momento; intenta de nuevo"
         );
       }
       throw new SendError("meta_error", err.message);

@@ -1,0 +1,1 @@
+ALTER TABLE "ml_credentials" ADD COLUMN "qa_mode" text DEFAULT 'copiloto' NOT NULL;

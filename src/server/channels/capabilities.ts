@@ -148,6 +148,31 @@ export const CHANNEL_CAPABILITIES: Record<Channel, ChannelCapabilities> = {
     deliveryReceipts: false,
     quoteReplies: false,
   },
+  /**
+   * 067 — El hilo de posventa de Mercado Libre.
+   *
+   * No es un chat social: ML abre el hilo por una orden concreta y lo cierra
+   * con ella. Por eso no hay ventana de servicio (`windowMs: null`): la
+   * plataforma no impone un plazo desde el último entrante, el hilo vive
+   * mientras la orden lo permita y es ella la que responde con su propio
+   * error si ya no admite mensajes. Sin plantillas, sin etiquetas, sin citas
+   * y sin adjuntos salientes: ML solo acepta texto plano por su API de
+   * mensajería de posventa.
+   */
+  mercadolibre: {
+    label: CHANNEL_LABEL.mercadolibre,
+    windowMs: null,
+    outsideWindow: "none",
+    humanAgentWindowMs: null,
+    textFormat: "plain",
+    maxTextBytes: null,
+    maxTextChars: 3500,
+    maxOutboundPerWindow: null,
+    outboundMedia: false,
+    structuredMessages: false,
+    deliveryReceipts: false,
+    quoteReplies: false,
+  },
 };
 
 /**

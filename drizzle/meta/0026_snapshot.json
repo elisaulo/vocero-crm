@@ -1,6 +1,6 @@
 {
-  "id": "33c0d98b-7a81-4dd8-825b-344d0347ba87",
-  "prevId": "b1d222aa-df8b-4173-9478-453c3b9e1c5d",
+  "id": "6d623194-27dc-4cf3-adc2-0f3626b3f07a",
+  "prevId": "33c0d98b-7a81-4dd8-825b-344d0347ba87",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1577,6 +1577,12 @@
           "notNull": true,
           "default": 0
         },
+        "evolution_instance": {
+          "name": "evolution_instance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1593,8 +1599,8 @@
         }
       },
       "indexes": {
-        "conversation_org_contact_real_uq": {
-          "name": "conversation_org_contact_real_uq",
+        "conversation_org_contact_no_evo_uq": {
+          "name": "conversation_org_contact_no_evo_uq",
           "columns": [
             {
               "expression": "organization_id",
@@ -1610,7 +1616,35 @@
             }
           ],
           "isUnique": true,
-          "where": "\"conversation\".\"is_test\" = false",
+          "where": "\"conversation\".\"is_test\" = false AND \"conversation\".\"evolution_instance\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "conversation_org_contact_evo_uq": {
+          "name": "conversation_org_contact_evo_uq",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "contact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "evolution_instance",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"conversation\".\"is_test\" = false AND \"conversation\".\"evolution_instance\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -3368,6 +3402,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'meta'"
+        },
+        "external_message_id": {
+          "name": "external_message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3772,6 +3819,157 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.ml_credentials": {
+      "name": "ml_credentials",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ml_user_id": {
+          "name": "ml_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nickname": {
+          "name": "nickname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_cipher": {
+          "name": "access_token_cipher",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token_iv": {
+          "name": "access_token_iv",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token_tag": {
+          "name": "access_token_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "refresh_token_cipher": {
+          "name": "refresh_token_cipher",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "refresh_token_iv": {
+          "name": "refresh_token_iv",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "refresh_token_tag": {
+          "name": "refresh_token_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_expires_at": {
+          "name": "token_expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'connected'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ml_credentials_org_uq": {
+          "name": "ml_credentials_org_uq",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ml_credentials_user_uq": {
+          "name": "ml_credentials_user_uq",
+          "columns": [
+            {
+              "expression": "ml_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ml_credentials_organization_id_organization_id_fk": {
+          "name": "ml_credentials_organization_id_organization_id_fk",
+          "tableFrom": "ml_credentials",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.offered_slot": {
       "name": "offered_slot",
       "schema": "",
@@ -3908,6 +4106,31 @@
         },
         "metadata": {
           "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "whatsapp_provider": {
+          "name": "whatsapp_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'meta'"
+        },
+        "evolution_api_url": {
+          "name": "evolution_api_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evolution_api_key": {
+          "name": "evolution_api_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evolution_instance": {
+          "name": "evolution_instance",
           "type": "text",
           "primaryKey": false,
           "notNull": false

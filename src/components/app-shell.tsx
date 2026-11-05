@@ -31,6 +31,7 @@ export function AppShell({
   apariencia,
   commit,
   agenda = false,
+  mercadolibre = false,
   kicker,
   aviso = null,
   children,
@@ -43,6 +44,8 @@ export function AppShell({
   commit?: ResolvedCommit;
   /** 015 — ¿esta instancia tiene agenda? Lo decide el servidor. */
   agenda?: boolean;
+  /** 067 — ¿hay cuenta de Mercado Libre conectada? Lo decide el servidor. */
+  mercadolibre?: boolean;
   /** 028 — La etiqueta bajo el logo (`navKicker`). */
   kicker?: string;
   /**
@@ -95,6 +98,7 @@ export function AppShell({
         role={role}
         apariencia={apariencia}
         agenda={agenda}
+        mercadolibre={mercadolibre}
         kicker={kicker}
         open={navOpen}
         onClose={() => setNavOpen(false)}

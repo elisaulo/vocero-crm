@@ -47,6 +47,7 @@ const SETTINGS_HREF: Record<Channel, string> = {
   instagram: "/settings/instagram",
   messenger: "/settings/messenger",
   tiktok: "/settings/tiktok",
+  mercadolibre: "/settings/mercadolibre",
 };
 
 const DOT: Record<Level, string> = {
