@@ -40,11 +40,38 @@ function isInternalSignup(): boolean {
 
 const RATE_LIMITED_PATHS = new Set(["/sign-in/email", "/sign-up/email"]);
 
+/**
+ * Tarea 2 (rebranding a jombe.app): los orígenes desde los que se acepta una
+ * petición de autenticación. `BETTER_AUTH_TRUSTED_ORIGINS` los declara a mano
+ * (coma) porque conviven landing, www, la app y la API en subdominios
+ * distintos; si falta, el único de confianza es el de `baseURL`.
+ */
+function trustedOrigins(env: ReturnType<typeof getEnv>): string[] {
+  const declarados = (env.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter((o) => o.length > 0);
+  const base = (env.BETTER_AUTH_URL ?? env.APP_BASE_URL).replace(/\/+$/, "");
+  return [...new Set([base, ...declarados])];
+}
+
 function createAuth() {
   const env = getEnv();
   return betterAuth({
-    baseURL: env.APP_BASE_URL,
+    baseURL: env.BETTER_AUTH_URL ?? env.APP_BASE_URL,
     secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: trustedOrigins(env),
+    // Tarea 2: la sesión solo viaja entre subdominios si se declara el dominio
+    // padre (`.jombe.app`). Sin `AUTH_COOKIE_DOMAIN` la cookie es de host, que
+    // es lo correcto en una instalación self-hosted de un solo host.
+    advanced: env.AUTH_COOKIE_DOMAIN
+      ? {
+        crossSubDomainCookies: {
+          enabled: true,
+          domain: env.AUTH_COOKIE_DOMAIN,
+        },
+      }
+      : undefined,
     database: drizzleAdapter(getDb(), {
       provider: "pg",
       schema: {
