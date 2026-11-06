@@ -14,7 +14,7 @@ export default function BlogPage() {
                 Pronto vas a encontrar aquí las novedades del proyecto. Mientras tanto,
                 el historial completo de versiones vive en el{" "}
                 <a
-                    href="https://github.com/elisaulo/vocero-crm/blob/main/CHANGELOG.md"
+                    href="https://github.com/elisaulo/jombe-crm/blob/main/CHANGELOG.md"
                     className="underline"
                     target="_blank"
                     rel="noreferrer"

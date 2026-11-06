@@ -14,7 +14,7 @@ export default function LegalPage() {
                 <p>
                     Jombe CRM es software de código abierto distribuido bajo la{" "}
                     <a
-                        href="https://github.com/elisaulo/vocero-crm/blob/main/LICENSE"
+                        href="https://github.com/elisaulo/jombe-crm/blob/main/LICENSE"
                         className="underline"
                         target="_blank"
                         rel="noreferrer"

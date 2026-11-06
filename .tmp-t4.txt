@@ -1,0 +1,16 @@
+Already up to date
+Done in 959ms using pnpm v11.5.0
+Already up to date
+Done in 914ms using pnpm v11.5.0
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mc:/Users/Elisaul/Documents/ANTIGRAVITY/vocero-crm[39m
+
+ [32m✓[39m tests/unit/evolution.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/unit/manifests-plataformas.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m tests/unit/evolution-integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 196[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m35 passed[39m[22m[90m (35)[39m
+[2m   Start at [22m 19:36:53
+[2m   Duration [22m 5.11s[2m (transform 1.01s, setup 0ms, collect 3.41s, tests 265ms, environment 2ms, prepare 1.39s)[22m
+

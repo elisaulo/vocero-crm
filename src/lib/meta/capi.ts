@@ -14,7 +14,7 @@ import { graphRequest } from "@/lib/meta/client";
  */
 
 /** Cómo se identifica el software que integró el evento. Constante del proyecto. */
-const PARTNER_AGENT = "vocero-crm";
+const PARTNER_AGENT = "jombe-crm";
 
 export type BusinessMessagingEvent = {
   eventName: string;
@@ -91,7 +91,7 @@ export async function sendBusinessMessagingEvent(input: {
   if (!isMetaBusinessMessagingEvent(input.event.eventName)) {
     throw new Error(
       `"${input.event.eventName}" no está en el catálogo de eventos ` +
-        `business_messaging de Meta (${META_BUSINESS_MESSAGING_EVENTS.join(", ")})`
+      `business_messaging de Meta (${META_BUSINESS_MESSAGING_EVENTS.join(", ")})`
     );
   }
 
@@ -110,7 +110,7 @@ export async function sendBusinessMessagingEvent(input: {
     // `failed` con el motivo, en vez de un `sent` que miente.
     throw new Error(
       `Meta respondió 200 pero events_received=${eventsReceived} ` +
-        `(evento descartado; fbtrace_id: ${res?.fbtrace_id ?? "n/d"})`
+      `(evento descartado; fbtrace_id: ${res?.fbtrace_id ?? "n/d"})`
     );
   }
 

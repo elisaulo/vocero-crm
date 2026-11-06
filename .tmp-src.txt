@@ -1,0 +1,97 @@
+src/app/layout.tsx:123:          id="vocero-temas"
+src/components/agent/brain-status-card.tsx:189:      detail: `BRAIN_DISPATCH_URL no es una URL http:// o https:// válida, o lleva usuario y clave (p. ej. http://nea:8000/vocero/dispatch): corrígela y vuelve a desplegar el CRM. ${mientras}`,
+src/components/avisos-de-mensajes.ts:16:const CLAVE_SONIDO = "vocero.sonido";
+src/components/avisos-de-mensajes.ts:141:export const EVENTO_ABRIR_CONVERSACION = "vocero:abrir-conversacion";
+src/components/bookings/bookings-client.tsx:49:const VIEW_KEY = "vocero:citas:vista";
+src/components/bookings/bookings-client.tsx:50:const CANCELLED_KEY = "vocero:citas:canceladas";
+src/components/bookings/bookings-client.tsx:51:const TESTS_KEY = "vocero:citas:pruebas";
+src/components/inbox/audio-player.tsx:20:const CLAVE_VELOCIDAD = "vocero.audio.velocidad";
+src/components/inbox/inbox-client.tsx:84:    setPanelOpen(localStorage.getItem("vocero.panelOpen") !== "false");
+src/components/inbox/inbox-client.tsx:91:      localStorage.setItem("vocero.panelOpen", String(open));
+src/components/pwa.tsx:38:  __voceroInstalacion?: EventoInstalacion | null;
+src/components/pwa.tsx:39:  __voceroInstalacionOyentes?: Set<() => void>;
+src/components/pwa.tsx:42:  g.__voceroInstalacionOyentes ??= new Set();
+src/components/pwa.tsx:43:  return g.__voceroInstalacionOyentes;
+src/components/pwa.tsx:48:if (typeof window !== "undefined" && !("__voceroInstalacionEscucha" in window)) {
+src/components/pwa.tsx:49:  Object.defineProperty(window, "__voceroInstalacionEscucha", { value: true });
+src/components/pwa.tsx:53:    g.__voceroInstalacion = e as EventoInstalacion;
+src/components/pwa.tsx:57:    g.__voceroInstalacion = null;
+src/components/pwa.tsx:73:    const leer = () => setEvento(yaInstalada() ? null : (g.__voceroInstalacion ?? null));
+src/components/pwa.tsx:87:        g.__voceroInstalacion = null;
+src/components/settings/apariencia-client.tsx:68:    const estilo = document.getElementById("vocero-temas-vivo") ?? document.head.appendChild(Object.assign(document.createElement("style"), { id: "vocero-temas-vivo" }));
+src/lib/auth/index.ts:21:  __voceroInternalSignup?: AsyncLocalStorage<boolean>;
+src/lib/auth/index.ts:27:  if (!globalForSignup.__voceroInternalSignup) {
+src/lib/auth/index.ts:28:    globalForSignup.__voceroInternalSignup = new AsyncLocalStorage<boolean>();
+src/lib/auth/index.ts:30:  return globalForSignup.__voceroInternalSignup;
+src/lib/auth/index.ts:142:const globalForAuth = globalThis as unknown as { __voceroAuth?: Auth };
+src/lib/auth/index.ts:145:  if (!globalForAuth.__voceroAuth) globalForAuth.__voceroAuth = createAuth();
+src/lib/auth/index.ts:146:  return globalForAuth.__voceroAuth;
+src/lib/borradores.ts:17:const PREFIJO = "vocero.borrador.";
+src/lib/borradores.ts:20:export const EVENTO_BORRADOR = "vocero:borrador";
+src/lib/db/index.ts:37:  __voceroSql?: ReturnType<typeof postgres>;
+src/lib/db/index.ts:49:  if (!globalForDb.__voceroSql) globalForDb.__voceroSql = createClient();
+src/lib/db/index.ts:50:  return globalForDb.__voceroSql;
+src/lib/env.ts:94:  // http://nea:8000/vocero/dispatch. Con ella, `BOT_API_KEY` y el interruptor
+src/lib/notification-sound.ts:35:const STORAGE_KEY = "vocero:notificationSound";
+src/lib/rate-limit.ts:15:  __voceroRateLimit?: Map<string, Bucket>;
+src/lib/rate-limit.ts:19:  if (!globalForRl.__voceroRateLimit) {
+src/lib/rate-limit.ts:20:    globalForRl.__voceroRateLimit = new Map();
+src/lib/rate-limit.ts:22:  return globalForRl.__voceroRateLimit;
+src/lib/temas.ts:18:  "vocero",
+src/lib/temas.ts:19:  "vocero-oscuro",
+src/lib/temas.ts:52:  vocero: {
+src/lib/temas.ts:56:    pareja: "vocero-oscuro",
+src/lib/temas.ts:94:  "vocero-oscuro": {
+src/lib/temas.ts:98:    pareja: "vocero",
+src/lib/temas.ts:353:export const APARIENCIA_COOKIE = "vocero-apariencia";
+src/lib/theme.ts:14:export const THEME_COOKIE = "vocero-theme";
+src/server/agenda/connectors/google.ts:192:              requestId: `vocero-${Date.parse(req.startUtc)}`,
+src/server/apariencia.ts:62: * `vocero-theme`) lo conserva: ve la pareja oscura del tema del negocio.
+src/server/bot/status.ts:42:  __voceroBotLastSeen?: number;
+src/server/bot/status.ts:43:  __voceroBrainHealth?: HealthCacheEntry;
+src/server/bot/status.ts:49:  globalForBrain.__voceroBotLastSeen = now;
+src/server/bot/status.ts:53:  const t = globalForBrain.__voceroBotLastSeen;
+src/server/bot/status.ts:59:  delete globalForBrain.__voceroBotLastSeen;
+src/server/bot/status.ts:60:  delete globalForBrain.__voceroBrainHealth;
+src/server/bot/status.ts:211:  const cached = globalForBrain.__voceroBrainHealth;
+src/server/bot/status.ts:221:  globalForBrain.__voceroBrainHealth = entry;
+src/server/brains/config.ts:13: * contenedor del cerebro (`http://nea:8000/vocero/dispatch`).
+src/server/brains/contract.ts:280:export const CABECERA_FIRMA = "x-vocero-signature";
+src/server/brains/contract.ts:281:export const CABECERA_DISPATCH = "x-vocero-dispatch-id";
+src/server/brains/contract.ts:282:export const CABECERA_ORG = "x-vocero-organization";
+src/server/brains/contract.ts:284:export const CABECERA_EVENTO = "x-vocero-event";
+src/server/dev/ai-mock.ts:53:const globalForIa = globalThis as unknown as { __voceroAiMock?: EstadoIa };
+src/server/dev/ai-mock.ts:56:  globalForIa.__voceroAiMock ??= { demoraMs: 0, peticiones: [] };
+src/server/dev/ai-mock.ts:57:  return globalForIa.__voceroAiMock;
+src/server/dev/webhook-fallo.ts:10:const g = globalThis as unknown as { __voceroWebhookFallos?: number };
+src/server/dev/webhook-fallo.ts:13:  g.__voceroWebhookFallos = Math.max(0, Math.floor(veces));
+src/server/dev/webhook-fallo.ts:17:  return g.__voceroWebhookFallos ?? 0;
+src/server/dev/webhook-fallo.ts:22:  const quedan = g.__voceroWebhookFallos ?? 0;
+src/server/dev/webhook-fallo.ts:24:  g.__voceroWebhookFallos = quedan - 1;
+src/server/dev/zernio-mock-state.ts:60:const g = globalThis as unknown as { __voceroZernioMock?: ZernioMockState };
+src/server/dev/zernio-mock-state.ts:63:  if (!g.__voceroZernioMock) {
+src/server/dev/zernio-mock-state.ts:64:    g.__voceroZernioMock = { seq: 0, sent: [], accounts: [], webhooks: [], down: [], hits: {} };
+src/server/dev/zernio-mock-state.ts:67:  const s = g.__voceroZernioMock;
+src/server/dispatch/worker.ts:65:  __voceroDispatchWorker?: Estado;
+src/server/dispatch/worker.ts:69:  if (!globalForWorker.__voceroDispatchWorker) {
+src/server/dispatch/worker.ts:70:    globalForWorker.__voceroDispatchWorker = {
+src/server/dispatch/worker.ts:77:  return globalForWorker.__voceroDispatchWorker;
+src/server/doctor/checks.ts:65:    "en .env: DATABASE_URL=postgresql://postgres:<POSTGRES_PASSWORD>@postgres:5432/vocero (docker compose) o ...@localhost:5432/vocero (docker-compose.dev.yml)",
+src/server/doctor/checks.ts:312:        fix: "créala (CREATE DATABASE vocero) o deja que docker compose la cree con POSTGRES_DB=vocero",
+src/server/doctor/checks.ts:557:      fix: "en .env: BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch (la dirección interna de tu cerebro)",
+src/server/events/bus.ts:50:const globalForBus = globalThis as unknown as { __voceroBus?: EventEmitter };
+src/server/events/bus.ts:53:  if (!globalForBus.__voceroBus) {
+src/server/events/bus.ts:56:    globalForBus.__voceroBus = bus;
+src/server/events/bus.ts:58:  return globalForBus.__voceroBus;
+src/server/media-dir.ts:81:  __voceroMediaDirProbe?: ProbeCacheEntry;
+src/server/media-dir.ts:104:  const cached = globalForMedia.__voceroMediaDirProbe;
+src/server/media-dir.ts:109:  globalForMedia.__voceroMediaDirProbe = {
+src/server/media-dir.ts:119:  delete globalForMedia.__voceroMediaDirProbe;
+src/server/webhooks/worker.ts:35:const g = globalThis as unknown as { __voceroWebhookBarrido?: Estado };
+src/server/webhooks/worker.ts:38:  if (!g.__voceroWebhookBarrido) {
+src/server/webhooks/worker.ts:39:    g.__voceroWebhookBarrido = {
+src/server/webhooks/worker.ts:47:  return g.__voceroWebhookBarrido;
+src/server/zernio/conexiones.ts:272:  const name = `vocero-${new URL(env.APP_BASE_URL).host}`;
+src/server/zernio/webhooks.ts:49:const g = globalThis as unknown as { __voceroZernioWebhooks?: Map<string, Entry> };
+src/server/zernio/webhooks.ts:51:  if (!g.__voceroZernioWebhooks) g.__voceroZernioWebhooks = new Map();
+src/server/zernio/webhooks.ts:52:  return g.__voceroZernioWebhooks;

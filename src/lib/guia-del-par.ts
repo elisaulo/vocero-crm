@@ -5,4 +5,4 @@
  * no pueden importar de `server/`.
  */
 export const GUIA_DEL_PAR_URL =
-  "https://github.com/elisaulo/vocero-crm/blob/main/docs/migrar-a-2.0.md#el-par-crm--nea";
+  "https://github.com/elisaulo/jombe-crm/blob/main/docs/migrar-a-2.0.md#el-par-crm--nea";
