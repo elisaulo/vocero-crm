@@ -45,6 +45,14 @@ services:
       BOT_API_KEY: ${BOT_API_KEY:-bot_key_segura_1234567890}
       BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-http://nea:8000/health}
       BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-http://nea:8000/vocero/dispatch}
+      # Evolution API v2 (transporte alternativo de WhatsApp), en evoapi.jombe.app.
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-https://evoapi.jombe.app}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      # Pasarela LLM compatible con OpenAI, en freellmapi.jombe.app/v1.
+      # Respaldo de Ajustes → IA; la fila de la organización manda.
+      FREELLMAPI_BASE_URL: ${FREELLMAPI_BASE_URL:-https://freellmapi.jombe.app/v1}
+      FREELLMAPI_API_KEY: ${FREELLMAPI_API_KEY:-}
       MEDIA_STORE: ${MEDIA_STORE:-}
       MEDIA_BUCKET_ENDPOINT: ${MEDIA_BUCKET_ENDPOINT:-}
       MEDIA_BUCKET_NAME: ${MEDIA_BUCKET_NAME:-}
