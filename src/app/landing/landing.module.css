@@ -1,0 +1,86 @@
+/*
+  Tarea 3 (rebranding a jombe.app) — Tokens de la landing.
+  Módulo CSS propio y no `globals.css`: la landing es oscura por diseño y no
+  comparte la escala de neutros del CRM (que cambia con el white-label y con
+  el tema del dueño). Aquí no hay tema: una sola apariencia, siempre oscura,
+  como el §2 del plan. Los colores de marca (esmeralda y fucsia) sí son de la
+  marca y viven en variables para poder ajustarlos en un solo lugar.
+*/
+.landing {
+    --l-bg: #06070a;
+    --l-bg-2: #0b0d13;
+    --l-surface: rgba(255, 255, 255, 0.045);
+    --l-surface-2: rgba(255, 255, 255, 0.08);
+    --l-border: rgba(255, 255, 255, 0.1);
+    --l-border-strong: rgba(255, 255, 255, 0.18);
+    --l-text: #f5f7fa;
+    --l-text-2: #a9b1c0;
+    --l-text-3: #78818f;
+    --l-emerald: #10b981;
+    --l-fuchsia: #d946ef;
+    --l-emerald-ink: #052e22;
+}
+
+/* El velo de color detrás del hero: dos resplandores, esmeralda y fucsia. */
+.aurora::before,
+.aurora::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    width: 46rem;
+    height: 46rem;
+    border-radius: 9999px;
+    filter: blur(120px);
+    opacity: 0.34;
+    pointer-events: none;
+}
+
+.aurora::before {
+    top: -18rem;
+    left: -12rem;
+    background: var(--l-emerald);
+}
+
+.aurora::after {
+    top: -10rem;
+    right: -16rem;
+    background: var(--l-fuchsia);
+    opacity: 0.26;
+}
+
+/* Glassmorphism: superficie translúcida con borde claro y desenfoque real. */
+.glass {
+    background: var(--l-surface);
+    border: 1px solid var(--l-border);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.9);
+}
+
+.glass-hover {
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.glass-hover:hover {
+    border-color: var(--l-border-strong);
+    background: var(--l-surface-2);
+    transform: translateY(-2px);
+}
+
+/* La rejilla tenue del fondo, sin imagen. */
+.grid-lines {
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Degradado del titular: tinta clara que cae en esmeralda. */
+.gradient-ink {
+    background: linear-gradient(96deg, var(--l-text) 22%, var(--l-emerald) 62%, var(--l-fuchsia) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
