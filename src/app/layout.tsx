@@ -16,7 +16,7 @@ import "./globals.css";
 // bajaba de Google en cada BUILD y un hipo de esa red tumbaba el build; así
 // el build no sale a internet y el runtime tampoco (soberanía). 061 — La
 // interfaz va en Urbanist (geométrica y ligera, como la referencia del diseño
-// de tarjetas); Archivo, la de vocerocrm.com, queda cargada para elegirla
+// de tarjetas); Archivo, la de jombe.app, queda cargada para elegirla
 // (062). `--font-sans` se arma en globals.css a partir de estas.
 const urbanist = localFont({
   src: "./fonts/urbanist-latin-variable.woff2",
@@ -68,7 +68,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding().catch(() => DEFAULT_BRANDING);
   const producto = productName([...enabledChannels()]);
-  // La app se presenta como «Jombe - CRM» (marca + producto), no como «Vocero
+  // La app se presenta como «Jombe - CRM» (marca + producto), no como «Jombe
   // CRM»: el nombre sale de la marca de la organización, nunca cableado.
   // v2.7.6 — el título de la ventana es exactamente el nombre de la app
   // («Jombe - CRM»), sin el sufijo «— CRM multicanal».

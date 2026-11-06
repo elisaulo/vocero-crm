@@ -1,5 +1,5 @@
 ﻿# ============================================================
-# Vocero CRM — railway.toml (docs.railway.com/reference/config-as-code)
+# Jombe CRM — railway.toml (docs.railway.com/reference/config-as-code)
 #
 # 2.0 — El agente (Nea) es un segundo servicio del mismo proyecto, desde la
 # imagen ghcr.io/elisaulo/nea-agent:2.0.0, sin dominio público: CRM_BASE_URL

@@ -8,7 +8,7 @@ import { isConnectorId } from "@/lib/agenda-connectors";
  * se entregue lo demuestra la prueba de conexión de cada conector, no esto.
  *
  * Pura (sin base de datos) para poder probar la tabla de decisión sola.
- * Puerto de `calendar-verifiers.ts` de Vocero Cloud, recortado al catálogo de
+ * Puerto de `calendar-verifiers.ts` de Jombe Cloud, recortado al catálogo de
  * la raíz: `enlace-fijo`, `zoom` y `google` (que aquí hace calendario y Meet
  * en una sola credencial).
  */

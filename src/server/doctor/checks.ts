@@ -354,7 +354,7 @@ export type StoredWhatsApp = {
 /**
  * Las conexiones guardadas, organización por organización y por la misma
  * puerta que usa la app (getCredentialsByOrg: query acotada + descifrado).
- * Vocero raíz no tiene credenciales de WhatsApp en el entorno: viven cifradas
+ * Jombe raíz no tiene credenciales de WhatsApp en el entorno: viven cifradas
  * en la base.
  */
 export async function loadWhatsAppCredentials(): Promise<StoredWhatsApp[]> {

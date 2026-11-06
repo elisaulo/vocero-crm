@@ -10,7 +10,7 @@ import { getBrainHealth } from "@/server/bot/status";
 /**
  * Qué le falta a esta instancia para que el agente conteste (issue #86).
  *
- * Puerto de `onboarding/status.ts` de Vocero Cloud recortado a lo que la raíz
+ * Puerto de `onboarding/status.ts` de Jombe Cloud recortado a lo que la raíz
  * tiene: el perfil del agente, la credencial de IA (la fila de Ajustes → IA
  * o, de respaldo, `OPENROUTER_*` del entorno), el número de WhatsApp y, solo
  * con `AGENDA=on`, la agenda. Nada de modelo de plataforma, dueño invitado,

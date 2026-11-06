@@ -245,7 +245,7 @@ function opusHead(pista: Pista): Uint8Array {
 }
 
 function opusTags(): Uint8Array {
-  const vendor = new TextEncoder().encode("Vocero");
+  const vendor = new TextEncoder().encode("Jombe");
   const out = new Uint8Array(8 + 4 + vendor.length + 4);
   const dv = new DataView(out.buffer);
   out.set(new TextEncoder().encode("OpusTags"), 0);
@@ -277,7 +277,7 @@ export function empaquetarOgg(
   ];
   let granulo = 0;
   let secuencia = 2;
-  for (let i = 0; i < paquetes.length; ) {
+  for (let i = 0; i < paquetes.length;) {
     const grupo: Uint8Array[] = [];
     let segmentos = 0;
     while (i < paquetes.length && grupo.length < PAQUETES_POR_PAGINA) {

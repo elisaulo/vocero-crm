@@ -175,7 +175,7 @@ export function MercadolibreClient() {
                         {connection ? "Reconectar Mercado Libre" : "Conectar Mercado Libre"}
                     </CardTitle>
                     <CardDescription>
-                        Autoriza a Vocero a leer tus ventas, preguntas y publicaciones. El
+                        Autoriza a Jombe a leer tus ventas, preguntas y publicaciones. El
                         acceso se renueva solo; puedes desconectarlo cuando quieras.
                     </CardDescription>
                 </CardHeader>
@@ -245,7 +245,7 @@ export function MercadolibreClient() {
             <p className="flex items-start gap-2 text-xs text-text-2">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                    Vocero nunca ve tu contraseña: la autorización ocurre en
+                    Jombe nunca ve tu contraseña: la autorización ocurre en
                     mercadolibre.com y aquí solo queda el token, cifrado.
                 </span>
             </p>

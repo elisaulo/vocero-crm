@@ -29,7 +29,7 @@ import {
  * si el contenedor se reinicia, los pendientes siguen ahí y el arranque los
  * reanuda (`instrumentation-node.ts`).
  *
- * Puerto de `src/server/dispatch/worker.ts` de Vocero Cloud.
+ * Puerto de `src/server/dispatch/worker.ts` de Jombe Cloud.
  */
 
 /**

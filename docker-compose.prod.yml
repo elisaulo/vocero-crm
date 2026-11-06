@@ -1,10 +1,10 @@
 # ============================================================
-# Vocero CRM — Despliegue en PRODUCCIÓN (VPS con Coolify + Traefik)
+# Jombe CRM — Despliegue en PRODUCCIÓN (VPS con Coolify + Traefik)
 #
 # Este archivo es un alias explícito de docker-compose.yml para
 # entornos de producción. Mantiene el puerto 3000 restringido a
 # localhost, obligando que TODO el tráfico externo pase por
-# Traefik → crm.vocero.bid (HTTPS).
+# Traefik → crm.jombe.app (HTTPS).
 #
 # Uso:
 #   docker compose -f docker-compose.prod.yml up -d
@@ -22,10 +22,12 @@ services:
     ports:
       # SEGURIDAD: expuesto SOLO en localhost.
       # Bloquea acceso directo por IP pública del VPS.
-      # Todo el tráfico externo debe pasar por Traefik → crm.vocero.bid (HTTPS).
+      # Todo el tráfico externo debe pasar por Traefik → crm.jombe.app (HTTPS).
       - "127.0.0.1:3000:3000"
     environment:
-      APP_BASE_URL: ${APP_BASE_URL:-https://crm.vocero.bid}
+      APP_BASE_URL: ${APP_BASE_URL:-https://crm.jombe.app}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://crm.jombe.app}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-https://crm.jombe.app,https://jombe.app,https://www.jombe.app,https://api.jombe.app}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:segura123@vocero-db:5432/vocero}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-U8x9P2mK5vN1qR4wZ7yB0cDfG3hJ6kL9}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-Ui3KfhXI97QrKlZaCWP/KwT7tv7mWE/qytUjsL3ojo0=}
@@ -60,15 +62,34 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
-      - "traefik.http.routers.vocero-http.rule=Host(`crm.vocero.bid`)"
-      - "traefik.http.routers.vocero-http.entrypoints=http"
-      - "traefik.http.routers.vocero-http.service=vocero-svc"
-      - "traefik.http.routers.vocero-https.rule=Host(`crm.vocero.bid`)"
-      - "traefik.http.routers.vocero-https.entrypoints=https"
-      - "traefik.http.routers.vocero-https.tls=true"
-      - "traefik.http.routers.vocero-https.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.vocero-https.service=vocero-svc"
-      - "traefik.http.services.vocero-svc.loadbalancer.server.port=3000"
+      # Un solo contenedor sirve CRM y landing; el middleware de host de Next
+      # decide qué rutas se atienden en cada dominio.
+      - "traefik.http.routers.jombe-http.rule=Host(`crm.jombe.app`) || Host(`jombe.app`) || Host(`www.jombe.app`)"
+      - "traefik.http.routers.jombe-http.entrypoints=http"
+      - "traefik.http.routers.jombe-http.service=jombe-svc"
+      - "traefik.http.routers.jombe-http.middlewares=jombe-https-redirect"
+      - "traefik.http.routers.jombe-https.rule=Host(`crm.jombe.app`) || Host(`jombe.app`) || Host(`www.jombe.app`)"
+      - "traefik.http.routers.jombe-https.entrypoints=https"
+      - "traefik.http.routers.jombe-https.tls=true"
+      - "traefik.http.routers.jombe-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jombe-https.service=jombe-svc"
+      - "traefik.http.middlewares.jombe-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.jombe-https-redirect.redirectscheme.permanent=true"
+      # 301 permanente del dominio anterior. Se retira pasados 90 días.
+      - "traefik.http.routers.jombe-legacy-http.rule=Host(`vocero.bid`) || Host(`www.vocero.bid`) || Host(`crm.vocero.bid`)"
+      - "traefik.http.routers.jombe-legacy-http.entrypoints=http"
+      - "traefik.http.routers.jombe-legacy-http.middlewares=jombe-legacy-redirect"
+      - "traefik.http.routers.jombe-legacy-http.service=jombe-svc"
+      - "traefik.http.routers.jombe-legacy-https.rule=Host(`vocero.bid`) || Host(`www.vocero.bid`) || Host(`crm.vocero.bid`)"
+      - "traefik.http.routers.jombe-legacy-https.entrypoints=https"
+      - "traefik.http.routers.jombe-legacy-https.tls=true"
+      - "traefik.http.routers.jombe-legacy-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jombe-legacy-https.middlewares=jombe-legacy-redirect"
+      - "traefik.http.routers.jombe-legacy-https.service=jombe-svc"
+      - "traefik.http.middlewares.jombe-legacy-redirect.redirectregex.regex=^https?://(?:www[.])?(?:crm[.])?vocero[.]bid(.*)"
+      - "traefik.http.middlewares.jombe-legacy-redirect.redirectregex.replacement=https://crm.jombe.app$${1}"
+      - "traefik.http.middlewares.jombe-legacy-redirect.redirectregex.permanent=true"
+      - "traefik.http.services.jombe-svc.loadbalancer.server.port=3000"
 
   postgres:
     image: postgres:16-alpine
@@ -82,7 +103,7 @@ services:
     volumes:
       - vocero_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vocero"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d vocero" ]
       interval: 5s
       timeout: 5s
       retries: 10

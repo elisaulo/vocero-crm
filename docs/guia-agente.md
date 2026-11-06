@@ -1,4 +1,4 @@
-# Guía del agente — Cómo responde Vocero CRM
+# Guía del agente — Cómo responde Jombe CRM
 
 Esta guía explica cómo configurar el comportamiento del agente para que clasifique la intención del cliente antes de responder, limite la longitud de sus respuestas y derive a un humano cuando toca.
 

@@ -2,7 +2,7 @@
 
 Desde la spec [066](../specs/066-embedded-signup/spec.md), **Ajustes →
 WhatsApp** puede mostrar un botón **«Conectar con Meta»**: quien administra la
-cuenta autoriza su WhatsApp en la ventana oficial de Meta y Vocero canjea el
+cuenta autoriza su WhatsApp en la ventana oficial de Meta y Jombe canjea el
 código, registra el número, guarda las credenciales cifradas y registra el
 webhook en la Cuenta de WhatsApp, en la Cuenta de mensajes y en el número. Sin
 pegar tokens.
@@ -58,7 +58,7 @@ Guarda los cambios.
 
 **d) Facebook Login for Business › Configuraciones › Crear configuración**
 (en la UI en español puede llamarse «Ajustes › Crear ajuste»):
-1. Nombre: p. ej. «Vocero — Embedded Signup».
+1. Nombre: p. ej. «Jombe — Embedded Signup».
 2. Variación de inicio de sesión: **WhatsApp Embedded Signup**.
 3. Productos: **solo WhatsApp Cloud API**. No marques Marketing Messages,
    Conversions API ni anuncios: cada producto pide sus permisos y, si alguno
@@ -71,7 +71,7 @@ Guarda los cambios.
 
 **e) Webhook de la app** (WhatsApp › Configuración): igual que en el alta
 manual, la app necesita una callback URL propia y el campo `messages`
-suscrito. Vocero pone el override de esta instancia solo, al conectar.
+suscrito. Jombe pone el override de esta instancia solo, al conectar.
 
 ## 4. Quién puede completar el popup
 
@@ -86,7 +86,7 @@ suscrito. Vocero pone el override de esta instancia solo, al conectar.
   no deja onboardear por Embedded Signup un número hacia el mismo portafolio
   que posee la app. Para eso, alta manual con token de usuario del sistema.
 
-## 5. Qué hace Vocero al pulsar
+## 5. Qué hace Jombe al pulsar
 
 1. `FB.init({ appId, version, xfbml: false, cookie: false, fedCM: false })`.
    `fedCM: false` es obligatorio: con FedCM el SDK descarta `config_id` y el
@@ -104,14 +104,14 @@ suscrito. Vocero pone el override de esta instancia solo, al conectar.
    hoy en la Cuenta de WhatsApp no es fatal si la de mensajes respondió bien.
 
 El **PIN generado** se muestra una sola vez: es la verificación en dos pasos
-del número. Guárdalo; Vocero no lo almacena.
+del número. Guárdalo; Jombe no lo almacena.
 
 ## Problemas frecuentes
 
 | Síntoma | Causa probable |
 |---|---|
 | No aparece el botón | Falta alguna de las tres variables, o los IDs no son solo dígitos, o no se redesplegó |
-| Diálogo nativo de Chrome «Iniciar sesión con facebook.com» | FedCM; Vocero ya lo apaga. Si lo ves, hay una versión vieja desplegada |
+| Diálogo nativo de Chrome «Iniciar sesión con facebook.com» | FedCM; Jombe ya lo apaga. Si lo ves, hay una versión vieja desplegada |
 | «Meta no pudo completar la autorización» | `META_APP_SECRET` de otra app, o el código caducó (repite) |
 | «Función no disponible» / `#2655111` | La app está en acceso estándar y el perfil no tiene rol en la app |
 | Conectado, pero el webhook avisa de la Cuenta de mensajes | Meta no la reveló o el token no tiene acceso a ella: escribe su ID en el formulario manual y pulsa «Registrar en Meta» |

@@ -4,7 +4,7 @@ import { estadoIaDe, mensajeDeEstado } from "@/lib/ai/provider";
 
 /**
  * ¿Hay que avisarle al dueño de que su agente no puede contestar?
- * (puerto de `aviso-ia` de Vocero Cloud, issue #85)
+ * (puerto de `aviso-ia` de Jombe Cloud, issue #85)
  *
  * El caso que esto cierra: una organización con el agente encendido y sin
  * proveedor de IA (o con la llave rechazada). El mensaje entra, el turno no

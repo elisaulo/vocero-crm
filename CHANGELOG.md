@@ -166,7 +166,7 @@ Actualizar: `git pull && docker compose build && docker compose up -d`.
 ### Preservado (nuestras personalizaciones)
 
 - `docker-compose.yml`: puerto `127.0.0.1:3000:3000` (seguridad) + imagen
-  `elisaulo/vocero-crm:local` + red `coolify` + labels Traefik para `crm.vocero.bid`
+  `elisaulo/vocero-crm:local` + red `coolify` + labels Traefik para `crm.jombe.app`
 - `src/components/app-shell.tsx`: sidebar colapsable con localStorage
 - `src/components/app-nav.tsx`: sidebar sticky + collapsed mode + v2.1.6
 - `src/app/layout.tsx`: `html` y `body` con `h-dvh overflow-hidden`
@@ -182,7 +182,7 @@ cambio en variables de entorno.
 - **Puerto 3000 restringido a `localhost`** (`docker-compose.yml`): el binding
   cambia de `"3000:3000"` a `"127.0.0.1:3000:3000"`. El puerto ya no es
   accesible directamente desde la IP pública del VPS — todo el tráfico externo
-  debe pasar obligatoriamente por Traefik hacia `crm.vocero.bid` (HTTPS con
+  debe pasar obligatoriamente por Traefik hacia `crm.jombe.app` (HTTPS con
   TLS/Let's Encrypt). Traefik sigue alcanzando el contenedor internamente por
   la red `coolify` y el label `loadbalancer.server.port=3000`.
 
@@ -243,7 +243,7 @@ docker compose up -d`.
 
 ### Nuevo
 
-- **`docker-compose.yml` para Coolify + Traefik** (`crm.vocero.bid`): elimina
+- **`docker-compose.yml` para Coolify + Traefik** (`crm.jombe.app`): elimina
   los servicios obsoletos `evolution-api` (`atendai/evolution-api:v2.1.1`),
   `caddy` y `nea` del compose principal. Contiene solo `app` y `postgres`,
   con labels de Traefik para TLS automático con Let's Encrypt sobre la red

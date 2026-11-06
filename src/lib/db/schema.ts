@@ -985,7 +985,7 @@ export const booking = pgTable(
  * La memoria de lo ofrecido. Es lo que hace verificable el requisito
  * innegociable: sin fila aquí, no hay reserva.
  *
- * Vive en el CRM y no en quien conduce la conversación porque Vocero promete
+ * Vive en el CRM y no en quien conduce la conversación porque Jombe promete
  * "conecta TU propio cerebro": con la garantía del lado del cliente, cualquier
  * cerebro podría reservar un instante que jamás se ofreció y el CRM lo
  * aceptaría.
@@ -1221,7 +1221,7 @@ export const capiSettings = pgTable(
     tokenTag: text("token_tag").notNull(),
     /**
      * Qué etapa significa "lead calificado" PARA ESTE NEGOCIO. Las etapas
-     * sembradas de Vocero no incluyen ninguna con ese nombre y cada quien
+     * sembradas de Jombe no incluyen ninguna con ese nombre y cada quien
      * renombra las suyas, así que se elige en vez de adivinarse. NULL = ese
      * evento no se emite. `set null` a propósito: borrar la etapa apaga el
      * evento, no rompe la configuración.
@@ -1245,7 +1245,7 @@ export const capiSettings = pgTable(
 
 /**
  * Credencial del proveedor de IA de la organización (puerto de `ai_credentials`
- * de Vocero Cloud, issue #85). Una fila por organización: proveedor (su
+ * de Jombe Cloud, issue #85). Una fila por organización: proveedor (su
  * `base_url` OpenAI-compatible), modelo y token cifrado con los mismos helpers
  * que el de WhatsApp; hacia fuera solo `token_last4`.
  *
@@ -1296,7 +1296,7 @@ export const aiCredentials = pgTable(
  * cerebro externo. El mensaje ya está en `message` antes de que exista una
  * fila aquí: bandeja primero, cerebro después.
  *
- * Misma tabla, columnas y estados que `dispatch` de Vocero Cloud, sin lo que
+ * Misma tabla, columnas y estados que `dispatch` de Jombe Cloud, sin lo que
  * allá es de la plataforma (`brain_generation`, `expires_at`, `brain_kind`,
  * `responded_message_id`).
  */
@@ -1363,7 +1363,7 @@ export const dispatch = pgTable(
      * La tarjeta «Quién responde» pregunta por el último entregado y el último
      * fallido. Con `updated_at` en el índice esa pregunta cuesta lo mismo con
      * cien filas que con un millón; sin él, cada refresco ordenaba todo el
-     * histórico. (En Vocero Cloud es `dispatch_org_status_idx`, sin la tercera
+     * histórico. (En Jombe Cloud es `dispatch_org_status_idx`, sin la tercera
      * columna: este es su superconjunto.)
      */
     index("dispatch_org_status_updated_idx").on(

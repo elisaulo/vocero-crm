@@ -18,7 +18,7 @@ import { publish } from "@/server/events/bus";
  * hace un INSERT y cuatro UPDATE de la ventana. La garantía la da Postgres,
  * así que sobrevive a que alguien reescriba el worker.
  *
- * Puerto de `src/server/dispatch/outbox.ts` de Vocero Cloud.
+ * Puerto de `src/server/dispatch/outbox.ts` de Jombe Cloud.
  */
 
 /**

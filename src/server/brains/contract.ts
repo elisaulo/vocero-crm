@@ -11,7 +11,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * que agregar un canal no toca a los cerebros y agregar un cerebro no toca a
  * los canales.
  *
- * Es la misma forma que el despacho de Vocero Cloud (su
+ * Es la misma forma que el despacho de Jombe Cloud (su
  * `src/server/brains/contract.ts`), para que un mismo cerebro sirva a las dos
  * ediciones. La única diferencia está en `mediaId`, y se explica abajo.
  */
@@ -250,7 +250,7 @@ export const TIPO_OLVIDO = "conversation.deleted" as const;
 
 /**
  * El orden de las claves es contrato: se firma el JSON tal como sale de aquí.
- * Es el mismo cuerpo que manda Vocero Cloud, y la prueba gemela de `nea-agent`
+ * Es el mismo cuerpo que manda Jombe Cloud, y la prueba gemela de `nea-agent`
  * (`tests/test_olvido.py`) lo tiene copiado byte a byte, igual que
  * `tests/unit/olvido-contrato.test.ts` aquí.
  */
