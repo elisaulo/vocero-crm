@@ -6,9 +6,13 @@ import {
   clasificarRespuesta,
   firmarCuerpo,
   CABECERA_DISPATCH,
+  CABECERA_DISPATCH_LEGADA,
   CABECERA_EVENTO,
+  CABECERA_EVENTO_LEGADA,
   CABECERA_FIRMA,
+  CABECERA_FIRMA_LEGADA,
   CABECERA_ORG,
+  CABECERA_ORG_LEGADA,
   type EventoOlvido,
   type EventoDespacho,
   type MensajeParaEvento,
@@ -21,7 +25,7 @@ import { windowMsFor } from "@/server/channels/capabilities";
 
 /**
  * 021 — Entrega de un despacho al cerebro: leer la ráfaga, armar el evento y
- * hacer el POST firmado. Puerto de `src/server/brains/deliver.ts` de Vocero
+ * hacer el POST firmado. Puerto de `src/server/brains/deliver.ts` de Jombe
  * Cloud sin tipos de cerebro: aquí hay uno, el de `BRAIN_DISPATCH_URL`.
  */
 
@@ -308,6 +312,13 @@ export async function entregar(
         [CABECERA_FIRMA]: firmarCuerpo(cuerpo, destino.secret),
         [CABECERA_DISPATCH]: evento.dispatchId,
         [CABECERA_ORG]: evento.organization.slug ?? evento.organization.id,
+        // Rebranding (v2.8.0): se siguen mandando las cabeceras viejas para que
+        // un cerebro que todavía lea `x-vocero-*` no se rompa. La firma cubre el
+        // cuerpo, no las cabeceras: repetirla aquí es lo mismo que arriba.
+        // TODO: remove fallback in v2.9
+        [CABECERA_FIRMA_LEGADA]: firmarCuerpo(cuerpo, destino.secret),
+        [CABECERA_DISPATCH_LEGADA]: evento.dispatchId,
+        [CABECERA_ORG_LEGADA]: evento.organization.slug ?? evento.organization.id,
       },
       redirect: "manual",
       cache: "no-store",
@@ -380,6 +391,11 @@ export async function avisarOlvido(
         [CABECERA_FIRMA]: firmarCuerpo(cuerpo, destino.secret),
         [CABECERA_EVENTO]: evento.type,
         [CABECERA_ORG]: evento.organization.slug ?? evento.organization.id,
+        // Rebranding (v2.8.0): el cerebro viejo lee `x-vocero-*`.
+        // TODO: remove fallback in v2.9
+        [CABECERA_FIRMA_LEGADA]: firmarCuerpo(cuerpo, destino.secret),
+        [CABECERA_EVENTO_LEGADA]: evento.type,
+        [CABECERA_ORG_LEGADA]: evento.organization.slug ?? evento.organization.id,
       },
       redirect: "manual",
       cache: "no-store",

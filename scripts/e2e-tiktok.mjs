@@ -9,7 +9,7 @@
  *
  * Uso (configuración estándar de la 036, ver `scripts/lib/cerebro-falso.mjs`):
  *   1) app corriendo (`pnpm dev`) sobre una base migrada, con
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch, CHANNELS que
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch, CHANNELS que
  *      incluya `tiktok` (y, para el reparto por plataforma, `instagram`),
  *      WA_MOCK_ENABLED=true, ZERNIO_BASE_URL → zernio-mock,
  *      OPENROUTER_BASE_URL → ai-mock con OPENROUTER_API_TOKEN y
@@ -61,7 +61,7 @@ async function api(path, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -73,7 +73,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Espera a que algo OCURRA, en vez de dormir un rato y confiar. */
 async function hasta(cond, ms = 15000, paso = 200) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const v = await cond();
     if (v) return v;
     if (Date.now() > fin) return null;
@@ -265,10 +265,10 @@ async function conectar() {
   ok(
     "la conexión enseña la cuenta, el usuario sin arroba y solo la cola de la llave",
     con?.accountRef === ACCOUNT &&
-      con?.username === "negocio.demo" &&
-      con?.tokenLast4 === "demo" &&
-      con?.status === "connected" &&
-      con?.hasWebhookSecret === true,
+    con?.username === "negocio.demo" &&
+    con?.tokenLast4 === "demo" &&
+    con?.status === "connected" &&
+    con?.hasWebhookSecret === true,
     JSON.stringify(con)
   );
   const crudo = JSON.stringify(estado.json);
@@ -282,7 +282,7 @@ async function conectar() {
   ok(
     "tiktokUrl es la de este canal",
     typeof wh?.tiktokUrl === "string" &&
-      wh.tiktokUrl.endsWith(`/api/webhooks/tiktok/${VERIFY_TOKEN}`),
+    wh.tiktokUrl.endsWith(`/api/webhooks/tiktok/${VERIFY_TOKEN}`),
     String(wh?.tiktokUrl).replace(VERIFY_TOKEN, "<token>")
   );
   const salud = await (await fetch(`${BASE}/api/health`)).json();
@@ -339,7 +339,7 @@ async function recibirYContestar() {
     ok(
       "y el contexto da la ventana de TikTok: abierta y con más de 24 h por delante",
       ctx.json?.conversation?.windowOpen === true &&
-        ctx.json?.conversation?.windowRemainingMs > 24 * HORA,
+      ctx.json?.conversation?.windowRemainingMs > 24 * HORA,
       JSON.stringify(ctx.json?.conversation)
     );
   } else {
@@ -366,9 +366,9 @@ async function recibirYContestar() {
   ok(
     "Zernio la recibió en la conversación de ese cliente, con la cuenta",
     porZernio.length === 1 &&
-      porZernio[0].accountId === ACCOUNT &&
-      porZernio[0].message === respuesta?.text &&
-      !porZernio[0].messageTag,
+    porZernio[0].accountId === ACCOUNT &&
+    porZernio[0].message === respuesta?.text &&
+    !porZernio[0].messageTag,
     JSON.stringify(porZernio)
   );
 
@@ -407,13 +407,13 @@ async function limites({ conv, hilo, sender, nombre }) {
   ok(
     "con un texto que dice qué pasa y qué lo arregla",
     /10 mensajes/.test(once.json?.error?.message ?? "") &&
-      /vuelva a escribir/.test(once.json?.error?.message ?? ""),
+    /vuelva a escribir/.test(once.json?.error?.message ?? ""),
     once.json?.error?.message
   );
   ok(
     "y no llegó a Zernio ni quedó en la conversación",
     (await enviadosPorZernio(hilo)).length === 10 &&
-      !(await mensajesDe(conv.id)).some((m) => m.text === `el undécimo ${MARCA}`)
+    !(await mensajesDe(conv.id)).some((m) => m.text === `el undécimo ${MARCA}`)
   );
   if (BOT_KEY.length >= 16) {
     const porBot = await bot("/api/bot/messages", {

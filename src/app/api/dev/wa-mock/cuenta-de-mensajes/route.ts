@@ -14,7 +14,7 @@ const bodySchema = z.object({
   /** 066 — Si `POST {wabaId}/subscribed_apps` también responde 2388339. */
   rechazaSuscripcion: z.boolean().default(false),
   /**
-   * Plantillas creadas FUERA de Vocero (Administrador de WhatsApp, Graph
+   * Plantillas creadas FUERA de Jombe (Administrador de WhatsApp, Graph
    * directo, `hello_world`): el «panel de Meta» ya las tiene, el CRM no.
    */
   plantillasExternas: z

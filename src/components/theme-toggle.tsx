@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Moon, Sun } from "lucide-react";
-import { THEME_COOKIE, THEME_COOKIE_MAX_AGE } from "@/lib/theme";
+import { THEME_COOKIE, THEME_COOKIE_LEGACY, THEME_COOKIE_MAX_AGE } from "@/lib/theme";
 import {
   APARIENCIA_COOKIE,
+  APARIENCIA_COOKIE_LEGACY,
   atributosHtml,
   modoDe,
   parejaDe,
@@ -21,9 +22,15 @@ export function guardarAparienciaPropia(a: Apariencia | null) {
     document.cookie = `${APARIENCIA_COOKIE}=${encodeURIComponent(JSON.stringify(a))};path=/;max-age=${THEME_COOKIE_MAX_AGE};samesite=lax`;
     // La cookie de antes se mantiene al día para quien todavía la lea.
     document.cookie = `${THEME_COOKIE}=${modoDe(a)};path=/;max-age=${THEME_COOKIE_MAX_AGE};samesite=lax`;
+    // TODO: remove in v2.9 — los nombres viejos, por si algo de afuera aún los mira.
+    document.cookie = `${APARIENCIA_COOKIE_LEGACY}=${encodeURIComponent(JSON.stringify(a))};path=/;max-age=${THEME_COOKIE_MAX_AGE};samesite=lax`;
+    document.cookie = `${THEME_COOKIE_LEGACY}=${modoDe(a)};path=/;max-age=${THEME_COOKIE_MAX_AGE};samesite=lax`;
   } else {
     document.cookie = `${APARIENCIA_COOKIE}=;path=/;max-age=0;samesite=lax`;
     document.cookie = `${THEME_COOKIE}=;path=/;max-age=0;samesite=lax`;
+    // TODO: remove in v2.9
+    document.cookie = `${APARIENCIA_COOKIE_LEGACY}=;path=/;max-age=0;samesite=lax`;
+    document.cookie = `${THEME_COOKIE_LEGACY}=;path=/;max-age=0;samesite=lax`;
   }
 }
 export function pintarApariencia(a: Apariencia) {

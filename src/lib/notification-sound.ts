@@ -7,6 +7,8 @@
  * se guarda como Data URL (Base64) en localStorage y se reproduce con
  * `new Audio(dataUrl).play()`: nunca sale del navegador.
  */
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
+
 export type NotificationSoundId =
   | "campanilla"
   | "beep"
@@ -32,7 +34,9 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
 ];
 
 export const DEFAULT_SOUND_ID: NotificationSoundId = "campanilla";
-const STORAGE_KEY = "vocero:notificationSound";
+const STORAGE_KEY = "jombe:notificationSound";
+/** Llave histórica: se migra a la nueva al primer uso (se quita en v2.9). */
+const STORAGE_KEY_LEGACY = "vocero:notificationSound";
 
 /** Tope del archivo personalizado: 2 MB (el Data URL puede crecer ~33 %). */
 export const CUSTOM_SOUND_MAX_BYTES = 2 * 1024 * 1024;
@@ -44,15 +48,25 @@ export const CUSTOM_SOUND_NAME_KEY = "jombe_custom_sound_name";
 /** Lee la preferencia guardada en localStorage (o el default). */
 export function getSavedSoundId(): NotificationSoundId {
   if (typeof window === "undefined") return DEFAULT_SOUND_ID;
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  const found = NOTIFICATION_SOUNDS.find((s) => s.id === v);
-  return found ? found.id : DEFAULT_SOUND_ID;
+  // TODO: remove in v2.9
+  migrateLocalStorageKey(STORAGE_KEY_LEGACY, STORAGE_KEY);
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY);
+    const found = NOTIFICATION_SOUNDS.find((s) => s.id === v);
+    return found ? found.id : DEFAULT_SOUND_ID;
+  } catch {
+    return DEFAULT_SOUND_ID;
+  }
 }
 
 /** Guarda la preferencia en localStorage. */
 export function saveSoundId(id: NotificationSoundId): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, id);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    // Sin almacenamiento: la preferencia vale solo para esta pestaña.
+  }
 }
 
 /**

@@ -10,6 +10,18 @@ import { z } from "zod";
 
 export const envSchema = z.object({
   APP_BASE_URL: z.string().url(),
+  // Tarea 2 (rebranding a jombe.app): URL canónica de Better Auth. Si falta se
+  // usa APP_BASE_URL. Existe para separar la URL pública de la app de la que
+  // firman las sesiones cuando hay un proxy delante.
+  BETTER_AUTH_URL: z.string().url().optional(),
+  // Tarea 2: orígenes de confianza para CORS y CSRF de Better Auth, separados
+  // por coma. Ej.: https://crm.jombe.app,https://jombe.app,https://www.jombe.app
+  // Sin ella, Better Auth solo confía en el origen de BETTER_AUTH_URL.
+  BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
+  // Tarea 2: dominio de la cookie de sesión cuando la app y la landing viven en
+  // subdominios distintos y la sesión debe viajar entre ellos. Ej.: .jombe.app
+  // Vacío (lo normal en self-hosted de un solo host): cookie de host.
+  AUTH_COOKIE_DOMAIN: z.string().optional(),
   DATABASE_URL: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(16),
   ENCRYPTION_KEY: z
@@ -31,6 +43,18 @@ export const envSchema = z.object({
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api"),
   OPENROUTER_MODEL: z.string().optional(),
   OPENROUTER_JUDGE_MODEL: z.string().optional(),
+  // Tarea 4: pasarela compatible con OpenAI (FreeLLMAPI). Si está, manda sobre
+  // OPENROUTER_BASE_URL como base del proveedor de respaldo del entorno; lo
+  // guardado en Ajustes → IA sigue teniendo prioridad (lib/ai/provider.ts).
+  // No se valida con `.url()` a propósito, por lo mismo que BRAIN_HEALTH_URL:
+  // mal escrita, la IA de respaldo queda inactiva en vez de tumbar el CRM.
+  FREELLMAPI_BASE_URL: z.string().optional(),
+  FREELLMAPI_API_KEY: z.string().optional(),
+  // Tarea 4: Evolution API v2. Ej.: https://evoapi.jombe.app. Tampoco se valida
+  // aquí: sin ella el canal Evolution queda inactivo y lo demás sigue.
+  EVOLUTION_API_URL: z.string().optional(),
+  EVOLUTION_API_KEY: z.string().optional(),
+  EVOLUTION_INSTANCE: z.string().optional(),
   // 014/017: canales encendidos, separados por coma. WhatsApp siempre esta on.
   // Ej.: CHANNELS=whatsapp,instagram,messenger. Sin ella, la instancia es solo
   // WhatsApp y las superficies de los demas canales responden 404.
@@ -67,7 +91,7 @@ export const envSchema = z.object({
   // configuración y lo demás sigue funcionando (server/bot/status.ts).
   BRAIN_HEALTH_URL: z.string().optional(),
   // 021: a dónde le despacha el CRM cada turno al cerebro externo. Ej.:
-  // http://nea:8000/vocero/dispatch. Con ella, `BOT_API_KEY` y el interruptor
+  // http://nea:8000/jombe/dispatch. Con ella, `BOT_API_KEY` y el interruptor
   // del Agente encendido, contesta el cerebro (036). Tampoco se valida aquí,
   // por lo mismo que la de arriba: mal escrita, el despacho queda inactivo y
   // la tarjeta lo dice (server/brains/config.ts).

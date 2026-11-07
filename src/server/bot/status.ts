@@ -15,7 +15,7 @@ import {
  *
  * 036 — El CRM ya no trae agente: quien contesta es el cerebro al que se le
  * despacha (`BRAIN_DISPATCH_URL`), y solo con el interruptor encendido. Sin
- * cerebro, Vocero es una bandeja manual, que es un producto válido: el aviso
+ * cerebro, Jombe es una bandeja manual, que es un producto válido: el aviso
  * `sin_cerebro` informa, no alarma. Ya no hay dos que puedan contestar a la
  * vez desde el CRM, así que `doble_respuesta` se fue.
  */
@@ -39,25 +39,25 @@ type HealthCacheEntry = {
 // En globalThis: los módulos pueden evaluarse más de una vez (una por ruta en
 // dev) y la última llamada la anota `requireBotKey`, en otra ruta.
 const globalForBrain = globalThis as unknown as {
-  __voceroBotLastSeen?: number;
-  __voceroBrainHealth?: HealthCacheEntry;
+  __jombeBotLastSeen?: number;
+  __jombeBrainHealth?: HealthCacheEntry;
 };
 
 /** La anota `requireBotKey` en cada llamada autenticada. Solo memoria: se
  *  pierde al reiniciar, y la UI lo dice («desde el último arranque»). */
 export function markBotSeen(now: number = Date.now()): void {
-  globalForBrain.__voceroBotLastSeen = now;
+  globalForBrain.__jombeBotLastSeen = now;
 }
 
 export function botLastSeenAt(): Date | null {
-  const t = globalForBrain.__voceroBotLastSeen;
+  const t = globalForBrain.__jombeBotLastSeen;
   return typeof t === "number" ? new Date(t) : null;
 }
 
 /** Solo para tests. */
 export function resetBrainStatusState(): void {
-  delete globalForBrain.__voceroBotLastSeen;
-  delete globalForBrain.__voceroBrainHealth;
+  delete globalForBrain.__jombeBotLastSeen;
+  delete globalForBrain.__jombeBrainHealth;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ export async function fetchBrainHealth(
     });
     // Node devuelve el 3xx tal cual; un navegador, un `opaqueredirect`.
     if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
-      await res.body?.cancel().catch(() => {});
+      await res.body?.cancel().catch(() => { });
       return {
         ...base,
         reachable: false,
@@ -208,7 +208,7 @@ export async function getBrainHealth(
 ): Promise<BrainHealthDto | null> {
   if (!rawUrl) return null;
   const clock = opts.clock ?? Date.now;
-  const cached = globalForBrain.__voceroBrainHealth;
+  const cached = globalForBrain.__jombeBrainHealth;
   if (cached && cached.url === rawUrl && clock() < cached.expiresAt) {
     return cached.pending;
   }
@@ -218,7 +218,7 @@ export async function getBrainHealth(
     expiresAt: Number.POSITIVE_INFINITY,
     pending: fetchBrainHealth(rawUrl, opts),
   };
-  globalForBrain.__voceroBrainHealth = entry;
+  globalForBrain.__jombeBrainHealth = entry;
   const result = await entry.pending;
   entry.expiresAt = clock() + (opts.ttlMs ?? BRAIN_HEALTH_TTL_MS);
   return result;
@@ -232,19 +232,19 @@ export async function getBrainHealth(
 async function readCapped(res: Response, max: number): Promise<string | null> {
   const declared = Number(res.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > max) {
-    await res.body?.cancel().catch(() => {});
+    await res.body?.cancel().catch(() => { });
     return null;
   }
   if (!res.body) return "";
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
-  for (;;) {
+  for (; ;) {
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
     if (total > max) {
-      await reader.cancel().catch(() => {});
+      await reader.cancel().catch(() => { });
       return null;
     }
     chunks.push(value);

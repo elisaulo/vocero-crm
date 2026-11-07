@@ -25,7 +25,7 @@ import * as schema from "./schema";
  * comporten igual.
  */
 export const PG_CONNECTION_OPTIONS = {
-  onnotice: () => {},
+  onnotice: () => { },
   connection: { TimeZone: "UTC" },
 } as const;
 
@@ -34,7 +34,7 @@ export const PG_CONNECTION_OPTIONS = {
  * globalThis para no agotar conexiones.
  */
 const globalForDb = globalThis as unknown as {
-  __voceroSql?: ReturnType<typeof postgres>;
+  __jombeSql?: ReturnType<typeof postgres>;
 };
 
 function createClient() {
@@ -46,8 +46,8 @@ function createClient() {
 }
 
 export function getSql() {
-  if (!globalForDb.__voceroSql) globalForDb.__voceroSql = createClient();
-  return globalForDb.__voceroSql;
+  if (!globalForDb.__jombeSql) globalForDb.__jombeSql = createClient();
+  return globalForDb.__jombeSql;
 }
 
 let cachedDb: ReturnType<typeof drizzle<typeof schema>> | null = null;

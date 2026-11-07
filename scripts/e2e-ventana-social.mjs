@@ -15,7 +15,7 @@
  *
  * Uso (configuración estándar de la 036, ver `scripts/lib/cerebro-falso.mjs`):
  *   1) app corriendo (`pnpm dev`) sobre una base migrada, con
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch,
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch,
  *      CHANNELS=whatsapp,instagram,messenger,tiktok, WA_MOCK_ENABLED=true,
  *      META_GRAPH_BASE_URL → wa-mock, ZERNIO_BASE_URL → zernio-mock,
  *      OPENROUTER_BASE_URL → ai-mock con OPENROUTER_API_TOKEN y
@@ -77,7 +77,7 @@ async function api(path, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -88,7 +88,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function hasta(cond, ms = 15000, paso = 200) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const v = await cond();
     if (v) return v;
     if (Date.now() > fin) return null;
@@ -320,17 +320,17 @@ async function ventanaHumana() {
     ok(
       `${canal} a las 30 h: la bandeja dice atención humana y cuánto queda (~6 días)`,
       en.conv?.windowOpen === false &&
-        h?.open === true &&
-        h.remainingMs > 7 * DIA - 31 * HORA &&
-        h.remainingMs <= 7 * DIA - 30 * HORA,
+      h?.open === true &&
+      h.remainingMs > 7 * DIA - 31 * HORA &&
+      h.remainingMs <= 7 * DIA - 30 * HORA,
       JSON.stringify({ w: en.conv?.windowOpen, h })
     );
     const ia = await comoCerebro(en.conv.id, `respuesta automática ${MARCA}`);
     ok(
       `${canal} a las 30 h: la IA no puede → 409 window_closed que lo explica`,
       ia.res.status === 409 &&
-        ia.json?.error?.code === "window_closed" &&
-        ia.json?.error?.message?.includes("una persona"),
+      ia.json?.error?.code === "window_closed" &&
+      ia.json?.error?.message?.includes("una persona"),
       `${ia.res.status} ${JSON.stringify(ia.json)}`
     );
     ok(`${canal} a las 30 h: y a la plataforma no salió nada`, (await enviadosPorZernio(en.hilo)).length === 0);
@@ -360,8 +360,8 @@ async function ventanaHumana() {
     ok(
       `${canal} a los 8 días: ni una persona → 409 window_closed que dice 7 días`,
       tarde.res.status === 409 &&
-        tarde.json?.error?.code === "window_closed" &&
-        tarde.json?.error?.message?.includes("7 días"),
+      tarde.json?.error?.code === "window_closed" &&
+      tarde.json?.error?.message?.includes("7 días"),
       `${tarde.res.status} ${JSON.stringify(tarde.json)}`
     );
     const tardeIa = await comoCerebro(fuera.conv.id, `ya es tarde ${MARCA}`);

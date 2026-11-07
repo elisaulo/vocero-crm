@@ -11,7 +11,10 @@
  * y un cambio automático al anochecer sorprende en mitad de una conversación.
  */
 
-export const THEME_COOKIE = "vocero-theme";
+/** Cookie actual del tema claro/oscuro (2.8.0: rebranding Vocero → Jombe). */
+export const THEME_COOKIE = "jombe-theme";
+/** Cookie histórica: se lee como alias y migra a la nueva (se quita en v2.9). */
+export const THEME_COOKIE_LEGACY = "vocero-theme";
 export const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export type ThemePreference = "light" | "dark";

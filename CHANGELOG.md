@@ -1,9 +1,56 @@
 # Cambios
 
-Qué trae cada versión de Vocero CRM y qué hacer para actualizar. La versión
+Qué trae cada versión de Jombe CRM y qué hacer para actualizar. La versión
 sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 2.1.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/elisaulo/vocero-crm:X.Y.Z`.
+
+## 2.8.0 — 2026-11-07
+
+Rebranding completo de Vocero CRM a Jombe CRM: la marca en la interfaz, los
+temas, los contratos HTTP, los alias de almacenamiento del navegador y las
+cookies pasan a llamarse Jombe, con migración automática de lo que los usuarios
+ya tenían guardado. La ruta de la imagen Docker no cambia
+(`ghcr.io/elisaulo/vocero-crm`): solo la etiqueta. No requiere migración de BD
+manual: el script opcional `pnpm db:rebrand` renombra la base y el rol de
+Postgres para instalaciones que quieran el nombre nuevo también ahí. Actualizar
+es redesplegar con la etiqueta `2.8.0`.
+
+### Añadido
+
+- **Rebranding Vocero → Jombe**: toda la interfaz, la documentación de producto
+  y los valores por defecto dicen Jombe CRM. Los alias de compatibilidad quedan
+  hasta 2.9: las claves de `localStorage` `vocero.*` se migran a `jombe.*` al
+  leerlas ([`storage-migration.ts`](src/lib/storage-migration.ts:17)), las
+  cookies `vocero-theme` / `vocero-apariencia` pasan a `jombe-theme` /
+  `jombe-apariencia` con el mismo mecanismo, y los temas `vocero` /
+  `vocero-oscuro` se reconocen como alias de los nuevos nombres
+  ([`temas.ts`](src/lib/temas.ts:355)).
+- **Contratos HTTP renombrados con fallback**: las cabeceras `x-vocero-*` pasan a
+  `x-jombe-*` y el servidor acepta las dos mientras existan clientes viejos; el
+  evento del despacho se firma con `X-Jombe-Signature` y se sigue aceptando
+  `X-Vocero-Signature` ([`contract.ts`](src/server/brains/contract.ts:304)).
+- **`pnpm db:rebrand`**: script opcional e idempotente
+  ([`rebrand-db-migrate.mjs`](scripts/rebrand-db-migrate.mjs:1)) que renombra la
+  base de datos y el rol de Postgres de `vocero` a `jombe` (o lo que se pase con
+  `--from`/`--to`), con `--dry-run` y confirmación. No es obligatorio: una
+  instalación que mantenga su base `vocero` sigue funcionando igual.
+
+### Corregido
+
+- **`capi.ts` ya no asume el nombre de la marca en el evento**: el payload de la
+  Conversions API usa el nombre guardado de la organización
+  ([`capi.ts`](src/lib/meta/capi.ts:130)).
+
+### Actualizar desde 2.7.8
+
+Redesplegar con la etiqueta `2.8.0` (docker compose, Coolify, Render, Fly,
+Railway). No hay migraciones de BD nuevas. Las preferencias del navegador
+(tema, sonido, velocidad de audio, borradores, panel de detalles) se migran
+solas de las claves `vocero.*` a las `jombe.*` al primer uso; nada que hacer.
+Si quieres renombrar también la base y el rol de Postgres, corre `pnpm
+db:rebrand` una vez (opcional). La imagen sigue publicándose en
+`ghcr.io/elisaulo/vocero-crm`; solo cambia la etiqueta a `2.8.0`.
 
 ## 2.7.8 — 2026-11-05
 
@@ -166,7 +213,7 @@ Actualizar: `git pull && docker compose build && docker compose up -d`.
 ### Preservado (nuestras personalizaciones)
 
 - `docker-compose.yml`: puerto `127.0.0.1:3000:3000` (seguridad) + imagen
-  `elisaulo/vocero-crm:local` + red `coolify` + labels Traefik para `crm.vocero.bid`
+  `elisaulo/vocero-crm:local` + red `coolify` + labels Traefik para `crm.jombe.app`
 - `src/components/app-shell.tsx`: sidebar colapsable con localStorage
 - `src/components/app-nav.tsx`: sidebar sticky + collapsed mode + v2.1.6
 - `src/app/layout.tsx`: `html` y `body` con `h-dvh overflow-hidden`
@@ -182,7 +229,7 @@ cambio en variables de entorno.
 - **Puerto 3000 restringido a `localhost`** (`docker-compose.yml`): el binding
   cambia de `"3000:3000"` a `"127.0.0.1:3000:3000"`. El puerto ya no es
   accesible directamente desde la IP pública del VPS — todo el tráfico externo
-  debe pasar obligatoriamente por Traefik hacia `crm.vocero.bid` (HTTPS con
+  debe pasar obligatoriamente por Traefik hacia `crm.jombe.app` (HTTPS con
   TLS/Let's Encrypt). Traefik sigue alcanzando el contenedor internamente por
   la red `coolify` y el label `loadbalancer.server.port=3000`.
 
@@ -243,7 +290,7 @@ docker compose up -d`.
 
 ### Nuevo
 
-- **`docker-compose.yml` para Coolify + Traefik** (`crm.vocero.bid`): elimina
+- **`docker-compose.yml` para Coolify + Traefik** (`crm.jombe.app`): elimina
   los servicios obsoletos `evolution-api` (`atendai/evolution-api:v2.1.1`),
   `caddy` y `nea` del compose principal. Contiene solo `app` y `postgres`,
   con labels de Traefik para TLS automático con Let's Encrypt sobre la red

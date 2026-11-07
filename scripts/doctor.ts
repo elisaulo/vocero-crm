@@ -43,17 +43,17 @@ function section(title: string, results: CheckResult[]): void {
 
 const skip = (label: string, detail: string): CheckResult => ({ status: "skip", label, detail });
 
-console.log("Vocero CRM — doctor");
+console.log("Jombe CRM — doctor");
 
 section("Archivo .env", [
   hasEnvFile
     ? { status: "ok", label: ".env", detail: envPath }
     : {
-        status: "warn",
-        label: ".env",
-        detail: `no existe en ${cwd}: se evalúa solo el entorno del proceso`,
-        fix: "pnpm init-env (crea .env con los secretos generados; con tu dominio: pnpm init-env --domain crm.tudominio.com)",
-      },
+      status: "warn",
+      label: ".env",
+      detail: `no existe en ${cwd}: se evalúa solo el entorno del proceso`,
+      fix: "pnpm init-env (crea .env con los secretos generados; con tu dominio: pnpm init-env --domain crm.tudominio.com)",
+    },
 ]);
 
 const { results, env } = evaluateEnv(process.env);
@@ -77,7 +77,7 @@ if (!env) {
     section("WhatsApp", await checkWhatsApp());
     await getSql()
       .end({ timeout: 1 })
-      .catch(() => {});
+      .catch(() => { });
   } else {
     section("WhatsApp", [
       skip("WhatsApp", "sin base de datos no se pueden leer las conexiones guardadas"),

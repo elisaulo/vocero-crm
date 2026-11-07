@@ -18,16 +18,16 @@ import { isPublicSignupAllowed } from "@/server/auth/registration";
  * desde fuera: solo envuelve llamadas server-side.
  */
 const globalForSignup = globalThis as unknown as {
-  __voceroInternalSignup?: AsyncLocalStorage<boolean>;
+  __jombeInternalSignup?: AsyncLocalStorage<boolean>;
 };
 
 // En globalThis: los módulos pueden evaluarse más de una vez (una por ruta en
 // dev) y todas las copias deben compartir el mismo contexto.
 function internalSignupContext(): AsyncLocalStorage<boolean> {
-  if (!globalForSignup.__voceroInternalSignup) {
-    globalForSignup.__voceroInternalSignup = new AsyncLocalStorage<boolean>();
+  if (!globalForSignup.__jombeInternalSignup) {
+    globalForSignup.__jombeInternalSignup = new AsyncLocalStorage<boolean>();
   }
-  return globalForSignup.__voceroInternalSignup;
+  return globalForSignup.__jombeInternalSignup;
 }
 
 export function runInternalSignup<T>(fn: () => Promise<T>): Promise<T> {
@@ -40,11 +40,38 @@ function isInternalSignup(): boolean {
 
 const RATE_LIMITED_PATHS = new Set(["/sign-in/email", "/sign-up/email"]);
 
+/**
+ * Tarea 2 (rebranding a jombe.app): los orígenes desde los que se acepta una
+ * petición de autenticación. `BETTER_AUTH_TRUSTED_ORIGINS` los declara a mano
+ * (coma) porque conviven landing, www, la app y la API en subdominios
+ * distintos; si falta, el único de confianza es el de `baseURL`.
+ */
+function trustedOrigins(env: ReturnType<typeof getEnv>): string[] {
+  const declarados = (env.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter((o) => o.length > 0);
+  const base = (env.BETTER_AUTH_URL ?? env.APP_BASE_URL).replace(/\/+$/, "");
+  return [...new Set([base, ...declarados])];
+}
+
 function createAuth() {
   const env = getEnv();
   return betterAuth({
-    baseURL: env.APP_BASE_URL,
+    baseURL: env.BETTER_AUTH_URL ?? env.APP_BASE_URL,
     secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: trustedOrigins(env),
+    // Tarea 2: la sesión solo viaja entre subdominios si se declara el dominio
+    // padre (`.jombe.app`). Sin `AUTH_COOKIE_DOMAIN` la cookie es de host, que
+    // es lo correcto en una instalación self-hosted de un solo host.
+    advanced: env.AUTH_COOKIE_DOMAIN
+      ? {
+        crossSubDomainCookies: {
+          enabled: true,
+          domain: env.AUTH_COOKIE_DOMAIN,
+        },
+      }
+      : undefined,
     database: drizzleAdapter(getDb(), {
       provider: "pg",
       schema: {
@@ -112,9 +139,9 @@ function createAuth() {
 
 type Auth = ReturnType<typeof createAuth>;
 
-const globalForAuth = globalThis as unknown as { __voceroAuth?: Auth };
+const globalForAuth = globalThis as unknown as { __jombeAuth?: Auth };
 
 export function getAuth(): Auth {
-  if (!globalForAuth.__voceroAuth) globalForAuth.__voceroAuth = createAuth();
-  return globalForAuth.__voceroAuth;
+  if (!globalForAuth.__jombeAuth) globalForAuth.__jombeAuth = createAuth();
+  return globalForAuth.__jombeAuth;
 }

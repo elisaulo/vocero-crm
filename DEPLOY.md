@@ -1,6 +1,6 @@
-﻿# Guía de Despliegue en VPS — Vocero CRM con Proveedor Dual (Meta + Evolution API)
+﻿# Guía de Despliegue en VPS — Jombe CRM con Proveedor Dual (Meta + Evolution API)
 
-Esta guía detalla los pasos para desplegar Vocero CRM en un servidor VPS propio utilizando Docker Compose, Caddy para SSL automático, PostgreSQL y Evolution API v2 para sesiones de WhatsApp por código QR.
+Esta guía detalla los pasos para desplegar Jombe CRM en un servidor VPS propio utilizando Docker Compose, Caddy para SSL automático, PostgreSQL y Evolution API v2 para sesiones de WhatsApp por código QR.
 
 ---
 
@@ -79,7 +79,7 @@ docker compose exec app node scripts/migrate.mjs
 
 ## Paso 4: Conectar WhatsApp (Evolution API / Meta Cloud API)
 
-### Opción A: Configuración desde el Panel de Vocero CRM (Recomendado)
+### Opción A: Configuración desde el Panel de Jombe CRM (Recomendado)
 
 1. Abre tu navegador en `https://crm.tudominio.com` y regístrate como el primer usuario administrador.
 2. Navega a **Ajustes → WhatsApp**.

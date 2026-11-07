@@ -3,7 +3,7 @@ import type { LossReason, SourceValue, StageDto } from "@/lib/types";
 /**
  * 019 — Contratos y aritmética de la pantalla Resultados.
  *
- * Portado de Vocero Cloud (101 W6 + la tabla por anuncio de 212) SIN gasto
+ * Portado de Jombe Cloud (101 W6 + la tabla por anuncio de 212) SIN gasto
  * publicitario: fuera la carga manual, el costo por prospecto y el retorno
  * (decisión del dueño, spec 019 D1). Lo de origen y anuncios viaja en conteos.
  *

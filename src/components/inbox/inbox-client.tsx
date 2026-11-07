@@ -26,6 +26,7 @@ import {
 import { citaDe } from "./helpers";
 import { marcarBandejaMontada, publicarLista, unaALaVez } from "@/lib/lista-compartida";
 import { ContactPanel } from "./contact-panel";
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
 
 /**
  * Texto que ya salió del compositor pero cuyo POST todavía viaja. Existe solo
@@ -49,6 +50,11 @@ type PendingOut = {
 const PANEL_MEDIA_QUERY = "(min-width: 1280px)";
 const isWideEnoughForPanel = () =>
   typeof window !== "undefined" && window.matchMedia(PANEL_MEDIA_QUERY).matches;
+
+/** Preferencia de escritorio del panel de detalles (2.8.0: Vocero → Jombe). */
+const CLAVE_PANEL = "jombe.panelOpen";
+/** Clave de antes del rebranding: se migra al leer (se quita en v2.9). */
+const CLAVE_PANEL_LEGADA = "vocero.panelOpen";
 
 export function InboxClient({
   channels,
@@ -81,14 +87,16 @@ export function InboxClient({
 
   useEffect(() => {
     if (!isWideEnoughForPanel()) return;
-    setPanelOpen(localStorage.getItem("vocero.panelOpen") !== "false");
+    // TODO: remove in v2.9
+    migrateLocalStorageKey(CLAVE_PANEL_LEGADA, CLAVE_PANEL);
+    setPanelOpen(localStorage.getItem(CLAVE_PANEL) !== "false");
   }, []);
   const togglePanel = useCallback((open: boolean) => {
     setPanelOpen(open);
     // La preferencia es de escritorio: abrir el cajón en el teléfono no debe
     // reescribir cómo queda la Bandeja en la computadora.
     if (isWideEnoughForPanel()) {
-      localStorage.setItem("vocero.panelOpen", String(open));
+      localStorage.setItem(CLAVE_PANEL, String(open));
     }
   }, []);
   const selectedIdRef = useRef<string | null>(null);
@@ -247,10 +255,10 @@ export function InboxClient({
         prev.map((m) =>
           m.id === messageId
             ? {
-                ...m,
-                status: status as MessageDto["status"],
-                error: error ?? null,
-              }
+              ...m,
+              status: status as MessageDto["status"],
+              error: error ?? null,
+            }
             : m
         )
       );
@@ -491,12 +499,12 @@ export function InboxClient({
                       ? "ventana abierta"
                       : selected.humanWindow?.open
                         ? // 024: pasadas 24 h en Instagram o Messenger solo
-                          // contesta una persona. No se llama «atención
-                          // humana»: eso ya es el traspaso, con la IA en pausa.
-                          "ventana humana"
+                        // contesta una persona. No se llama «atención
+                        // humana»: eso ya es el traspaso, con la IA en pausa.
+                        "ventana humana"
                         : selected.contact.phone
-                        ? formatPhone(selected.contact.phone)
-                        : // Instagram no tiene teléfono: decir "Sin teléfono"
+                          ? formatPhone(selected.contact.phone)
+                          : // Instagram no tiene teléfono: decir "Sin teléfono"
                           // sería contestar una pregunta que nadie hizo.
                           CHANNEL_LABEL[selected.channel]}
                   </p>

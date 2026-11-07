@@ -229,7 +229,7 @@ const VARIABLE_RE = /\{\{\s*\d+\s*\}\}/;
 /**
  * 065 (puerto de la spec 101 de un fork): convierte una plantilla que ya
  * existe en Meta (creada en el Administrador de WhatsApp, o la `hello_world`
- * que trae toda cuenta) en una fila que Vocero sabe enviar. Vocero solo manda
+ * que trae toda cuenta) en una fila que Jombe sabe enviar. Jombe solo manda
  * parámetros del CUERPO, así que se importa únicamente lo que no pide nada
  * más: encabezado de texto fijo, pie y botones sin variables. Lo demás
  * (encabezado con imagen, botón de URL dinámica, autenticación) se deja fuera
@@ -290,7 +290,7 @@ const TEMPLATE_FIELDS =
  * así que el pull es la vía universal (DV-VC-04/DV-VC-15).
  *
  * 065: lee la Cuenta de mensajes si se conoce, recorre la paginación y además
- * IMPORTA las plantillas que Vocero no conocía (creadas fuera de Vocero), si
+ * IMPORTA las plantillas que Jombe no conocía (creadas fuera de Jombe), si
  * se pueden enviar desde aquí. Devuelve cuántas filas cambió: actualizadas +
  * importadas.
  */

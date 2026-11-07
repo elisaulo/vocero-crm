@@ -12,7 +12,7 @@
  *
  * Uso (configuración estándar de la 036, ver `scripts/lib/cerebro-falso.mjs`):
  *   1) app corriendo (`pnpm dev`) sobre una base migrada, con
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch, BOT_API_KEY,
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch, BOT_API_KEY,
  *      WA_MOCK_ENABLED=true, META_GRAPH_BASE_URL → wa-mock,
  *      OPENROUTER_BASE_URL → ai-mock con OPENROUTER_API_TOKEN y
  *      OPENROUTER_MODEL, y AGENT_COALESCE_MS=1500.
@@ -61,14 +61,14 @@ async function api(ruta, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function hasta(cond, ms = 15000, paso = 250) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const v = await cond();
     if (v) return v;
     if (Date.now() > fin) return null;

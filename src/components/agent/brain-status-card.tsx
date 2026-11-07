@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 /**
  * «Quién responde a tus clientes»: arriba de la pantalla del Agente.
  *
- * 036 — Vocero no trae agente: contesta el cerebro que se conecta al lado
+ * 036 — Jombe no trae agente: contesta el cerebro que se conecta al lado
  * (Nea u otro) y solo si el interruptor de esta página está encendido (el CRM
- * le despacha). Sin cerebro, Vocero es una bandeja manual: el aviso
+ * le despacha). Sin cerebro, Jombe es una bandeja manual: el aviso
  * `sin_cerebro` informa, no alarma. Con cerebro y el interruptor apagado,
  * `apagado` sí avisa: nadie contesta en automático.
  */
@@ -48,7 +48,7 @@ export function BrainStatusCard({
       <CardHeader className="pb-4">
         <CardTitle>Quién responde a tus clientes</CardTitle>
         <CardDescription>
-          Vocero no trae agente: contesta el que conectas al lado (Nea, o el
+          Jombe no trae agente: contesta el que conectas al lado (Nea, o el
           tuyo), y solo con el interruptor de arriba encendido. Sin agente,
           contestas tú desde la bandeja.
         </CardDescription>
@@ -56,7 +56,7 @@ export function BrainStatusCard({
       <CardContent className="space-y-3">
         {status.warning === "sin_cerebro" && (
           <Callout tone="info" icon={Info} title="Sin agente conectado">
-            Vocero funciona como bandeja manual: tus clientes reciben lo que
+            Jombe funciona como bandeja manual: tus clientes reciben lo que
             contestes tú. Para que un agente conteste, levántalo al lado del CRM
             y pon <Env>BRAIN_DISPATCH_URL</Env> y <Env>BOT_API_KEY</Env> en el
             entorno.{" "}
@@ -152,18 +152,17 @@ function externalView(s: BrainStatusDto, now: number): RowView {
     return keyConfigured
       ? { tone: "ok", headline: capitalize(parts.join(" · ")), detail: `${capitalize(llamada)}.` }
       : {
-          tone: "warn",
-          headline: capitalize(parts.join(" · ")),
-          detail: "Al CRM le falta BOT_API_KEY: no puede contestar por la API.",
-        };
+        tone: "warn",
+        headline: capitalize(parts.join(" · ")),
+        detail: "Al CRM le falta BOT_API_KEY: no puede contestar por la API.",
+      };
   }
   if (health?.problem === "config") {
     return {
       tone: "warn",
       headline: "No se puede consultar su estado",
-      detail: `BRAIN_HEALTH_URL no es una URL http:// o https:// válida (p. ej. http://nea:8000/health): corrígela y vuelve a desplegar el CRM.${
-        keyConfigured ? ` ${capitalize(llamada)}.` : ""
-      }`,
+      detail: `BRAIN_HEALTH_URL no es una URL http:// o https:// válida (p. ej. http://nea:8000/health): corrígela y vuelve a desplegar el CRM.${keyConfigured ? ` ${capitalize(llamada)}.` : ""
+        }`,
     };
   }
   if (health) {
@@ -171,9 +170,8 @@ function externalView(s: BrainStatusDto, now: number): RowView {
     return {
       tone: "warn",
       headline: capitalize(`${name ? `${name} · ` : ""}no está en línea`),
-      detail: `${health.host} ${problemLabel(health)}.${
-        keyConfigured ? ` ${capitalize(llamada)}.` : ""
-      }`,
+      detail: `${health.host} ${problemLabel(health)}.${keyConfigured ? ` ${capitalize(llamada)}.` : ""
+        }`,
     };
   }
   if (keyConfigured) {
@@ -188,7 +186,7 @@ function dispatchView(d: BrainDispatchDto, now: number): RowView {
     return {
       tone: "warn",
       headline: "No se puede despachar",
-      detail: `BRAIN_DISPATCH_URL no es una URL http:// o https:// válida, o lleva usuario y clave (p. ej. http://nea:8000/vocero/dispatch): corrígela y vuelve a desplegar el CRM. ${mientras}`,
+      detail: `BRAIN_DISPATCH_URL no es una URL http:// o https:// válida, o lleva usuario y clave (p. ej. https://brain.jombe.app/dispatch): corrígela y vuelve a desplegar el CRM. ${mientras}`,
     };
   }
   if (d.problem === "sin_llave") {

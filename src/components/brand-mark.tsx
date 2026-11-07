@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 export type BrandingMark = Pick<Branding, "name" | "accent" | "favicon">;
 
 /**
- * El trazo de la marca: la "V" dinámica con onda de voz de Vocero CRM.
+ * El trazo de la marca: la "V" dinámica con onda de voz de Jombe CRM.
  * Brazo izquierdo: color del contexto (hereda acento). Brazo derecho + onda:
  * degradado de azul (#2563EB) a celeste (#38BDF8).
  */

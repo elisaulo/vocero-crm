@@ -3,7 +3,7 @@ import { faviconCacheKey } from "./favicon";
 import type { Branding } from "./branding";
 
 /**
- * 048 — Vocero instalable en el celular (PWA), con la marca de la
+ * 048 — Jombe instalable en el celular (PWA), con la marca de la
  * organización. Lo puro vive aquí para probarlo sin servidor: el manifest, los
  * tamaños de icono y sus URLs.
  */
@@ -61,7 +61,7 @@ export function shortAppName(name: string): string {
  * El nombre con el que se presenta la app: la marca de la organización más el
  * producto. La instancia por defecto se llama «Jombe», así que su app es
  * «Jombe - CRM» (v2.7.6: con guion, no «Jombe CRM»); una instancia rebautizada
- * ve SU nombre («Ferretería El Martillo - CRM»), nunca «Vocero» cableado.
+ * ve SU nombre («Ferretería El Martillo - CRM»), nunca «Jombe» cableado.
  */
 export function appDisplayName(name: string): string {
   const limpio = name.trim() || "Jombe";
@@ -69,7 +69,7 @@ export function appDisplayName(name: string): string {
   return /\bcrm$/i.test(limpio) ? limpio : `${limpio} - CRM`;
 }
 
-/** Pura: el manifest de la instancia. Nada de «Vocero» cableado: sale de la marca. */
+/** Pura: el manifest de la instancia. Nada de «Jombe» cableado: sale de la marca. */
 export function buildManifest(
   branding: Pick<Branding, "name" | "accent" | "favicon">,
   description: string

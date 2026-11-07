@@ -1,11 +1,13 @@
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
-import { THEME_COOKIE } from "@/lib/theme";
+import { THEME_COOKIE, THEME_COOKIE_LEGACY } from "@/lib/theme";
 import {
   APARIENCIA_COOKIE,
+  APARIENCIA_COOKIE_LEGACY,
   aparienciaSchema,
   modoDe,
+  normalizarApariencia,
   parejaDe,
   resolverApariencia,
   type Apariencia,
@@ -26,18 +28,20 @@ function leerMetadata(metadata: string | null): Record<string, unknown> {
   }
 }
 
-/** La del negocio, o null si nunca se eligió (vale la de Vocero). */
+/** La del negocio, o null si nunca se eligió (vale la de Jombe). */
 export async function aparienciaDelNegocio(organizationId?: string | null): Promise<Apariencia | null> {
   const db = getDb();
   const rows = organizationId
     ? await db
-        .select({ metadata: schema.organization.metadata })
-        .from(schema.organization)
-        .where(eq(schema.organization.id, organizationId))
-        .limit(1)
+      .select({ metadata: schema.organization.metadata })
+      .from(schema.organization)
+      .where(eq(schema.organization.id, organizationId))
+      .limit(1)
     : // Sin sesión (login, layout raíz): la única organización de la instancia.
-      await db.select({ metadata: schema.organization.metadata }).from(schema.organization).limit(1);
-  const r = aparienciaSchema.safeParse(leerMetadata(rows[0]?.metadata ?? null).apariencia);
+    await db.select({ metadata: schema.organization.metadata }).from(schema.organization).limit(1);
+  const r = aparienciaSchema.safeParse(
+    normalizarApariencia(leerMetadata(rows[0]?.metadata ?? null).apariencia)
+  );
   return r.success ? r.data : null;
 }
 
@@ -58,8 +62,9 @@ export async function guardarAparienciaDelNegocio(organizationId: string, a: Apa
 
 /**
  * La que se pinta en esta petición: la cookie de la persona, si no la del
- * negocio. Quien ya tenía elegido el oscuro con el botón de antes (la cookie
- * `vocero-theme`) lo conserva: ve la pareja oscura del tema del negocio.
+ * negocio. Quien ya tenía elegido el oscuro con el botón de antes lo conserva:
+ * ve la pareja oscura del tema del negocio. Las cookies con el nombre viejo
+ * (`vocero-apariencia` y `vocero-theme`) se leen como alias hasta v2.9.
  */
 export async function aparienciaActual(organizationId?: string | null): Promise<{
   apariencia: Apariencia;
@@ -68,8 +73,13 @@ export async function aparienciaActual(organizationId?: string | null): Promise<
 }> {
   const jar = await cookies();
   const delNegocio = await aparienciaDelNegocio(organizationId).catch(() => null);
-  const r = resolverApariencia(jar.get(APARIENCIA_COOKIE)?.value, delNegocio);
-  if (!r.propia && jar.get(THEME_COOKIE)?.value === "dark" && modoDe(r.apariencia) === "light") {
+  // TODO: remove in v2.9 — el `??` con la cookie vieja es el fallback del rebranding.
+  const propiaCruda =
+    jar.get(APARIENCIA_COOKIE)?.value ?? jar.get(APARIENCIA_COOKIE_LEGACY)?.value;
+  const r = resolverApariencia(propiaCruda, delNegocio);
+  const modoHistorico =
+    jar.get(THEME_COOKIE)?.value ?? jar.get(THEME_COOKIE_LEGACY)?.value;
+  if (!r.propia && modoHistorico === "dark" && modoDe(r.apariencia) === "light") {
     return { apariencia: parejaDe(r.apariencia), propia: false, delNegocio };
   }
   return { ...r, delNegocio };

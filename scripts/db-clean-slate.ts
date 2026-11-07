@@ -115,8 +115,8 @@ async function confirmar(): Promise<boolean> {
   return new Promise((resolve) => {
     rl.question(
       '\n⚠️  ATENCIÓN: Se eliminarán TODOS los datos. Esquema y migraciones intactos.\n' +
-        '   Solo úsalo antes del primer arranque en producción o en staging.\n\n' +
-        '   Escribe "limpiar" para confirmar: ',
+      '   Solo úsalo antes del primer arranque en producción o en staging.\n\n' +
+      '   Escribe "limpiar" para confirmar: ',
       (respuesta) => {
         rl.close();
         resolve(respuesta.trim().toLowerCase() === "limpiar");
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  console.log("\nVocero CRM — db:clean (Clean Slate)");
+  console.log("\nJombe CRM — db:clean (Clean Slate)");
   console.log(`Base de datos: ${maskUrl(databaseUrl)}`);
 
   if (!FORCE) {
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
     console.error(err);
     process.exit(1);
   } finally {
-    await client.end({ timeout: 3 }).catch(() => {});
+    await client.end({ timeout: 3 }).catch(() => { });
   }
 }
 

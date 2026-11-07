@@ -1,4 +1,4 @@
-﻿# SYSTEM_MANIFEST.md — Vocero CRM Multi-Provider (Evolution API Extension)
+﻿# SYSTEM_MANIFEST.md — Jombe CRM Multi-Provider (Evolution API Extension)
 
 ## 1. Zonas Sagradas (Protected / Inmutables)
 Queda estrictamente prohibido refactorizar, renombrar o eliminar los siguientes componentes y flujos nativos:
@@ -9,7 +9,7 @@ Queda estrictamente prohibido refactorizar, renombrar o eliminar los siguientes 
 ## 2. Nueva Logica de Integracion (Evolution API)
 La integracion con Evolution API se agrega como un proveedor conmutable mediante el patron Provider/Adapter:
 - **Modelo de Configuracion:** Adicion del campo `whatsapp_provider` (`enum: 'meta' | 'evolution'`, default: `'meta'`) y credenciales de Evolution (`evolution_api_url`, `evolution_api_key`, `evolution_instance`).
-- **Webhook Dedicado:** Creacion de `src/app/api/webhooks/evolution/route.ts` para capturar el evento `messages.upsert` de Baileys, normalizar el payload al formato interno de Vocero e invocar el pipeline de leads y agentes.
+- **Webhook Dedicado:** Creacion de `src/app/api/webhooks/evolution/route.ts` para capturar el evento `messages.upsert` de Baileys, normalizar el payload al formato interno de Jombe e invocar el pipeline de leads y agentes.
 - **Servicio Saliente Modular:** Creacion de `src/lib/evolution.ts` para despachar mensajes mediante `POST /message/sendText/{instance}`.
 - **Despachador Unificado:** `src/lib/messaging-dispatcher.ts` bifurca la salida hacia Meta o Evolution segun la configuracion activa de la organizacion.
 - **Interfaz de Ajustes:** Extension de la UI de configuracion con selector de pestanas o toggle (*Meta Cloud API* / *Evolution API (QR)*).

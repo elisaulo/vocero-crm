@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
  * 031 — `adOrigen`: de qué anuncio llegó la persona, o `null`. Antes un
  * cerebro delante del CRM lo leía del `referral` del webhook de Meta; con el
  * despacho el webhook ya no le llega, y esto es lo que lo reemplaza. Misma
- * llave y misma forma que en Vocero Cloud. El `ctwa_clid` no sale: solo si
+ * llave y misma forma que en Jombe Cloud. El `ctwa_clid` no sale: solo si
  * existe.
  *
  * 038 — `lead.nextStages`: a qué etapas puede mover el cerebro al lead con

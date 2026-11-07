@@ -24,7 +24,7 @@ import { localDateExpr, notLabContact } from "@/server/analytics/shared";
  * más. La excepción es el desenlace de cada lead, que la base resuelve con un
  * DISTINCT ON y aquí solo se reparte en cubetas.
  *
- * Portado de Vocero Cloud sin el «dinero esperado»: necesita la probabilidad
+ * Portado de Jombe Cloud sin el «dinero esperado»: necesita la probabilidad
  * de cierre del lead, una columna que el raíz no tiene (spec 019, D5).
  */
 export async function salesBlock(

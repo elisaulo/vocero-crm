@@ -127,8 +127,8 @@ describe("render.yaml: el Blueprint declara todo lo que Render deja declarar", (
   });
 
   it("DATABASE_URL viene de la base del Blueprint y APP_BASE_URL de la URL del servicio", () => {
-    expect(bloqueRender("DATABASE_URL")).toMatch(/fromDatabase:[\s\S]*name: vocero-db[\s\S]*property: connectionString/);
-    expect(activo).toMatch(/^databases:\n\s*- name: vocero-db$/m);
+    expect(bloqueRender("DATABASE_URL")).toMatch(/fromDatabase:[\s\S]*name: jombe-db[\s\S]*property: connectionString/);
+    expect(activo).toMatch(/^databases:\n\s*- name: jombe-db$/m);
     expect(bloqueRender("APP_BASE_URL")).toMatch(/fromService:[\s\S]*envVarKey: RENDER_EXTERNAL_URL/);
   });
 
@@ -174,8 +174,8 @@ describe("fly.toml: lo que cabe en el archivo y los comandos de lo que no", () =
       // Y no en [env], que es visible en el fly.toml del repo.
       expect(activo, clave).not.toMatch(new RegExp(`^\\s*${clave} =`, "m"));
     }
-    expect(fly).toMatch(/fly postgres attach vocero-db --app vocero-crm/);
-    expect(fly).toMatch(/fly volumes create vocero_data --app vocero-crm/);
+    expect(fly).toMatch(/fly postgres attach jombe-db --app jombe-crm/);
+    expect(fly).toMatch(/fly volumes create jombe_data --app jombe-crm/);
   });
 });
 

@@ -29,7 +29,7 @@ import {
  * si el contenedor se reinicia, los pendientes siguen ahí y el arranque los
  * reanuda (`instrumentation-node.ts`).
  *
- * Puerto de `src/server/dispatch/worker.ts` de Vocero Cloud.
+ * Puerto de `src/server/dispatch/worker.ts` de Jombe Cloud.
  */
 
 /**
@@ -62,19 +62,19 @@ type Estado = {
 // ruta) y todas las copias deben compartir el mismo worker: dos temporizadores
 // sobre el mismo outbox se pisarían el lease.
 const globalForWorker = globalThis as unknown as {
-  __voceroDispatchWorker?: Estado;
+  __jombeDispatchWorker?: Estado;
 };
 
 function estado(): Estado {
-  if (!globalForWorker.__voceroDispatchWorker) {
-    globalForWorker.__voceroDispatchWorker = {
+  if (!globalForWorker.__jombeDispatchWorker) {
+    globalForWorker.__jombeDispatchWorker = {
       timer: null,
       corriendo: false,
       cita: null,
       citaEn: null,
     };
   }
-  return globalForWorker.__voceroDispatchWorker;
+  return globalForWorker.__jombeDispatchWorker;
 }
 
 export function iniciarWorker(): void {

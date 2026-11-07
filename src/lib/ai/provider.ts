@@ -32,11 +32,11 @@ export type EstadoIa =
   | { activa: true; origen: "org" | "env"; last4: string }
   | { activa: false; motivo: "sin_configurar" }
   | {
-      activa: false;
-      motivo: "token_invalido" | "sin_saldo";
-      last4: string;
-      desde: Date | null;
-    };
+    activa: false;
+    motivo: "token_invalido" | "sin_saldo";
+    last4: string;
+    desde: Date | null;
+  };
 
 export type AiResolution =
   | { ok: true; provider: AiProvider }
@@ -54,6 +54,22 @@ export type AiResolution =
  * Los strings vacíos cuentan como ausentes, como en `getEnv()`.
  */
 export function envAiProvider(): AiProvider | null {
+  // Tarea 4 (rebranding a jombe.app): FreeLLMAPI es la pasarela compatible con
+  // OpenAI del despliegue propio. Si el entorno la declara, manda sobre las
+  // OPENROUTER_* como proveedor de respaldo; lo guardado en Ajustes → IA
+  // sigue teniendo prioridad (interpretarCredencial).
+  const freellmBase = leer("FREELLMAPI_BASE_URL");
+  const freellmKey = leer("FREELLMAPI_API_KEY");
+  if (freellmBase && freellmKey) {
+    const model = leer("OPENROUTER_MODEL") ?? "";
+    return {
+      source: "env",
+      baseUrl: freellmBase,
+      model,
+      judgeModel: leer("OPENROUTER_JUDGE_MODEL") ?? model,
+      token: freellmKey,
+    };
+  }
   if (!isAiConfiguredByEnv()) return null;
   const model = leer("OPENROUTER_MODEL") ?? "";
   return {

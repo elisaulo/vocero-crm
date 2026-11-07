@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,7 +18,9 @@ import { cn } from "@/lib/utils";
 const BARRAS = 40;
 const VELOCIDADES = [1, 1.5, 2] as const;
 type Velocidad = (typeof VELOCIDADES)[number];
-const CLAVE_VELOCIDAD = "vocero.audio.velocidad";
+const CLAVE_VELOCIDAD = "jombe.audio.velocidad";
+/** Clave de antes del rebranding: se migra al leer (se quita en v2.9). */
+const CLAVE_VELOCIDAD_LEGADA = "vocero.audio.velocidad";
 
 type Analisis = { barras: number[]; duracion: number | null };
 
@@ -27,6 +30,8 @@ const analizados = new Map<string, Analisis>();
 let sonando: HTMLAudioElement | null = null;
 
 function velocidadGuardada(): Velocidad {
+  // TODO: remove in v2.9
+  migrateLocalStorageKey(CLAVE_VELOCIDAD_LEGADA, CLAVE_VELOCIDAD);
   try {
     const v = Number(window.localStorage.getItem(CLAVE_VELOCIDAD));
     return (VELOCIDADES as readonly number[]).includes(v) ? (v as Velocidad) : 1;
@@ -38,7 +43,7 @@ function velocidadGuardada(): Velocidad {
 function guardarVelocidad(v: Velocidad) {
   try {
     window.localStorage.setItem(CLAVE_VELOCIDAD, String(v));
-  } catch {}
+  } catch { }
 }
 
 /** Onda de reserva (si el navegador no decodifica): estable para cada audio. */

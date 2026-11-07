@@ -6,7 +6,7 @@ import { last4, type AiProviderId, type AiStatus } from "@/lib/ai/presets";
 
 /**
  * La credencial del proveedor de IA de la organización (puerto de
- * `ai_credentials` de Vocero Cloud, issue #85).
+ * `ai_credentials` de Jombe Cloud, issue #85).
  *
  * Mismo patrón que `server/whatsapp/credentials.ts`: cifrado AES-256-GCM en
  * reposo y hacia fuera solo los últimos 4 caracteres. La resolución «la fila

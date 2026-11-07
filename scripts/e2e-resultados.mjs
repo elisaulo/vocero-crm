@@ -22,7 +22,7 @@
  *   node --env-file=.env.e2e-036 scripts/e2e-resultados.mjs
  * Requiere: app viva con los mocks (WA_MOCK_ENABLED=true, META_GRAPH_BASE_URL →
  * wa-mock, OPENROUTER_BASE_URL → ai-mock), BOT_API_KEY,
- * BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch y la BD migrada.
+ * BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch y la BD migrada.
  * Corre con AGENDA apagada o encendida: lo lee del mismo entorno que la app.
  */
 import postgres from "postgres";
@@ -64,7 +64,7 @@ async function api(path, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -73,7 +73,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Espera a que algo OCURRA, en vez de dormir un rato y confiar. */
 async function hasta(cond, ms = 30000, paso = 400) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     try {
       if (await cond()) return true;
     } catch {
@@ -84,7 +84,7 @@ async function hasta(cond, ms = 30000, paso = 400) {
   }
 }
 
-const sql = postgres(process.env.DATABASE_URL, { max: 1, onnotice: () => {} });
+const sql = postgres(process.env.DATABASE_URL, { max: 1, onnotice: () => { } });
 
 const tel = (n) => `52157${RUN}${String(n).padStart(2, "0")}`;
 const nombre = (n) => `Resultados ${RUN} ${n}`;
@@ -418,7 +418,7 @@ async function main() {
     `${serie.length} cubetas`);
   ok("y cuadra con los indicadores",
     serie.reduce((a, s) => a + s.won, 0) === despues.sales.kpis.won.current &&
-      serie.reduce((a, s) => a + s.newLeads, 0) === despues.sales.kpis.newLeads.current);
+    serie.reduce((a, s) => a + s.newLeads, 0) === despues.sales.kpis.newLeads.current);
 
   console.log("\n== 4 · Origen y anuncios (solo conteos) ==");
   ok("conversaciones nuevas: +9, y +1 en el periodo anterior",
@@ -449,7 +449,7 @@ async function main() {
   const a1 = anuncio(despues, R1);
   ok("anuncio R1: 3 conversaciones, 3 prospectos, 1 venta, 33 % de 3",
     a1?.conversations === 3 && a1?.leads === 3 && a1?.won === 1 &&
-      a1?.winRate?.value === 33 && a1?.winRate?.sample === 3 && a1?.winRate?.reliable === false,
+    a1?.winRate?.value === 33 && a1?.winRate?.sample === 3 && a1?.winRate?.reliable === false,
     JSON.stringify(a1));
   ok("anuncio R1 trae titular, tipo e imagen", a1?.headline === R1.headline && a1?.sourceType === "ad" && !!a1?.imageAssetId,
     JSON.stringify(a1));
@@ -565,14 +565,14 @@ async function main() {
 
 let cerebro = null;
 async function cerrarCerebro() {
-  if (cookie) await apagarAgente(api).catch(() => {});
-  await cerebro?.esperar().catch(() => {});
-  await cerebro?.apagar().catch(() => {});
+  if (cookie) await apagarAgente(api).catch(() => { });
+  await cerebro?.esperar().catch(() => { });
+  await cerebro?.apagar().catch(() => { });
 }
 
 main().catch(async (err) => {
   console.error(`\nError conduciendo el guion: ${err.stack ?? err.message}`);
   await cerrarCerebro();
-  await sql.end().catch(() => {});
+  await sql.end().catch(() => { });
   process.exit(1);
 });
