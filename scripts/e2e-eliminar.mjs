@@ -12,7 +12,7 @@
  * Uso (configuración estándar de la 036, ver `scripts/lib/cerebro-falso.mjs`):
  *   1) app corriendo (`pnpm dev`) sobre una base migrada, con
  *      WA_MOCK_ENABLED=true, META_GRAPH_BASE_URL → wa-mock, BOT_API_KEY y
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch.
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch.
  *      Con AGENDA=on corre además la cita por venir (AC6).
  *   2) node --env-file=.env.e2e-036 scripts/e2e-eliminar.mjs
  *
@@ -73,7 +73,7 @@ async function api(ruta, opts = {}, jar = null) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -81,7 +81,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function hasta(cond, ms = 15000, paso = 250) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const v = await cond();
     if (v) return v;
     if (Date.now() > fin) return null;
@@ -143,7 +143,7 @@ function escucharEventos() {
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
-    for (;;) {
+    for (; ;) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += dec.decode(value, { stream: true });
@@ -156,11 +156,11 @@ function escucharEventos() {
         if (tipo && data) {
           try {
             vistos.push({ type: tipo, data: JSON.parse(data) });
-          } catch {}
+          } catch { }
         }
       }
     }
-  })().catch(() => {});
+  })().catch(() => { });
   return { vistos, cerrar: () => (controller.abort(), listo) };
 }
 
@@ -208,8 +208,8 @@ async function main() {
     if (cerebro) await cerebroCaido(cerebro);
     await citaPorVenir();
   } finally {
-    await apagarAgente(api).catch(() => {});
-    if (cerebro) await cerebro.apagar().catch(() => {});
+    await apagarAgente(api).catch(() => { });
+    if (cerebro) await cerebro.apagar().catch(() => { });
   }
 
   console.log(`\n${checks - failures}/${checks} checks en verde`);
@@ -244,7 +244,7 @@ async function permisos() {
   ok(
     "y la conversación sigue en la bandeja, con su mensaje",
     (await conversaciones()).some((c) => c.id === p.conv.id) &&
-      ((await mensajes(p.conv.id)).json?.messages ?? []).length === 1
+    ((await mensajes(p.conv.id)).json?.messages ?? []).length === 1
   );
 }
 
@@ -322,7 +322,7 @@ async function elHilo(cerebro) {
     ok("llegó exactamente un conversation.deleted", olvidos.length === 1, `llegaron ${olvidos.length}`);
     ok("firmado como un turno, sobre el cuerpo crudo", o?.firmaOk === true);
     ok(
-      "con x-vocero-event, con la organización y SIN id de despacho",
+      "con x-jombe-event, con la organización y SIN id de despacho",
       o?.cabeceras.evento === "conversation.deleted" && Boolean(o?.cabeceras.org) && o?.cabeceras.dispatch === null,
       JSON.stringify(o?.cabeceras)
     );

@@ -35,26 +35,26 @@ export function RegistrarServiceWorker() {
 // El aviso puede llegar antes de que el menú se monte (o mientras se navega
 // entre pantallas): se guarda fuera de React para no perderlo.
 const g = globalThis as unknown as {
-  __voceroInstalacion?: EventoInstalacion | null;
-  __voceroInstalacionOyentes?: Set<() => void>;
+  __jombeInstalacion?: EventoInstalacion | null;
+  __jombeInstalacionOyentes?: Set<() => void>;
 };
 function oyentes(): Set<() => void> {
-  g.__voceroInstalacionOyentes ??= new Set();
-  return g.__voceroInstalacionOyentes;
+  g.__jombeInstalacionOyentes ??= new Set();
+  return g.__jombeInstalacionOyentes;
 }
 function avisar() {
   for (const f of oyentes()) f();
 }
-if (typeof window !== "undefined" && !("__voceroInstalacionEscucha" in window)) {
-  Object.defineProperty(window, "__voceroInstalacionEscucha", { value: true });
+if (typeof window !== "undefined" && !("__jombeInstalacionEscucha" in window)) {
+  Object.defineProperty(window, "__jombeInstalacionEscucha", { value: true });
   window.addEventListener("beforeinstallprompt", (e) => {
     // Sin esto, Chrome enseña su propia barra en el celular en el peor momento.
     e.preventDefault();
-    g.__voceroInstalacion = e as EventoInstalacion;
+    g.__jombeInstalacion = e as EventoInstalacion;
     avisar();
   });
   window.addEventListener("appinstalled", () => {
-    g.__voceroInstalacion = null;
+    g.__jombeInstalacion = null;
     avisar();
   });
 }
@@ -70,7 +70,7 @@ export function BotonInstalar({ className }: { className?: string }) {
   const [evento, setEvento] = useState<EventoInstalacion | null>(null);
 
   useEffect(() => {
-    const leer = () => setEvento(yaInstalada() ? null : (g.__voceroInstalacion ?? null));
+    const leer = () => setEvento(yaInstalada() ? null : (g.__jombeInstalacion ?? null));
     leer();
     oyentes().add(leer);
     return () => {
@@ -84,9 +84,9 @@ export function BotonInstalar({ className }: { className?: string }) {
       type="button"
       onClick={async () => {
         // `prompt()` solo se puede llamar una vez por aviso.
-        g.__voceroInstalacion = null;
+        g.__jombeInstalacion = null;
         setEvento(null);
-        await evento.prompt().catch(() => {});
+        await evento.prompt().catch(() => { });
       }}
       title="Instalar la app en este dispositivo"
       className={cn("w-full text-left", className)}

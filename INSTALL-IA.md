@@ -10,7 +10,7 @@
 > ningún otro archivo**: Coolify descarga la imagen publicada y los secretos
 > viven como variables de la plataforma.
 
-**Imagen**: `ghcr.io/elisaulo/vocero-crm:2.7.8` (GitHub Container Registry,
+**Imagen**: `ghcr.io/elisaulo/vocero-crm:2.8.0` (GitHub Container Registry,
 una etiqueta por versión, `linux/amd64`, escucha en el puerto `3000`).
 
 **Repositorio**: `https://github.com/elisaulo/vocero-crm` (público, rama `main`,
@@ -54,7 +54,7 @@ dentro: README → «Instalación» → «Otras plataformas».
 | Variable | Valor |
 |---|---|
 | `APP_BASE_URL` | `https://<dominio>` |
-| `DATABASE_URL` | `postgresql://postgres:<POSTGRES_PASSWORD>@<host-postgres>:5432/vocero` |
+| `DATABASE_URL` | `postgresql://postgres:<POSTGRES_PASSWORD>@<host-postgres>:5432/jombe` |
 | `POSTGRES_PASSWORD` | generado (es la de la base; la app no la lee, solo va dentro de `DATABASE_URL`) |
 | `BETTER_AUTH_SECRET` | generado |
 | `ENCRYPTION_KEY` | generado (base64, 44 caracteres) |
@@ -86,7 +86,7 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
 ## Ruta A — Coolify (con el MCP de Coolify)
 
 1. **Base de datos**: crea un servicio PostgreSQL 16 en el proyecto
-   (`database` tipo `postgresql`), con la contraseña generada y base `vocero`.
+(`database` tipo `postgresql`), con la contraseña generada y base `jombe`.
    Anota su host interno (algo como `<uuid>:5432`).
 2. **Aplicación**: en el mismo proyecto, crea una app de tipo **Docker Image**
    con la imagen `ghcr.io/elisaulo/vocero-crm`, la etiqueta `2.0.0`, puerto

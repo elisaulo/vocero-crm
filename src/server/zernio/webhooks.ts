@@ -46,10 +46,10 @@ type Entry = { at: number; ok: boolean; webhooks: ZernioWebhook[] };
 
 // En globalThis porque Next recarga módulos en desarrollo; una instancia es un
 // proceso, así que la memoria alcanza. La llave nunca es la del mapa: su hash.
-const g = globalThis as unknown as { __voceroZernioWebhooks?: Map<string, Entry> };
+const g = globalThis as unknown as { __jombeZernioWebhooks?: Map<string, Entry> };
 function cache(): Map<string, Entry> {
-  if (!g.__voceroZernioWebhooks) g.__voceroZernioWebhooks = new Map();
-  return g.__voceroZernioWebhooks;
+  if (!g.__jombeZernioWebhooks) g.__jombeZernioWebhooks = new Map();
+  return g.__jombeZernioWebhooks;
 }
 const keyOf = (token: string) => createHash("sha256").update(token).digest("hex");
 

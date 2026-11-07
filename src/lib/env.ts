@@ -91,7 +91,7 @@ export const envSchema = z.object({
   // configuración y lo demás sigue funcionando (server/bot/status.ts).
   BRAIN_HEALTH_URL: z.string().optional(),
   // 021: a dónde le despacha el CRM cada turno al cerebro externo. Ej.:
-  // http://nea:8000/vocero/dispatch. Con ella, `BOT_API_KEY` y el interruptor
+  // http://nea:8000/jombe/dispatch. Con ella, `BOT_API_KEY` y el interruptor
   // del Agente encendido, contesta el cerebro (036). Tampoco se valida aquí,
   // por lo mismo que la de arriba: mal escrita, el despacho queda inactivo y
   // la tarjeta lo dice (server/brains/config.ts).

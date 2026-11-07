@@ -1,5 +1,7 @@
 "use client";
 
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvents } from "@/components/use-events";
 import { Switch } from "@/components/ui/switch";
@@ -46,9 +48,13 @@ import { TimeGrid } from "./time-grid";
  */
 
 /** Preferencias de quien mira, en su navegador: no son datos del negocio. */
-const VIEW_KEY = "vocero:citas:vista";
-const CANCELLED_KEY = "vocero:citas:canceladas";
-const TESTS_KEY = "vocero:citas:pruebas";
+const VIEW_KEY = "jombe:citas:vista";
+const CANCELLED_KEY = "jombe:citas:canceladas";
+const TESTS_KEY = "jombe:citas:pruebas";
+/** Claves de antes del rebranding: se migran al leer (se quitan en v2.9). */
+const VIEW_KEY_LEGADA = "vocero:citas:vista";
+const CANCELLED_KEY_LEGADA = "vocero:citas:canceladas";
+const TESTS_KEY_LEGADA = "vocero:citas:pruebas";
 
 /** Una ráfaga de eventos SSE (una cita y su enlace) se paga con UNA consulta. */
 const SSE_COALESCE_MS = 250;
@@ -57,6 +63,11 @@ type Loaded = { key: string; bookings: Booking[]; truncated: boolean };
 
 function readPref(key: string): string | null {
   try {
+    // TODO: remove in v2.9 — la preferencia que quedó con el nombre viejo
+    // pasa a la clave nueva y la vieja se borra.
+    if (key === VIEW_KEY) migrateLocalStorageKey(VIEW_KEY_LEGADA, VIEW_KEY);
+    if (key === CANCELLED_KEY) migrateLocalStorageKey(CANCELLED_KEY_LEGADA, CANCELLED_KEY);
+    if (key === TESTS_KEY) migrateLocalStorageKey(TESTS_KEY_LEGADA, TESTS_KEY);
     return window.localStorage.getItem(key);
   } catch {
     return null; // modo privado o almacenamiento bloqueado
@@ -111,11 +122,11 @@ export function BookingsClient({
     const stored = readPref(VIEW_KEY);
     setView(
       initialView ??
-        (isCalendarView(stored)
-          ? stored
-          : window.matchMedia("(max-width: 767px)").matches
-            ? "dia"
-            : "semana")
+      (isCalendarView(stored)
+        ? stored
+        : window.matchMedia("(max-width: 767px)").matches
+          ? "dia"
+          : "semana")
     );
     // La línea de "ahora" y el resaltado de hoy se mueven solos.
     setNow(Date.now());
@@ -139,11 +150,11 @@ export function BookingsClient({
     const res = await fetch(`/api/bookings?from=${from}&to=${to}`).catch(() => null);
     const data = res?.ok
       ? ((await res.json().catch(() => null)) as {
-          bookings: Booking[];
-          timezone: string;
-          weeklyHours: WeeklyHours;
-          truncated?: boolean;
-        } | null)
+        bookings: Booking[];
+        timezone: string;
+        weeklyHours: WeeklyHours;
+        truncated?: boolean;
+      } | null)
       : null;
     // Varias navegaciones seguidas: solo se pinta la respuesta del último rango.
     if (id !== seq.current) return;

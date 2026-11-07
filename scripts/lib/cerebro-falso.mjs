@@ -9,7 +9,8 @@
  *
  *   - `GET /health` → 200 `{status:"ok", mode, version, llm:"crm"}` (o 503, o
  *     nunca contesta: `estado.salud`).
- *   - `POST <ruta del despacho>` → verifica la firma `X-Vocero-Signature`
+ *   - `POST <ruta del despacho>` → verifica la firma `X-Jombe-Signature`
+ *     (o la vieja `X-Vocero-Signature`, que se sigue aceptando hasta la v2.9)
  *     sobre el cuerpo CRUDO con `BOT_API_KEY`, acusa 200 (o 500, 422, tarde o
  *     nunca: `estado.modo`) y DESPUÉS contesta por `/api/bot/*`:
  *       · texto con «humano» o «asesor» → avisa al cliente por
@@ -48,7 +49,7 @@
  *   AGENT_COALESCE_MS=1500                     AGENDA=on
  *   MEDIA_DIR=./.dev-media
  *   BOT_API_KEY=<16+ caracteres>
- *   BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch
+ *   BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch
  *   (sin BRAIN_HEALTH_URL: el CRM pregunta al /health del mismo origen)
  *   + BETTER_AUTH_SECRET, ENCRYPTION_KEY, META_WEBHOOK_VERIFY_TOKEN
  *
@@ -88,8 +89,8 @@ export function urlDelDespacho(env = process.env) {
   } catch {
     console.error(
       "Falta BRAIN_DISPATCH_URL. Arranca la app (y corre el guion) con algo como\n" +
-        "  BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch\n" +
-        "Ver la configuración estándar en scripts/lib/cerebro-falso.mjs."
+      "  BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch\n" +
+      "Ver la configuración estándar en scripts/lib/cerebro-falso.mjs."
     );
     process.exit(1);
   }
@@ -207,7 +208,7 @@ export async function levantarCerebroFalso({
         headers: { "x-api-key": botKey },
       });
       contexto = await r.json().catch(() => null);
-    } catch {}
+    } catch { }
     const pedida = /califica a (.+)$/i.exec(texto)?.[1]?.trim();
     const etapa = pedida ?? contexto?.lead?.nextStages?.[0]?.name;
     estado.contextos.push({ convId, nextStages: contexto?.lead?.nextStages ?? null });
@@ -260,18 +261,28 @@ export async function levantarCerebroFalso({
       let evento = null;
       try {
         evento = JSON.parse(crudo.toString("utf8"));
-      } catch {}
+      } catch { }
       const modo = estado.modo;
+      // Rebranding (v2.8.0): `x-jombe-*` manda; si solo llega la vieja
+      // `x-vocero-*`, se acepta y se avisa. Igual que un cerebro real.
+      // TODO: remove fallback in v2.9
+      const cabecera = (nueva, vieja) => {
+        const valor = req.headers[nueva] ?? req.headers[vieja] ?? null;
+        if (valor !== null && req.headers[nueva] === undefined) {
+          console.warn(`[cerebro-falso] cabecera obsoleta "${vieja}": usa "${nueva}"`);
+        }
+        return valor;
+      };
       estado.recibidos.push({
         at: Date.now(),
         modo,
         crudo: crudo.toString("utf8"),
         evento,
-        firmaOk: firmaValida(botKey, crudo, req.headers["x-vocero-signature"]),
+        firmaOk: firmaValida(botKey, crudo, cabecera("x-jombe-signature", "x-vocero-signature")),
         cabeceras: {
-          dispatch: req.headers["x-vocero-dispatch-id"] ?? null,
-          org: req.headers["x-vocero-organization"] ?? null,
-          evento: req.headers["x-vocero-event"] ?? null,
+          dispatch: cabecera("x-jombe-dispatch-id", "x-vocero-dispatch-id"),
+          org: cabecera("x-jombe-organization", "x-vocero-organization"),
+          evento: cabecera("x-jombe-event", "x-vocero-event"),
           tipo: req.headers["content-type"] ?? null,
         },
       });
@@ -297,21 +308,21 @@ export async function levantarCerebroFalso({
     escuchando
       ? Promise.resolve()
       : new Promise((resolve, reject) => {
-          server.once("error", reject);
-          server.listen(Number(url.port || 80), url.hostname.replace(/^\[|\]$/g, ""), () => {
-            server.off("error", reject);
-            escuchando = true;
-            resolve();
-          });
+        server.once("error", reject);
+        server.listen(Number(url.port || 80), url.hostname.replace(/^\[|\]$/g, ""), () => {
+          server.off("error", reject);
+          escuchando = true;
+          resolve();
         });
+      });
   const apagar = () =>
     !escuchando
       ? Promise.resolve()
       : new Promise((resolve) => {
-          escuchando = false;
-          server.closeAllConnections();
-          server.close(() => resolve());
-        });
+        escuchando = false;
+        server.closeAllConnections();
+        server.close(() => resolve());
+      });
 
   if (escuchar) await encender();
 
@@ -348,7 +359,7 @@ export async function levantarCerebroFalso({
  */
 export async function encenderAgente(api, { ms = 25000 } = {}) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const r = await api("/api/agent/profile", {
       method: "PUT",
       body: JSON.stringify({ enabled: true }),

@@ -15,8 +15,8 @@ export type Modo = "light" | "dark";
 export const TEMA_IDS = [
   "menta",
   "noche",
-  "vocero",
-  "vocero-oscuro",
+  "jombe",
+  "jombe-oscuro",
   "papel",
   "carbon",
   "medianoche",
@@ -49,11 +49,11 @@ export const TEMAS: Record<TemaId, Tema> = {
     pareja: "menta",
     tokens: {},
   },
-  vocero: {
+  jombe: {
     nombre: "Jombe",
     descripcion: "El azul papel frío de la 2.x.",
     modo: "light",
-    pareja: "vocero-oscuro",
+    pareja: "jombe-oscuro",
     tokens: {
       "--bg": "#ffffff",
       "--bg-subtle": "#f6f8fc",
@@ -91,11 +91,11 @@ export const TEMAS: Record<TemaId, Tema> = {
       "--radio-tarjeta": "20px",
     },
   },
-  "vocero-oscuro": {
+  "jombe-oscuro": {
     nombre: "Jombe oscuro",
     descripcion: "El azul marino de la 2.x.",
     modo: "dark",
-    pareja: "vocero",
+    pareja: "jombe",
     tokens: {
       "--bg-subtle": "#141c30",
       "--bg": "#1c263c",
@@ -350,7 +350,30 @@ export const APARIENCIA_POR_DEFECTO: Apariencia = {
 };
 
 /** Cookie con la elección de esta persona en este equipo (D5). */
-export const APARIENCIA_COOKIE = "vocero-apariencia";
+export const APARIENCIA_COOKIE = "jombe-apariencia";
+/** Cookie histórica: se lee como alias y migra a la nueva (se quita en v2.9). */
+export const APARIENCIA_COOKIE_LEGACY = "vocero-apariencia";
+
+/** Identificadores de tema de antes del rebranding (se quitan en v2.9). */
+const TEMAS_HISTORICOS: Record<string, string> = {
+  vocero: "jombe",
+  "vocero-oscuro": "jombe-oscuro",
+};
+
+/**
+ * Acepta una apariencia guardada con los nombres de tema viejos: `vocero` y
+ * `vocero-oscuro` valen hoy como `jombe` y `jombe-oscuro`. Nunca lanza: lo que
+ * no reconoce lo devuelve tal cual y el esquema decide.
+ */
+export function normalizarApariencia(valor: unknown): unknown {
+  if (typeof valor !== "object" || valor === null) return valor;
+  const tema = (valor as { tema?: unknown }).tema;
+  if (typeof tema !== "string") return valor;
+  const actual = TEMAS_HISTORICOS[tema];
+  if (!actual) return valor;
+  // TODO: remove in v2.9
+  return { ...(valor as Record<string, unknown>), tema: actual };
+}
 
 /**
  * Lo que vale: la cookie de la persona si es válida; si no, el del negocio;
@@ -360,11 +383,13 @@ export function resolverApariencia(
   cookie: string | null | undefined,
   delNegocio: unknown
 ): { apariencia: Apariencia; propia: boolean } {
-  const negocio = aparienciaSchema.safeParse(delNegocio);
+  const negocio = aparienciaSchema.safeParse(normalizarApariencia(delNegocio));
   const base = negocio.success ? negocio.data : APARIENCIA_POR_DEFECTO;
   if (cookie) {
     try {
-      const propia = aparienciaSchema.safeParse(JSON.parse(decodeURIComponent(cookie)));
+      const propia = aparienciaSchema.safeParse(
+        normalizarApariencia(JSON.parse(decodeURIComponent(cookie)))
+      );
       if (propia.success && (propia.data.tema !== "propio" || temaPropio(propia.data.propio).ok)) {
         return { apariencia: propia.data, propia: true };
       }

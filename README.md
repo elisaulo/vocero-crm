@@ -132,7 +132,7 @@ Con docker compose, el par se levanta junto (la receta completa, con Coolify,
 está en [`docs/migrar-a-2.0.md`](docs/migrar-a-2.0.md#el-par-crm--nea)):
 
 ```bash
-# en tu .env: BOT_API_KEY, BRAIN_DISPATCH_URL=http://nea:8000/vocero/dispatch
+# en tu .env: BOT_API_KEY, BRAIN_DISPATCH_URL=http://nea:8000/jombe/dispatch
 # y BRAIN_HEALTH_URL=http://nea:8000/health
 docker compose up -d
 ```
@@ -173,7 +173,7 @@ inunde la API sin llave no deja a tu bot sin servicio.
 
 **El CRM le pasa cada turno a tu agente (el despacho).** Tu agente no
 necesita recibir el webhook de Meta: con `BRAIN_DISPATCH_URL` (p. ej.
-`http://nea:8000/vocero/dispatch`), la misma `BOT_API_KEY` y el interruptor de
+`http://nea:8000/jombe/dispatch`), la misma `BOT_API_KEY` y el interruptor de
 la pantalla Agente encendido, el mensaje entra primero a la bandeja y el CRM
 le hace a tu agente un `POST` firmado con lo que el cliente escribió desde la
 última respuesta, junto, después de esperar a que termine su ráfaga. Tu agente

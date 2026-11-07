@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
 
 /**
  * 045 — Avisos de mensaje nuevo, como WhatsApp Web: un sonido corto cuando
@@ -13,7 +14,9 @@ import { useEffect } from "react";
  * primer clic o tecla.
  */
 
-const CLAVE_SONIDO = "vocero.sonido";
+const CLAVE_SONIDO = "jombe.sonido";
+/** Clave de antes del rebranding: se migra al leer (se quita en v2.9). */
+const CLAVE_SONIDO_LEGADA = "vocero.sonido";
 /** Una ráfaga de mensajes suena una vez, no diez. */
 const PAUSA_ENTRE_SONIDOS_MS = 1500;
 
@@ -27,6 +30,8 @@ export function setConversacionAbierta(id: string | null): void {
 }
 
 export function sonidoActivado(): boolean {
+  // TODO: remove in v2.9
+  migrateLocalStorageKey(CLAVE_SONIDO_LEGADA, CLAVE_SONIDO);
   try {
     return window.localStorage.getItem(CLAVE_SONIDO) !== "off";
   } catch {
@@ -37,7 +42,7 @@ export function sonidoActivado(): boolean {
 export function guardarSonido(activado: boolean): void {
   try {
     window.localStorage.setItem(CLAVE_SONIDO, activado ? "on" : "off");
-  } catch {}
+  } catch { }
 }
 
 function obtenerContexto(): AudioContext | null {
@@ -59,7 +64,7 @@ export function useDesbloquearAudio(): void {
   useEffect(() => {
     const despertar = () => {
       const ctx = obtenerContexto();
-      if (ctx?.state === "suspended") void ctx.resume().catch(() => {});
+      if (ctx?.state === "suspended") void ctx.resume().catch(() => { });
     };
     window.addEventListener("pointerdown", despertar, { passive: true });
     window.addEventListener("keydown", despertar);
@@ -138,7 +143,7 @@ export function useTituloNoLeidos(chats: number): void {
  * Bandeja ya montada: si la URL no cambia (otro aviso del mismo chat), el
  * parámetro solo no bastaría.
  */
-export const EVENTO_ABRIR_CONVERSACION = "vocero:abrir-conversacion";
+export const EVENTO_ABRIR_CONVERSACION = "jombe:abrir-conversacion";
 export function abrirConversacionDeAviso(
   url: string,
   navegar: (url: string) => void

@@ -3,7 +3,8 @@
 #
 # Servicios: app (CRM) + postgres + nea (cerebro, opcional)
 # Dominio:   crm.jombe.app + jombe.app + www.jombe.app  (Traefik + Let's Encrypt)
-# Imagen:    elisaulo/vocero-crm:local  (construida desde el repo)
+# Imagen:    elisaulo/vocero-crm:local  (construida desde el repo;
+#            el nombre de la imagen publicada en GHCR no cambia con la marca)
 #
 # Uso inicial:
 #   pnpm init-env --domain crm.jombe.app
@@ -17,7 +18,7 @@
 #
 # La red `coolify` la crea Coolify automáticamente. Traefik vive en
 # esa red y enruta jombe.app, www.jombe.app y crm.jombe.app →
-# vocero-crm-app-1:3000.
+# jombe-crm-app-1:3000.
 #
 # 2.7.7 — El servicio `nea` (cerebro externo, `BRAIN_DISPATCH_URL`/
 # `BRAIN_HEALTH_URL` apuntan a él por defecto) lleva `restart:
@@ -31,8 +32,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.7.8}
-    container_name: vocero-crm-app-1
+    image: elisaulo/vocero-crm:${VOCERO_CRM_VERSION:-2.8.0}
+    container_name: jombe-crm-app-1
     restart: unless-stopped
     ports:
       # Expuesto SOLO en localhost: bloquea acceso directo por IP pública del VPS.
@@ -42,7 +43,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:-https://crm.jombe.app}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://crm.jombe.app}
       BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-https://crm.jombe.app,https://jombe.app,https://www.jombe.app,https://api.jombe.app}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:segura123@vocero-db:5432/vocero}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:segura123@jombe-db:5432/jombe}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-U8x9P2mK5vN1qR4wZ7yB0cDfG3hJ6kL9}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-Ui3KfhXI97QrKlZaCWP/KwT7tv7mWE/qytUjsL3ojo0=}
       META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:-token_seguro_1234567890}
@@ -58,7 +59,7 @@ services:
       ATRIBUCION: ${ATRIBUCION:-}
       BOT_API_KEY: ${BOT_API_KEY:-bot_key_segura_1234567890}
       BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-http://nea:8000/health}
-      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-http://nea:8000/vocero/dispatch}
+      BRAIN_DISPATCH_URL: ${BRAIN_DISPATCH_URL:-http://nea:8000/jombe/dispatch}
       EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
@@ -71,7 +72,7 @@ services:
       MEDIA_BUCKET_KEY_ID: ${MEDIA_BUCKET_KEY_ID:-}
       MEDIA_BUCKET_SECRET: ${MEDIA_BUCKET_SECRET:-}
     volumes:
-      - vocero_app_data:/data
+      - jombe_app_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,17 +113,17 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: vocero-crm-postgres-1
-    hostname: vocero-db
+    container_name: jombe-crm-postgres-1
+    hostname: jombe-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-segura123}
-      POSTGRES_DB: ${POSTGRES_DB:-vocero}
+      POSTGRES_DB: ${POSTGRES_DB:-jombe}
     volumes:
-      - vocero_pg:/var/lib/postgresql/data
+      - jombe_pg:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d vocero" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d jombe" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -136,7 +137,7 @@ services:
   # un reinicio o caída del proceso no deje el despacho sin a quién avisar.
   nea:
     image: ghcr.io/elisaulo/nea-agent:${NEA_VERSION:-latest}
-    container_name: vocero-nea-1
+    container_name: jombe-nea-1
     profiles: [ "nea" ]
     restart: unless-stopped
     environment:
@@ -147,8 +148,8 @@ services:
       - default
 
 volumes:
-  vocero_pg:
-  vocero_app_data:
+  jombe_pg:
+  jombe_app_data:
 
 networks:
   default:

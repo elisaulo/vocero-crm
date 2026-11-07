@@ -11,13 +11,19 @@
  * llena: sin borradores, todo sigue igual).
  */
 
+import { migrateLocalStorageKey } from "@/lib/storage-migration";
+
 export type TipoBorrador = "responder" | "nota";
 export type Almacen = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
 
-const PREFIJO = "vocero.borrador.";
+const PREFIJO = "jombe.borrador.";
+/** Prefijo histórico: se migra al nuevo al primer uso (se quita en v2.9). */
+export const PREFIJO_LEGACY = "vocero.borrador.";
 export const CADUCIDAD_MS = 7 * 24 * 3_600_000;
 /** Evento de la ventana con el que la lista se entera de un borrador nuevo. */
-export const EVENTO_BORRADOR = "vocero:borrador";
+export const EVENTO_BORRADOR = "jombe:borrador";
+/** Evento histórico: se sigue emitiendo para oyentes de la versión anterior (se quita en v2.9). */
+export const EVENTO_BORRADOR_LEGACY = "vocero:borrador";
 
 export function claveBorrador(tipo: TipoBorrador, conversationId: string): string {
   return `${PREFIJO}${tipo}.${conversationId}`;
@@ -64,7 +70,9 @@ export function limpiarEn(almacen: Almacen): number {
   const claves: string[] = [];
   for (let i = 0; i < almacen.length; i++) {
     const k = almacen.key(i);
-    if (k?.startsWith(PREFIJO)) claves.push(k);
+    // El prefijo viejo entra en el barrido: los borradores que quedaron de la
+    // versión anterior también son de esta persona y también se borran.
+    if (k?.startsWith(PREFIJO) || k?.startsWith(PREFIJO_LEGACY)) claves.push(k);
   }
   for (const k of claves) almacen.removeItem(k);
   return claves.length;
@@ -87,7 +95,10 @@ export function guardarBorrador(tipo: TipoBorrador, conversationId: string, text
     // Solo se avisa cuando cambia «hay borrador» o su texto: la lista no se
     // vuelve a pintar en cada tecla por nada.
     if (antes !== (texto.trim() ? texto : "")) {
-      window.dispatchEvent(new CustomEvent(EVENTO_BORRADOR, { detail: { conversationId } }));
+      const detalle = { detail: { conversationId } };
+      window.dispatchEvent(new CustomEvent(EVENTO_BORRADOR, detalle));
+      // TODO: remove in v2.9 — oyentes de la versión anterior.
+      window.dispatchEvent(new CustomEvent(EVENTO_BORRADOR_LEGACY, detalle));
     }
   } catch {
     // Sin almacenamiento: sin borrador.
@@ -98,6 +109,12 @@ export function leerBorrador(tipo: TipoBorrador, conversationId: string): string
   const a = almacen();
   if (!a) return "";
   try {
+    // TODO: remove in v2.9 — el borrador que quedó con el prefijo viejo se
+    // trae a la clave nueva y se borra la vieja.
+    migrateLocalStorageKey(
+      `${PREFIJO_LEGACY}${tipo}.${conversationId}`,
+      claveBorrador(tipo, conversationId)
+    );
     return leerDe(a, tipo, conversationId);
   } catch {
     return "";

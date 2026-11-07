@@ -18,7 +18,7 @@
  *      WA_MOCK_ENABLED=true, META_GRAPH_BASE_URL → wa-mock,
  *      OPENROUTER_BASE_URL → ai-mock + OPENROUTER_API_TOKEN + OPENROUTER_MODEL,
  *      BOT_API_KEY, AGENT_COALESCE_MS=1500,
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch (sin
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch (sin
  *      BRAIN_HEALTH_URL) y CHANNELS=whatsapp,instagram,messenger,tiktok
  *      (Instagram y TikTok entran por Zernio: ZERNIO_BASE_URL → zernio-mock).
  *   2) node --env-file=.env.e2e-036 scripts/e2e-despacho.mjs
@@ -90,7 +90,7 @@ async function api(path, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -102,7 +102,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Espera a que algo OCURRA, en vez de dormir un rato y confiar. */
 async function hasta(cond, ms = 15000, paso = 250) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     const v = await cond();
     if (v) return v;
     if (Date.now() > fin) return null;
@@ -189,8 +189,8 @@ async function main() {
   } finally {
     // Apagado al terminar: con el cerebro falso cerrado, un interruptor
     // encendido mandaría cada mensaje del siguiente guion a un humano.
-    if (cookie) await apagarAgente(api).catch(() => {});
-    await cerebro.apagar().catch(() => {});
+    if (cookie) await apagarAgente(api).catch(() => { });
+    await cerebro.apagar().catch(() => { });
   }
 
   console.log(`\n${checks - failures}/${checks} checks en verde`);
@@ -313,8 +313,8 @@ async function interruptor(cerebro) {
   ok(
     "409 sin_cerebro, con un mensaje que dice que el agente no contesta",
     rechazo?.res.status === 409 &&
-      rechazo.json?.error?.code === "sin_cerebro" &&
-      /no contesta/.test(rechazo.json?.error?.message ?? ""),
+    rechazo.json?.error?.code === "sin_cerebro" &&
+    /no contesta/.test(rechazo.json?.error?.message ?? ""),
     `${rechazo?.res.status} ${JSON.stringify(rechazo?.json)}`
   );
   ok(
@@ -325,8 +325,8 @@ async function interruptor(cerebro) {
   ok(
     "«Quién responde» ve el /health caído (503), sin URL ni llave",
     caido?.external?.health?.reachable === false &&
-      caido.external.health.httpStatus === 503 &&
-      caido.external.health.host === new URL(process.env.BRAIN_DISPATCH_URL).host,
+    caido.external.health.httpStatus === 503 &&
+    caido.external.health.host === new URL(process.env.BRAIN_DISPATCH_URL).host,
     JSON.stringify(caido?.external?.health)
   );
 
@@ -338,10 +338,10 @@ async function interruptor(cerebro) {
   ok(
     "enabled, sin aviso, y el /health en línea con versión y modo de Nea",
     st2?.enabled === true &&
-      st2?.warning === null &&
-      st2?.external?.health?.reachable === true &&
-      st2.external.health.version === "2.0.0-e2e" &&
-      st2.external.health.mode === "estándar",
+    st2?.warning === null &&
+    st2?.external?.health?.reachable === true &&
+    st2.external.health.version === "2.0.0-e2e" &&
+    st2.external.health.mode === "estándar",
     JSON.stringify({ enabled: st2?.enabled, warning: st2?.warning, health: st2?.external?.health })
   );
   ok(
@@ -368,7 +368,7 @@ async function proxyLlm() {
     let json = null;
     try {
       json = JSON.parse(crudo);
-    } catch {}
+    } catch { }
     return { status: r.status, crudo, json };
   };
   const bearer = { authorization: `Bearer ${BOT_KEY}` };
@@ -381,7 +381,7 @@ async function proxyLlm() {
   ok(
     "con Authorization: Bearer (lo que manda el SDK) → 200 con la respuesta del proveedor",
     conBearer.status === 200 &&
-      conBearer.json?.choices?.[0]?.message?.content === `Respuesta de prueba sobre: ${pregunta}`,
+    conBearer.json?.choices?.[0]?.message?.content === `Respuesta de prueba sobre: ${pregunta}`,
     `${conBearer.status} ${conBearer.crudo.slice(0, 200)}`
   );
   const conXKey = await leer(await llamar({ "x-api-key": BOT_KEY }));
@@ -395,7 +395,7 @@ async function proxyLlm() {
   ok(
     "el perfil le dice al cerebro por dónde y con qué modelo pensar (`llm`)",
     perfil.json?.llm?.path === "/api/bot/llm" &&
-      perfil.json.llm.model === (process.env.OPENROUTER_MODEL ?? perfil.json.llm.model),
+    perfil.json.llm.model === (process.env.OPENROUTER_MODEL ?? perfil.json.llm.model),
     JSON.stringify(perfil.json?.llm)
   );
 
@@ -469,9 +469,9 @@ async function unMensaje(cerebro) {
   ok(
     "con las cabeceras del contrato",
     llego.cabeceras.dispatch === e.dispatchId &&
-      Boolean(llego.cabeceras.org) &&
-      llego.cabeceras.evento === null &&
-      String(llego.cabeceras.tipo).startsWith("application/json"),
+    Boolean(llego.cabeceras.org) &&
+    llego.cabeceras.evento === null &&
+    String(llego.cabeceras.tipo).startsWith("application/json"),
     JSON.stringify(llego.cabeceras)
   );
   ok("dispatchId con prefijo dsp_", /^dsp_[0-9a-z]{20}$/.test(e.dispatchId), e.dispatchId);
@@ -483,19 +483,19 @@ async function unMensaje(cerebro) {
   ok(
     "conversación: la de la bandeja, canal whatsapp, IA activa y ventana abierta",
     e.conversation.id === conv.id &&
-      e.conversation.channel === "whatsapp" &&
-      e.conversation.aiEnabled === true &&
-      e.conversation.windowOpen === true &&
-      typeof e.conversation.windowExpiresAt === "string",
+    e.conversation.channel === "whatsapp" &&
+    e.conversation.aiEnabled === true &&
+    e.conversation.windowOpen === true &&
+    typeof e.conversation.windowExpiresAt === "string",
     JSON.stringify(e.conversation)
   );
   ok(
     "un mensaje, el del cliente, sin adjunto",
     e.messages.length === 1 &&
-      e.messages[0].text === texto &&
-      e.messages[0].type === "text" &&
-      e.messages[0].mediaId === null &&
-      !("mimeType" in e.messages[0]),
+    e.messages[0].text === texto &&
+    e.messages[0].type === "text" &&
+    e.messages[0].mediaId === null &&
+    !("mimeType" in e.messages[0]),
     JSON.stringify(e.messages)
   );
   ok(
@@ -594,7 +594,7 @@ async function enVuelo(cerebro) {
     ok(
       "que trae la ráfaga completa: lo ya despachado y lo nuevo",
       JSON.stringify(segundo?.evento.messages.map((m) => m.text)) ===
-        JSON.stringify([`primero ${MARCA}`, `segundo ${MARCA}`]),
+      JSON.stringify([`primero ${MARCA}`, `segundo ${MARCA}`]),
       JSON.stringify(segundo?.evento.messages.map((m) => m.text))
     );
   } finally {
@@ -648,8 +648,8 @@ async function mientrasPiensa(cerebro) {
   ok(
     "con exactamente el segundo mensaje: ni vacío ni repitiendo el ya contestado",
     llego?.evento.messages.length === 1 &&
-      llego.evento.messages[0].id === segundo.id &&
-      llego.evento.messages[0].text === dos,
+    llego.evento.messages[0].id === segundo.id &&
+    llego.evento.messages[0].text === dos,
     JSON.stringify(llego?.evento.messages.map((m) => ({ id: m.id, text: m.text })))
   );
   ok(
@@ -820,9 +820,9 @@ async function loQueDabaElWebhook(cerebro) {
   ok(
     "la ubicación viaja con coordenadas, nombre y dirección",
     ubicacion?.location?.latitude === 19.4326 &&
-      ubicacion?.location?.longitude === -99.1332 &&
-      ubicacion?.location?.name === "Zócalo" &&
-      ubicacion?.location?.address === "Centro, CDMX",
+    ubicacion?.location?.longitude === -99.1332 &&
+    ubicacion?.location?.name === "Zócalo" &&
+    ubicacion?.location?.address === "Centro, CDMX",
     JSON.stringify(ubicacion)
   );
   ok(
@@ -914,9 +914,9 @@ async function otrosCanales(cerebro) {
     ok(
       "despacho con canal messenger e identidad fb:",
       llego?.evento.conversation.channel === "messenger" &&
-        llego?.evento.contact.identity === `fb:${psid}` &&
-        llego?.evento.messages[0]?.text === texto &&
-        llego?.firmaOk === true,
+      llego?.evento.contact.identity === `fb:${psid}` &&
+      llego?.evento.messages[0]?.text === texto &&
+      llego?.firmaOk === true,
       JSON.stringify({ c: llego?.evento.conversation.channel, i: llego?.evento.contact.identity })
     );
     if (llego) {
@@ -984,9 +984,9 @@ async function otrosCanales(cerebro) {
   ok(
     "despacho con canal instagram e identidad ig:",
     llego?.evento.conversation.channel === "instagram" &&
-      llego?.evento.contact.identity === `ig:${igsid}` &&
-      llego?.evento.messages[0]?.text === texto &&
-      llego?.firmaOk === true,
+    llego?.evento.contact.identity === `ig:${igsid}` &&
+    llego?.evento.messages[0]?.text === texto &&
+    llego?.firmaOk === true,
     JSON.stringify({ c: llego?.evento.conversation.channel, i: llego?.evento.contact.identity })
   );
   ok(
@@ -1047,9 +1047,9 @@ async function tiktok(cerebro) {
   ok(
     "despacho con canal tiktok e identidad tt:",
     llego?.evento.conversation.channel === "tiktok" &&
-      llego?.evento.contact.identity === `tt:${sender}` &&
-      llego?.evento.messages[0]?.text === texto &&
-      llego?.firmaOk === true,
+    llego?.evento.contact.identity === `tt:${sender}` &&
+    llego?.evento.messages[0]?.text === texto &&
+    llego?.firmaOk === true,
     JSON.stringify({ c: llego?.evento.conversation.channel, i: llego?.evento.contact.identity })
   );
   const vence = Date.parse(llego?.evento.conversation.windowExpiresAt ?? "");
@@ -1276,8 +1276,8 @@ async function cerebroCaido(cerebro) {
   ok(
     "con espera creciente entre ellos (~1 s y ~4 s)",
     intentos.length === 3 &&
-      intentos[1].at - intentos[0].at >= 900 &&
-      intentos[2].at - intentos[1].at >= 3600,
+    intentos[1].at - intentos[0].at >= 900 &&
+    intentos[2].at - intentos[1].at >= 3600,
     intentos.length === 3 ? `${intentos[1].at - intentos[0].at} ms, ${intentos[2].at - intentos[1].at} ms` : ""
   );
   await sleep(3000);
@@ -1322,9 +1322,9 @@ async function cerebroCaido(cerebro) {
     ok("el mensaje está en la bandeja", Boolean(conv3));
     const traspaso3 = conv3
       ? await hasta(
-          async () => (await conversaciones()).find((c) => c.id === conv3.id && c.handoffAt),
-          COALESCE + 30000
-        )
+        async () => (await conversaciones()).find((c) => c.id === conv3.id && c.handoffAt),
+        COALESCE + 30000
+      )
       : null;
     ok("cae a un humano", traspaso3?.handoffReason === "error");
     const st3 = await estadoCerebro();
@@ -1379,11 +1379,11 @@ async function tarjeta(cerebro, url) {
   ok(
     "las llaves del DTO de la 036: enabled, aiConfigured, external, dispatch y warning (sin embedded)",
     st?.enabled === true &&
-      typeof st?.aiConfigured === "boolean" &&
-      typeof st?.external?.active === "boolean" &&
-      "lastSeenAt" in (st?.external ?? {}) &&
-      st?.warning === null &&
-      !("embedded" in (st ?? {})),
+    typeof st?.aiConfigured === "boolean" &&
+    typeof st?.external?.active === "boolean" &&
+    "lastSeenAt" in (st?.external ?? {}) &&
+    st?.warning === null &&
+    !("embedded" in (st ?? {})),
     JSON.stringify(Object.keys(st ?? {}))
   );
   ok("el cerebro cuenta como el que contesta", st?.external?.active === true);

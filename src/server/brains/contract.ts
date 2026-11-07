@@ -277,11 +277,23 @@ export function construirEventoOlvido(datos: {
   };
 }
 
-export const CABECERA_FIRMA = "x-vocero-signature";
-export const CABECERA_DISPATCH = "x-vocero-dispatch-id";
-export const CABECERA_ORG = "x-vocero-organization";
+export const CABECERA_FIRMA = "x-jombe-signature";
+export const CABECERA_DISPATCH = "x-jombe-dispatch-id";
+export const CABECERA_ORG = "x-jombe-organization";
 /** Para los eventos que no son un turno: hoy, `conversation.deleted` (026). */
-export const CABECERA_EVENTO = "x-vocero-event";
+export const CABECERA_EVENTO = "x-jombe-event";
+
+/**
+ * Alias de antes del rebranding a Jombe CRM: el CRM las sigue mandando para
+ * que un cerebro viejo (Nea 1.x) entienda el despacho sin actualizarse, y se
+ * aceptan al leer. `x-jombe-*` manda siempre.
+ *
+ * TODO: remove fallback in v2.9
+ */
+export const CABECERA_FIRMA_LEGADA = "x-vocero-signature";
+export const CABECERA_DISPATCH_LEGADA = "x-vocero-dispatch-id";
+export const CABECERA_ORG_LEGADA = "x-vocero-organization";
+export const CABECERA_EVENTO_LEGADA = "x-vocero-event";
 
 /**
  * Firma del cuerpo CRUDO, con prefijo `sha256=`.

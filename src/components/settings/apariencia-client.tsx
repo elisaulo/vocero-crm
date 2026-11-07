@@ -65,7 +65,7 @@ export function AparienciaClient({
       guardarAparienciaPropia(efectiva);
       setPropia(true);
     }
-    const estilo = document.getElementById("vocero-temas-vivo") ?? document.head.appendChild(Object.assign(document.createElement("style"), { id: "vocero-temas-vivo" }));
+    const estilo = document.getElementById("jombe-temas-vivo") ?? document.head.appendChild(Object.assign(document.createElement("style"), { id: "jombe-temas-vivo" }));
     estilo.textContent = cssDePropio(efectiva);
   }, [a, colores, propio.ok]);
 

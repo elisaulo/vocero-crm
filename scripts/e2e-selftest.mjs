@@ -17,7 +17,7 @@
  *   1) app corriendo (`pnpm dev`) con WA_MOCK_ENABLED=true,
  *      META_GRAPH_BASE_URL → wa-mock, OPENROUTER_BASE_URL → ai-mock (+ token y
  *      modelo), BOT_API_KEY, AGENT_COALESCE_MS=1500, AGENDA=on,
- *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/vocero/dispatch (sin
+ *      BRAIN_DISPATCH_URL=http://127.0.0.1:3261/jombe/dispatch (sin
  *      BRAIN_HEALTH_URL) y BD migrada
  *   2) node --env-file=.env.e2e-036 scripts/e2e-selftest.mjs
  *
@@ -67,7 +67,7 @@ async function api(path, opts = {}) {
   let json = null;
   try {
     json = await res.clone().json();
-  } catch {}
+  } catch { }
   return { res, json };
 }
 
@@ -89,7 +89,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 async function hasta(cond, ms = 15000, paso = 400) {
   const fin = Date.now() + ms;
-  for (;;) {
+  for (; ;) {
     if (await cond()) return true;
     if (Date.now() > fin) return false;
     await sleep(paso);
@@ -107,9 +107,9 @@ let cerebro = null;
 
 /** El interruptor apagado y el cerebro cerrado, pase lo que pase. */
 async function limpiar() {
-  if (cookie) await apagarAgente(api).catch(() => {});
-  await cerebro?.esperar().catch(() => {});
-  await cerebro?.apagar().catch(() => {});
+  if (cookie) await apagarAgente(api).catch(() => { });
+  await cerebro?.esperar().catch(() => { });
+  await cerebro?.apagar().catch(() => { });
 }
 
 async function main() {
@@ -424,8 +424,8 @@ async function main() {
   ok(
     "GET /api/bot/media/{id} → binario con content-type",
     med.res.ok &&
-      medBytes.byteLength > 0 &&
-      (med.res.headers.get("content-type") ?? "").includes("image"),
+    medBytes.byteLength > 0 &&
+    (med.res.headers.get("content-type") ?? "").includes("image"),
     `status=${med.res.status} bytes=${medBytes.byteLength}`
   );
   const medBad = await bot("/api/bot/media/no-es-media");
@@ -480,7 +480,7 @@ async function main() {
   ok(
     "036: el perfil trae `llm` (por dónde y con qué modelo pensar)",
     Boolean(prof.json) && "llm" in prof.json &&
-      (prof.json.llm === null || prof.json.llm.path === "/api/bot/llm"),
+    (prof.json.llm === null || prof.json.llm.path === "/api/bot/llm"),
     JSON.stringify(prof.json?.llm)
   );
   ok("`resources` presente y vacío", Array.isArray(prof.json?.resources));
@@ -509,7 +509,7 @@ async function main() {
   ok(
     "trae la identidad estable del contacto (no solo el teléfono)",
     typeof ctx.json?.contact?.waIdentity === "string" &&
-      ctx.json.contact.waIdentity.length > 0
+    ctx.json.contact.waIdentity.length > 0
   );
   ok(
     "trae la etapa del lead en el pipeline",
@@ -519,7 +519,7 @@ async function main() {
   ok(
     "la ventana de 24 h viaja abierta tras un entrante reciente",
     ctx.json?.conversation?.windowOpen === true &&
-      ctx.json?.conversation?.windowRemainingMs > 0,
+    ctx.json?.conversation?.windowRemainingMs > 0,
     JSON.stringify(ctx.json?.conversation)
   );
 
@@ -532,9 +532,9 @@ async function main() {
     ok(
       "con la agenda encendida el contexto trae `booking` (sin citas: las tres vacías)",
       typeof b?.timezone === "string" &&
-        b.next === null &&
-        b.unresolved === null &&
-        b.lastClosed === null,
+      b.next === null &&
+      b.unresolved === null &&
+      b.lastClosed === null,
       JSON.stringify(b)
     );
   } else {
@@ -619,9 +619,9 @@ async function main() {
   ok(
     "lo que no se entiende se ignora sin 422 (no se le tiran datos al bot)",
     fBasura.res.ok &&
-      fBasura.json?.ficha?.bueno === "sí" &&
-      !("anidado" in fBasura.json.ficha) &&
-      !("vacío" in fBasura.json.ficha),
+    fBasura.json?.ficha?.bueno === "sí" &&
+    !("anidado" in fBasura.json.ficha) &&
+    !("vacío" in fBasura.json.ficha),
     JSON.stringify(fBasura.json?.ficha)
   );
 
@@ -692,8 +692,8 @@ async function main() {
   ok(
     "el saliente trae la misma hora en el hilo y en la lista",
     convTz?.lastMessageAt !== undefined &&
-      botMsg?.createdAt !== undefined &&
-      minutos(convTz.lastMessageAt, botMsg.createdAt) < 5,
+    botMsg?.createdAt !== undefined &&
+    minutos(convTz.lastMessageAt, botMsg.createdAt) < 5,
     JSON.stringify({
       hilo: botMsg?.createdAt,
       lista: convTz?.lastMessageAt,
@@ -702,7 +702,7 @@ async function main() {
   ok(
     "y esa hora es la de ahora, no la del huso del servidor de BD",
     botMsg?.createdAt !== undefined &&
-      minutos(new Date().toISOString(), botMsg.createdAt) < 5,
+    minutos(new Date().toISOString(), botMsg.createdAt) < 5,
     JSON.stringify({ hilo: botMsg?.createdAt, ahora: new Date().toISOString() })
   );
 
@@ -724,8 +724,8 @@ async function main() {
   ok(
     "la conversación queda pausada y con su motivo",
     convTrasHandoff?.aiEnabled === false &&
-      !!convTrasHandoff?.handoffAt &&
-      convTrasHandoff?.handoffReason === "hostilidad",
+    !!convTrasHandoff?.handoffAt &&
+    convTrasHandoff?.handoffReason === "hostilidad",
     JSON.stringify({
       aiEnabled: convTrasHandoff?.aiEnabled,
       reason: convTrasHandoff?.handoffReason,
@@ -743,8 +743,8 @@ async function main() {
   ok(
     "repetir el handoff es idempotente: no pisa la hora ni el motivo original",
     hoRepe.res.ok &&
-      convTrasHandoff?.handoffAt === primerHandoffAt &&
-      convTrasHandoff?.handoffReason === "hostilidad",
+    convTrasHandoff?.handoffAt === primerHandoffAt &&
+    convTrasHandoff?.handoffReason === "hostilidad",
     JSON.stringify({
       antes: primerHandoffAt,
       ahora: convTrasHandoff?.handoffAt,
@@ -775,8 +775,8 @@ async function main() {
   ok(
     "un motivo fuera del catálogo NO tira el handoff (cae a 'modelo')",
     hoRaro.res.ok &&
-      convTrasHandoff?.aiEnabled === false &&
-      convTrasHandoff?.handoffReason === "modelo",
+    convTrasHandoff?.aiEnabled === false &&
+    convTrasHandoff?.handoffReason === "modelo",
     JSON.stringify({
       status: hoRaro.res.status,
       reason: convTrasHandoff?.handoffReason,
@@ -820,8 +820,8 @@ async function main() {
   ok(
     "typing con IA pausada → ok:false ai_paused (no toca Meta)",
     typPaused.res.ok &&
-      typPaused.json?.ok === false &&
-      typPaused.json?.reason === "ai_paused",
+    typPaused.json?.ok === false &&
+    typPaused.json?.reason === "ai_paused",
     JSON.stringify(typPaused.json)
   );
 
@@ -834,7 +834,7 @@ async function main() {
   ok(
     "el bot NO habla sobre una conversación tomada por un humano → 409 ai_paused",
     sendPaused.res.status === 409 &&
-      sendPaused.json?.error?.code === "ai_paused",
+    sendPaused.json?.error?.code === "ai_paused",
     JSON.stringify(sendPaused.json)
   );
   const outboxAfterPaused =
@@ -1134,8 +1134,8 @@ async function main() {
   ok(
     "el saliente con imagen trae asset disponible y origin=operator",
     sentImg?.type === "image" &&
-      sentImg?.origin === "operator" &&
-      sentImg?.media?.fetchStatus === "available",
+    sentImg?.origin === "operator" &&
+    sentImg?.media?.fetchStatus === "available",
     JSON.stringify(sentImg)
   );
 
@@ -1207,8 +1207,8 @@ async function main() {
   ok(
     "imagen entrante queda disponible tras la descarga in-process",
     inImg?.direction === "in" &&
-      inImg?.media?.kind === "image" &&
-      inImg?.media?.fetchStatus === "available",
+    inImg?.media?.kind === "image" &&
+    inImg?.media?.fetchStatus === "available",
     JSON.stringify(inImg?.media)
   );
   const inImgBin = await fetch(`${BASE}/api/media/${inImg?.media?.assetId}`, {
@@ -1468,11 +1468,11 @@ async function quienResponde(convId, estado) {
   ok(
     "brain-status con sesión → interruptor, IA, cerebro, despacho y aviso (sin `embedded`)",
     typeof antes?.enabled === "boolean" &&
-      typeof antes?.aiConfigured === "boolean" &&
-      typeof antes?.external?.active === "boolean" &&
-      antes?.dispatch?.active === true &&
-      "warning" in (antes ?? {}) &&
-      !("embedded" in (antes ?? {})),
+    typeof antes?.aiConfigured === "boolean" &&
+    typeof antes?.external?.active === "boolean" &&
+    antes?.dispatch?.active === true &&
+    "warning" in (antes ?? {}) &&
+    !("embedded" in (antes ?? {})),
     JSON.stringify(antes)
   );
   ok("la llave del cerebro externo cuenta como configurada", antes?.external?.keyConfigured === true);
@@ -1651,7 +1651,7 @@ async function guiaChecks() {
   ok(
     "los pasos de la raíz: agente, IA, WhatsApp, cerebro y agenda",
     JSON.stringify(inicial?.steps?.map((s) => s.key)) ===
-      JSON.stringify(["profile", "ai", "whatsapp", "brain", "calendar"]),
+    JSON.stringify(["profile", "ai", "whatsapp", "brain", "calendar"]),
     JSON.stringify(inicial?.steps?.map((s) => s.key))
   );
   const guiaKeys = inicial?.guide?.steps?.map((s) => s.key) ?? [];
@@ -1660,9 +1660,9 @@ async function guiaChecks() {
       ? "con la agenda encendida la guía tiene 5 pasos (con «Conecta tu agente»)"
       : "sin agenda la guía tiene 4 pasos (el de agenda ni se pinta)",
     JSON.stringify(guiaKeys) ===
-      JSON.stringify(
-        agenda ? ["agent", "ai", "whatsapp", "brain", "calendar"] : ["agent", "ai", "whatsapp", "brain"]
-      ),
+    JSON.stringify(
+      agenda ? ["agent", "ai", "whatsapp", "brain", "calendar"] : ["agent", "ai", "whatsapp", "brain"]
+    ),
     JSON.stringify(guiaKeys)
   );
   const perfil0 = inicial?.steps?.find((s) => s.key === "profile");
@@ -1696,7 +1696,7 @@ async function guiaChecks() {
   ok(
     "paso «Conecta tu agente»: despacho configurado y cerebro sin contestar → pendiente, y dice por qué",
     cerebro0?.status === "pending" &&
-      /no contesta|no responde/.test(`${cerebro0?.nextAction} ${cerebro0?.problem}`),
+    /no contesta|no responde/.test(`${cerebro0?.nextAction} ${cerebro0?.problem}`),
     JSON.stringify(cerebro0)
   );
   const brainGuia = (await estado())?.guide?.steps?.find((s) => s.key === "brain");
@@ -1818,8 +1818,8 @@ async function guiaChecks() {
   ok(
     "sin cerebro y lo demás listo: guía completa (el paso opcional no cuenta) y sin cerebro conectado",
     manual?.guide?.complete === true &&
-      manual?.guide?.brainConnected === false &&
-      manual?.enabled === false,
+    manual?.guide?.brainConnected === false &&
+    manual?.enabled === false,
     JSON.stringify(manual?.guide)
   );
   const rManual = await raiz();
@@ -1942,17 +1942,17 @@ async function overrideChecks() {
   ok(
     "sin override, guardar la conexión suscribe la app a la WABA",
     guardado.res.ok &&
-      trasGuardar.length === 1 &&
-      !trasGuardar[0]?.override_callback_uri,
+    trasGuardar.length === 1 &&
+    !trasGuardar[0]?.override_callback_uri,
     JSON.stringify({ status: guardado.res.status, trasGuardar })
   );
   // …y registra el webhook de la instancia en el número (pasó el handshake).
   ok(
     "y registra el webhook de la instancia en el NÚMERO (handshake incluido)",
     guardado.json?.webhook?.ok === true &&
-      guardado.json.webhook.appWithoutWebhook === false &&
-      !!urlPropia &&
-      (await webhookDelNumero()) === urlPropia,
+    guardado.json.webhook.appWithoutWebhook === false &&
+    !!urlPropia &&
+    (await webhookDelNumero()) === urlPropia,
     JSON.stringify({ webhook: guardado.json?.webhook, urlPropia, enMeta: await webhookDelNumero() })
   );
 
@@ -1970,15 +1970,15 @@ async function overrideChecks() {
   ok(
     "sin permiso de gestión, la conexión se guarda (200) y avisa por qué no registró",
     sinGestion.res.ok &&
-      sinGestion.json?.webhook?.ok === false &&
-      sinGestion.json.webhook.code === "missing_permission",
+    sinGestion.json?.webhook?.ok === false &&
+    sinGestion.json.webhook.code === "missing_permission",
     JSON.stringify({ status: sinGestion.res.status, webhook: sinGestion.json?.webhook })
   );
   const botonSinGestion = await api("/api/settings/webhook", { method: "POST" });
   ok(
     "y el botón devuelve el mismo motivo con 422",
     botonSinGestion.res.status === 422 &&
-      botonSinGestion.json?.error?.code === "missing_permission",
+    botonSinGestion.json?.error?.code === "missing_permission",
     JSON.stringify(botonSinGestion.json)
   );
   await guardar("tok-e2e");
@@ -2015,8 +2015,8 @@ async function overrideChecks() {
   ok(
     "y el número queda SIN override propio: el cerebro externo sigue recibiendo",
     guardado.json?.webhook?.skipped === "waba_override" &&
-      guardado.json.webhook.host === "nea.e2e.test" &&
-      (await webhookDelNumero()) === null,
+    guardado.json.webhook.host === "nea.e2e.test" &&
+    (await webhookDelNumero()) === null,
     JSON.stringify({ webhook: guardado.json?.webhook, enMeta: await webhookDelNumero() })
   );
 
@@ -2038,9 +2038,9 @@ async function overrideChecks() {
   ok(
     "desconectar borra la conexión y quita el override del número en Meta",
     soltar.res.ok &&
-      antesDeSoltar === urlPropia &&
-      sinConexion === null &&
-      (await webhookDelNumero()) === null,
+    antesDeSoltar === urlPropia &&
+    sinConexion === null &&
+    (await webhookDelNumero()) === null,
     JSON.stringify({ status: soltar.res.status, antesDeSoltar, sinConexion, enMeta: await webhookDelNumero() })
   );
   const reconectado = await guardar("tok-e2e");
@@ -2198,7 +2198,7 @@ async function agendaChecks() {
   ok(
     "horario no ofrecido → 409 slot_not_offered (código EXACTO)",
     noOfrecido.res.status === 409 &&
-      noOfrecido.json?.error?.code === "slot_not_offered",
+    noOfrecido.json?.error?.code === "slot_not_offered",
     `status=${noOfrecido.res.status} body=${JSON.stringify(noOfrecido.json)}`
   );
   ok(
@@ -2250,17 +2250,17 @@ async function agendaChecks() {
   ok(
     "el contexto del cerebro trae la cita que viene: id, instante UTC y estado",
     proxima?.id === creada.json?.bookingId &&
-      proxima?.startUtc === elegido &&
-      proxima?.status === "agendada" &&
-      proxima?.endUtc === new Date(Date.parse(elegido) + 30 * 60_000).toISOString(),
+    proxima?.startUtc === elegido &&
+    proxima?.status === "agendada" &&
+    proxima?.endUtc === new Date(Date.parse(elegido) + 30 * 60_000).toISOString(),
     JSON.stringify(ctxConCita.json?.booking)
   );
   ok(
     "…con la etiqueta del día en palabras, en la zona del negocio",
     ctxConCita.json?.booking?.timezone === "America/Mexico_City" &&
-      typeof proxima?.label === "string" &&
-      proxima.label.endsWith(`, ${slotsA[0].time}`) &&
-      proxima.label.length > `, ${slotsA[0].time}`.length + 8,
+    typeof proxima?.label === "string" &&
+    proxima.label.endsWith(`, ${slotsA[0].time}`) &&
+    proxima.label.length > `, ${slotsA[0].time}`.length + 8,
     `label=${JSON.stringify(proxima?.label)} time=${slotsA[0].time}`
   );
   ok(
@@ -2390,10 +2390,10 @@ async function agendaChecks() {
   ok(
     "…y la trae como cancelada por el equipo, sin enlace",
     ctxCancelada?.lastClosed?.id === bookingId &&
-      ctxCancelada.lastClosed.status === "cancelada" &&
-      ctxCancelada.lastClosed.cancelledBy === "equipo" &&
-      typeof ctxCancelada.lastClosed.closedAt === "string" &&
-      !("meetingLink" in ctxCancelada.lastClosed),
+    ctxCancelada.lastClosed.status === "cancelada" &&
+    ctxCancelada.lastClosed.cancelledBy === "equipo" &&
+    typeof ctxCancelada.lastClosed.closedAt === "string" &&
+    !("meetingLink" in ctxCancelada.lastClosed),
     JSON.stringify(ctxCancelada?.lastClosed)
   );
 
@@ -2432,7 +2432,7 @@ async function agendaChecks() {
     ok(
       "…y avisa que el enlace queda pendiente, en vez de prometerlo",
       sinProveedor.json?.linkPending === true &&
-        sinProveedor.json?.meetingLink === null,
+      sinProveedor.json?.meetingLink === null,
       JSON.stringify(sinProveedor.json)
     );
 
@@ -2488,7 +2488,7 @@ async function agendaChecks() {
     ok(
       "hacia el navegador solo salen los últimos 4 del secreto",
       buenas.json?.connection?.secretLast4 === "ueno" &&
-        !JSON.stringify(buenas.json).includes("secreto-bueno"),
+      !JSON.stringify(buenas.json).includes("secreto-bueno"),
       JSON.stringify(buenas.json)
     );
 
@@ -2511,8 +2511,8 @@ async function agendaChecks() {
       ok(
         "agendar con Zoom crea la reunión y devuelve su enlace",
         conZoom.res.status === 201 &&
-          typeof conZoom.json?.meetingLink === "string" &&
-          conZoom.json.meetingLink.includes("zoom.mock"),
+        typeof conZoom.json?.meetingLink === "string" &&
+        conZoom.json.meetingLink.includes("zoom.mock"),
         JSON.stringify(conZoom.json)
       );
 
@@ -2520,7 +2520,7 @@ async function agendaChecks() {
       ok(
         "el proveedor recibió la reunión con su tema y su hora",
         estado.meetings?.length === 1 &&
-          estado.meetings[0].topic.startsWith("Cita —"),
+        estado.meetings[0].topic.startsWith("Cita —"),
         JSON.stringify(estado.meetings)
       );
 
@@ -2609,19 +2609,19 @@ async function huecosPorFechaChecks() {
   ok(
     "sin date: la misma forma (slots + diasConAgenda) y ahora query",
     reparto.res.status === 200 &&
-      Array.isArray(reparto.json?.diasConAgenda) &&
-      rSlots.length > 0 &&
-      ["startUtc", "endUtc", "label", "dayIso", "dayLabel", "time"].every(
-        (k) => k in rSlots[0]
-      ),
+    Array.isArray(reparto.json?.diasConAgenda) &&
+    rSlots.length > 0 &&
+    ["startUtc", "endUtc", "label", "dayIso", "dayLabel", "time"].every(
+      (k) => k in rSlots[0]
+    ),
     `status=${reparto.res.status} keys=${Object.keys(reparto.json ?? {})}`
   );
   ok(
     "sin date: query dice que es un reparto y hasta dónde revisó",
     reparto.json?.query?.date === null &&
-      reparto.json?.query?.perDay === 3 &&
-      /^\d{4}-\d{2}-\d{2}$/.test(reparto.json?.query?.coveredUntil ?? "") &&
-      /^\d{4}-\d{2}-\d{2}$/.test(reparto.json?.query?.horizonEnd ?? ""),
+    reparto.json?.query?.perDay === 3 &&
+    /^\d{4}-\d{2}-\d{2}$/.test(reparto.json?.query?.coveredUntil ?? "") &&
+    /^\d{4}-\d{2}-\d{2}$/.test(reparto.json?.query?.horizonEnd ?? ""),
     JSON.stringify(reparto.json?.query)
   );
 
@@ -2631,8 +2631,8 @@ async function huecosPorFechaChecks() {
   ok(
     "con date: 200 con query.date = el día pedido y status available",
     delDia.res.status === 200 &&
-      delDia.json?.query?.date === manana &&
-      delDia.json?.query?.status === "available",
+    delDia.json?.query?.date === manana &&
+    delDia.json?.query?.status === "available",
     `status=${delDia.res.status} query=${JSON.stringify(delDia.json?.query)}`
   );
   ok(
@@ -2653,8 +2653,8 @@ async function huecosPorFechaChecks() {
   ok(
     "un día más allá del horizonte → beyond_horizon, sin horas",
     fuera.res.status === 200 &&
-      fuera.json?.query?.status === "beyond_horizon" &&
-      (fuera.json?.slots ?? []).length === 0,
+    fuera.json?.query?.status === "beyond_horizon" &&
+    (fuera.json?.slots ?? []).length === 0,
     `status=${fuera.res.status} query=${JSON.stringify(fuera.json?.query)}`
   );
   const mala = await bot(`${q}&date=2026-02-31`);
@@ -2779,7 +2779,7 @@ async function atribucionChecks() {
     ok(
       "pero sin identificador de clic: hasCtwaClid es false y el valor no aparece",
       detalleOff?.anuncio?.hasCtwaClid === false &&
-        !JSON.stringify(detalleOff).includes("clid-apagada"),
+      !JSON.stringify(detalleOff).includes("clid-apagada"),
       JSON.stringify(detalleOff?.anuncio)
     );
     console.log(
@@ -2816,7 +2816,7 @@ async function atribucionChecks() {
   ok(
     "una etapa que no es del negocio se rechaza con 422 etapa_invalida",
     etapaAjena.res.status === 422 &&
-      etapaAjena.json?.error?.code === "etapa_invalida",
+    etapaAjena.json?.error?.code === "etapa_invalida",
     `status=${etapaAjena.res.status} ${JSON.stringify(etapaAjena.json)}`
   );
 
@@ -2968,7 +2968,7 @@ async function atribucionChecks() {
   ok(
     "la venta viajó en UNIDADES de la moneda, no en centavos",
     evento2?.customData?.value === 450.5 &&
-      evento2?.customData?.currency === "MXN",
+    evento2?.customData?.currency === "MXN",
     JSON.stringify(evento2?.customData)
   );
 
@@ -3068,7 +3068,7 @@ async function atribucionChecks() {
   ok(
     "la fila queda FALLIDA con lo que dijo Meta (200 pero events_received=0)",
     fallido?.status === "failed" &&
-      /events_received=0/.test(fallido?.error ?? ""),
+    /events_received=0/.test(fallido?.error ?? ""),
     JSON.stringify(fallido)
   );
 
@@ -3175,8 +3175,8 @@ async function anuncioDeOrigenChecks() {
   ok(
     "la lista trae el anuncio con su titular",
     conv1?.anuncio?.headline === R1.headline &&
-      conv1?.anuncio?.sourceId === R1.source_id &&
-      conv1?.anuncio?.sourceType === "ad",
+    conv1?.anuncio?.sourceId === R1.source_id &&
+    conv1?.anuncio?.sourceType === "ad",
     JSON.stringify(conv1?.anuncio)
   );
   const d1 = conv1 ? await detalle(conv1.contact.id) : null;
@@ -3184,8 +3184,8 @@ async function anuncioDeOrigenChecks() {
   ok(
     "el detalle del contacto trae el anuncio completo",
     an?.sourceId === R1.source_id && an?.sourceType === "ad" &&
-      an?.sourceUrl === R1.source_url && an?.body === R1.body &&
-      an?.mediaType === "image" && !!an?.capturedAt,
+    an?.sourceUrl === R1.source_url && an?.body === R1.body &&
+    an?.mediaType === "image" && !!an?.capturedAt,
     JSON.stringify(an)
   );
   ok(
@@ -3199,13 +3199,13 @@ async function anuncioDeOrigenChecks() {
   ok(
     "el ctwa_clid no sale por la API",
     !JSON.stringify(d1 ?? {}).includes(R1.ctwa_clid) &&
-      !JSON.stringify(lista1 ?? {}).includes(R1.ctwa_clid),
+    !JSON.stringify(lista1 ?? {}).includes(R1.ctwa_clid),
     "¡la respuesta traía el identificador de clic!"
   );
   ok(
     "la fuente sin capturar se deduce «anuncio»",
     d1?.contact?.source?.value === "anuncio" &&
-      d1?.contact?.source?.source === "deducida",
+    d1?.contact?.source?.source === "deducida",
     JSON.stringify(d1?.contact?.source)
   );
   const imagenR1 = conv1 ? await imagenDe(conv1.contact.id) : null;
@@ -3216,8 +3216,8 @@ async function anuncioDeOrigenChecks() {
     ok(
       "y se sirve como PNG con sesión",
       media.status === 200 &&
-        media.headers.get("content-type") === "image/png" &&
-        bytes.subarray(1, 4).toString() === "PNG",
+      media.headers.get("content-type") === "image/png" &&
+      bytes.subarray(1, 4).toString() === "PNG",
       `status ${media.status}, tipo ${media.headers.get("content-type")}, ${bytes.length} bytes`
     );
     const sinSesion = await fetch(`${BASE}/api/media/${imagenR1}`);
@@ -3228,7 +3228,7 @@ async function anuncioDeOrigenChecks() {
   const entrantes = async () =>
     conv1
       ? ((await api(`/api/conversations/${conv1.id}/messages`)).json?.messages ?? [])
-          .filter((m) => m.direction === "in").length
+        .filter((m) => m.direction === "in").length
       : -1;
   const antes = await entrantes();
   // Reentrega exacta del primer mensaje, como hace Meta, y un segundo mensaje
@@ -3289,7 +3289,7 @@ async function anuncioDeOrigenChecks() {
   ok(
     "una conversación orgánica no tiene anuncio",
     !!convOrg && convOrg.anuncio === null && dOrg?.anuncio === null &&
-      dOrg?.contact?.source?.value === "desconocida",
+    dOrg?.contact?.source?.value === "desconocida",
     `lista ${JSON.stringify(convOrg?.anuncio)}, detalle ${JSON.stringify(dOrg?.anuncio)}`
   );
 
@@ -3443,7 +3443,7 @@ async function r11BotChecks() {
   ok(
     "…y es el MISMO contacto y conversación (su identidad sigue siendo el teléfono)",
     porBsuid.json?.conversation?.id === conv?.id &&
-      porBsuid.json?.contact?.waIdentity === CANON,
+    porBsuid.json?.contact?.waIdentity === CANON,
     JSON.stringify({ conv: porBsuid.json?.conversation?.id, contact: porBsuid.json?.contact })
   );
   const neutro = await bot(`/api/bot/context?identity=${bsuid}`);

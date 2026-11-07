@@ -120,7 +120,7 @@ export default async function RootLayout({
         />
         {/* 062 — Los temas listos (todos, para cambiar en vivo) y el propio. */}
         <style
-          id="vocero-temas"
+          id="jombe-temas"
           dangerouslySetInnerHTML={{ __html: cssDeTemas() + cssDePropio(apariencia) }}
         />
       </head>

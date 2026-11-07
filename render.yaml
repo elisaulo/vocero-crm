@@ -33,17 +33,17 @@
 # ============================================================
 services:
   - type: web
-    name: vocero
+    name: jombe
     runtime: image
     image:
       # Pública: sin `creds`. Es linux/amd64, lo único que corre Render.
-           url: ghcr.io/elisaulo/vocero-crm:2.7.8
+           url: ghcr.io/elisaulo/vocero-crm:2.8.0
     plan: starter
     # Misma región para el servicio y la base; no se cambia después.
     # region: oregon   # ohio · virginia · frankfurt · singapore
     healthCheckPath: /api/health
     disk:
-      name: vocero-data
+      name: jombe-data
       mountPath: /data
       sizeGB: 1
     envVars:
@@ -54,11 +54,11 @@ services:
         # cámbiala en el panel: de ella sale la URL del webhook.
         fromService:
           type: web
-          name: vocero
+          name: jombe
           envVarKey: RENDER_EXTERNAL_URL
       - key: DATABASE_URL
         fromDatabase:
-          name: vocero-db
+          name: jombe-db
           property: connectionString
       - key: BETTER_AUTH_SECRET
         generateValue: true
@@ -73,15 +73,15 @@ services:
         sync: false
       - key: META_GRAPH_API_VERSION
         value: v25.0
-      # 2.0 — El agente (Nea, el servicio `vocero-nea` de abajo). La llave
+      # 2.0 — El agente (Nea, el servicio `jombe-nea` de abajo). La llave
       # firma el despacho y con ella Nea le contesta al CRM: se genera aquí y
       # Nea la toma de este servicio.
       - key: BOT_API_KEY
         generateValue: true
       - key: BRAIN_DISPATCH_URL
-        value: http://vocero-nea:8000/vocero/dispatch
+        value: http://jombe-nea:8000/jombe/dispatch
       - key: BRAIN_HEALTH_URL
-        value: http://vocero-nea:8000/health
+        value: http://jombe-nea:8000/health
       # Opcionales, cuando los tengas (guía en .env.example):
       # - key: OPENROUTER_API_TOKEN
       #   sync: false
@@ -96,7 +96,7 @@ services:
   # Sin llave de IA: piensa por el CRM con la de Ajustes → IA. Sin disco ni
   # dominio. Guía: docs/migrar-a-2.0.md.
   - type: pserv
-    name: vocero-nea
+    name: jombe-nea
     runtime: image
     image:
       url: ghcr.io/elisaulo/nea-agent:2.0.0
@@ -105,23 +105,23 @@ services:
       - key: PORT
         value: "8000"
       - key: CRM_BASE_URL
-        value: http://vocero:3000
+        value: http://jombe:3000
       - key: CRM_BOT_API_KEY
         fromService:
           type: web
-          name: vocero
+          name: jombe
           envVarKey: BOT_API_KEY
       - key: DATABASE_URL
         fromDatabase:
-          name: vocero-db
+          name: jombe-db
           property: connectionString
       - key: DATABASE_SCHEMA
         value: nea
 
 databases:
-  - name: vocero-db
-    databaseName: vocero
-    user: vocero
+  - name: jombe-db
+    databaseName: jombe
+    user: jombe
     plan: basic-256mb
     postgresMajorVersion: "16"
     # region: oregon   # la misma que el servicio
